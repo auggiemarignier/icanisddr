@@ -71,8 +71,7 @@ def rotation_matrix_x(angle: float) -> np.ndarray:
 
 def rotation_matrix_zy(alpha: float, beta: float) -> np.ndarray:
     """
-    Create a 3D rotation matrix for a rotation around the z-axis followed by
-    a rotation around the y-axis.
+    Create a 3D rotation matrix for a rotation around the z-axis followed by a rotation around the y-axis.
 
     Parameters
     ----------

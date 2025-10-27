@@ -34,7 +34,7 @@ def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
     for m in range(6):
         i, j = VOIGT_MAP[m]
         for n in range(m, 6):
-            k, l = VOIGT_MAP[n]
+            k, l = VOIGT_MAP[n]  # noqa: E741
             C_voigt[m, n] = C[i, j, k, l]
             C_voigt[n, m] = C_voigt[m, n]
 
@@ -61,14 +61,16 @@ def voigt_to_elastic_tensor(C_voigt: np.ndarray) -> np.ndarray:
     for m in range(6):
         i, j = VOIGT_MAP[m]
         for n in range(m, 6):
-            k, l = VOIGT_MAP[n]
+            k, l = VOIGT_MAP[n]  # noqa: E741
             C[i, j, k, l] = C_voigt[m, n]
             C[k, l, i, j] = C[i, j, k, l]
 
     return C
 
 
-def transverse_isotropic_tensor(A: float, C: float, L: float, N: float, F: float) -> np.ndarray:
+def transverse_isotropic_tensor(
+    A: float, C: float, L: float, N: float, F: float
+) -> np.ndarray:
     """
     Construct a transverse isotropic elastic tensor in Voigt notation.
 
