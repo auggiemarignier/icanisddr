@@ -12,6 +12,9 @@ dependencies = [
     "scipy>=1.16.2",
 ]
 
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.uv]
 # harmonic requires distrax which requires numpy<2
@@ -70,3 +73,8 @@ max-complexity = 25
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+]
