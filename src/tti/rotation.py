@@ -65,13 +65,15 @@ def rotation_matrix_x(angle: float) -> np.ndarray:
     s = np.sin(angle)
 
     R = np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
-
     return R
 
 
 def rotation_matrix_zy(alpha: float, beta: float) -> np.ndarray:
     """
     Create a 3D rotation matrix for a rotation around the z-axis followed by a rotation around the y-axis.
+
+    This is designed to match the convention used in Brett et al., 2024, Eq 8
+    (https://www.nature.com/articles/s41561-024-01539-6#Sec6).
 
     Parameters
     ----------
@@ -88,6 +90,6 @@ def rotation_matrix_zy(alpha: float, beta: float) -> np.ndarray:
     R_z = rotation_matrix_z(alpha)
     R_y = rotation_matrix_y(beta)
 
-    R = R_y @ R_z
+    R = R_z @ R_y
 
     return R
