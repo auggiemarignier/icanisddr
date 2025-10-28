@@ -7,6 +7,7 @@ from tti.elastic import (
     VOIGT_MAP,
     VOIGT_MAP_INV,
     elastic_tensor_to_voigt,
+    voigt_to_elastic_tensor,
 )
 
 
@@ -55,9 +56,19 @@ def test_elastic_tensor_to_voigt(C4: np.ndarray) -> None:
     expected[1, 1] = 2.0
     expected[2, 2] = 3.0
 
+    # get Voigt indices for the component that was chosen to test symmetry in C4 fixture
     I = VOIGT_MAP_INV[(0, 1)]  # noqa: E741
     J = VOIGT_MAP_INV[(2, 0)]
     expected[I, J] = 4.0
     expected[J, I] = 4.0
 
     np.testing.assert_array_almost_equal(C_voigt, expected)
+
+
+def test_elastic_to_voigt_and_back(C4: np.ndarray) -> None:
+    """Test conversion from elastic tensor to Voigt notation and back."""
+
+    C_voigt = elastic_tensor_to_voigt(C4)
+    C_reconstructed = voigt_to_elastic_tensor(C_voigt)
+
+    np.testing.assert_array_almost_equal(C4, C_reconstructed)
