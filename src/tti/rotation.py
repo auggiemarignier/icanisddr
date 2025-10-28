@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from .elastic import elastic_tensor_to_voigt
+
 
 def rotation_matrix_z(angle: float) -> np.ndarray:
     """
@@ -93,3 +95,21 @@ def rotation_matrix_zy(alpha: float, beta: float) -> np.ndarray:
     R = R_z @ R_y
 
     return R
+
+
+def bonds_law_einsum(R: np.ndarray) -> np.ndarray:
+    """
+    Construct the Bond's law rotation tensor using Einstein summation.
+
+    Parameters
+    ----------
+    R : ndarray, shape (3, 3)
+        Rotation matrix.
+
+    Returns
+    -------
+    A : ndarray, shape (6, 6)
+        Bond's law rotation tensor.
+    """
+    A = np.einsum("ik,jl->ijkl", R, R)
+    return elastic_tensor_to_voigt(A)
