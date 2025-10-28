@@ -20,7 +20,7 @@ def C4() -> np.ndarray:
     C[2, 2, 2, 2] = 3.0
 
     # A valid elastic tensor should have the symmetries
-    # C_ijkl = C_jikl = C_ijlk = C_jlik = C_klij = C_lkij = C_klji = C_lkji
+    # C_ijkl = C_jikl = C_ijlk = C_jilk = C_klij = C_lkij = C_klji = C_lkji
     i = 0
     j = 1  # (i,j) = (0, 1) -> Voigt index 5
     k = 2
@@ -28,7 +28,7 @@ def C4() -> np.ndarray:
     C[i, j, k, l] = 4.0
     C[j, i, k, l] = 4.0
     C[i, j, l, k] = 4.0
-    C[j, l, i, k] = 4.0
+    C[j, i, l, k] = 4.0
     C[k, l, i, j] = 4.0
     C[l, k, i, j] = 4.0
     C[k, l, j, i] = 4.0

@@ -30,6 +30,13 @@ def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
     """
     Convert a 4th order elastic tensor (3x3x3x3) to Voigt notation (6x6).
 
+    There is no imposition of symmetries in this implementation.
+    As a result, the input tensor is expected to already have the major and minor symmetries of the elastic tensor.
+
+    C_ijkl = C_jikl = C_ijlk = C_jilk = C_klij = C_lkij = C_klji = C_lkji
+
+    The value of C_mn will be the last value assigned from the corresponding C_ijkl components.
+
     Parameters
     ----------
     C : ndarray, shape (3, 3, 3, 3)
@@ -57,6 +64,10 @@ def voigt_to_elastic_tensor(C_voigt: np.ndarray) -> np.ndarray:
     """
     Convert an elastic tensor in Voigt notation (6x6) to a 4th order tensor (3x3x3x3).
 
+    This imposes the major and minor symmetries of the elastic tensor.
+
+    C_ijkl = C_jikl = C_ijlk = C_jilk = C_klij = C_lkij = C_klji = C_lkji
+
     Parameters
     ----------
     C_voigt : ndarray, shape (6, 6)
@@ -77,7 +88,7 @@ def voigt_to_elastic_tensor(C_voigt: np.ndarray) -> np.ndarray:
             C[i, j, k, l] = C_voigt[m, n]
             C[j, i, k, l] = C_voigt[m, n]
             C[i, j, l, k] = C_voigt[m, n]
-            C[j, l, i, k] = C_voigt[m, n]
+            C[j, i, l, k] = C_voigt[m, n]
             C[k, l, i, j] = C_voigt[m, n]
             C[l, k, i, j] = C_voigt[m, n]
             C[k, l, j, i] = C_voigt[m, n]
