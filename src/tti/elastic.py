@@ -13,6 +13,18 @@ VOIGT_MAP = {
     5: [0, 1],
 }
 
+VOIGT_MAP_INV = {
+    (0, 0): 0,
+    (1, 1): 1,
+    (2, 2): 2,
+    (1, 2): 3,
+    (2, 1): 3,
+    (0, 2): 4,
+    (2, 0): 4,
+    (0, 1): 5,
+    (1, 0): 5,
+}
+
 
 def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
     """
@@ -31,13 +43,13 @@ def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
 
     C_voigt = np.zeros((6, 6))
 
-    for m in range(6):
-        i, j = VOIGT_MAP[m]
-        for n in range(m, 6):
-            k, l = VOIGT_MAP[n]  # noqa: E741
-            C_voigt[m, n] = C[i, j, k, l]
-            C_voigt[n, m] = C_voigt[m, n]
-
+    for i in range(3):
+        for j in range(3):
+            I = VOIGT_MAP_INV[(i, j)]  # noqa: E741
+            for k in range(3):
+                for l in range(3):  # noqa: E741
+                    J = VOIGT_MAP_INV[(k, l)]
+                    C_voigt[I, J] = C[i, j, k, l]
     return C_voigt
 
 
