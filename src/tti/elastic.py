@@ -26,6 +26,64 @@ VOIGT_MAP_INV = {
 }
 
 
+def _check_minor_symmetry(C: np.ndarray) -> bool:
+    """Check minor symmetries of a rank-4 tensor.
+
+    C_ijkl = C_jikl and C_ijkl = C_ijlk
+
+    => C_ijkl = C_jikl = C_ijlk = C_jilk
+
+    Parameters
+    ----------
+    C : ndarray, shape (3, 3, 3, 3)
+        Fourth order tensor to check
+
+    Returns
+    -------
+    bool
+        True if the tensor has the required symmetries, False otherwise.
+    """
+    ijkl_eq_jikl = np.array_equal(C, np.swapaxes(C, 0, 1))
+    ijkl_eq_ijlk = np.array_equal(C, np.swapaxes(C, 2, 3))
+    return ijkl_eq_jikl and ijkl_eq_ijlk
+
+
+def _check_major_symmetry(C: np.ndarray) -> bool:
+    """Check major symmetry of a rank-4 tensor.
+
+    C_ijkl = C_klij
+
+    Parameters
+    ----------
+    C : ndarray, shape (3, 3, 3, 3)
+        Fourth order tensor to check
+
+    Returns
+    -------
+    bool
+        True if the tensor has the required symmetry, False otherwise.
+    """
+    return np.array_equal(C, np.transpose(C, (2, 3, 0, 1)))
+
+
+def _check_elastic_tensor_symmetry(C: np.ndarray) -> bool:
+    """Check if a rank-4 tensor has both major and minor symmetries.
+
+    C_ijkl = C_jikl = C_ijlk = C_jilk = C_klij = C_lkij = C_klji = C_lkji
+
+    Parameters
+    ----------
+    C : ndarray, shape (3, 3, 3, 3)
+        Fourth order tensor to check
+
+    Returns
+    -------
+    bool
+        True if the tensor has both major and minor symmetries, False otherwise.
+    """
+    return _check_minor_symmetry(C) and _check_major_symmetry(C)
+
+
 def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
     """
     Convert a 4th order elastic tensor (3x3x3x3) to Voigt notation (6x6).
@@ -47,6 +105,8 @@ def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
     C_voigt : ndarray, shape (6, 6)
         Elastic tensor in Voigt notation
     """
+    if not _check_elastic_tensor_symmetry(C):
+        raise ValueError("Input elastic tensor does not have the required symmetries.")
 
     C_voigt = np.zeros((6, 6))
 

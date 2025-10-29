@@ -4,11 +4,42 @@ import numpy as np
 import pytest
 
 from tti.elastic import (
+    _check_major_symmetry,
+    _check_minor_symmetry,
     VOIGT_MAP,
     VOIGT_MAP_INV,
     elastic_tensor_to_voigt,
     voigt_to_elastic_tensor,
 )
+
+
+def test_check_minor_symmetry() -> None:
+    """Test the minor symmetry checker."""
+
+    C = np.zeros((3, 3, 3, 3))
+    C[0, 1, 2, 0] = 1.0
+    C[1, 0, 2, 0] = 1.0  # C_ijkl = C_jikl
+    C[0, 1, 0, 2] = 1.0  # C_ijkl = C_ijlk
+    C[1, 0, 0, 2] = 1.0  # C_jikl = C_jilk
+
+    assert _check_minor_symmetry(C)
+
+    C[1, 0, 0, 2] = 2.0  # Break the symmetry
+    assert not _check_minor_symmetry(C)
+
+
+def test_check_major_symmetry() -> None:
+    """Test the major symmetry checker."""
+
+    C = np.zeros((3, 3, 3, 3))
+    C[0, 1, 2, 0] = 1.0
+    C[2, 0, 0, 1] = 1.0  # C_ijkl = C_klij
+
+    assert _check_major_symmetry(C)
+
+    C[2, 0, 1, 0] = 2.0  # Break the symmetry
+    assert not _check_major_symmetry(C)
+
 
 
 @pytest.fixture
@@ -33,6 +64,9 @@ def C4() -> np.ndarray:
     C[l, k, i, j] = 4.0
     C[k, l, j, i] = 4.0
     C[l, k, j, i] = 4.0
+
+    assert _check_minor_symmetry(C)
+    assert _check_major_symmetry(C)
 
     return C
 
