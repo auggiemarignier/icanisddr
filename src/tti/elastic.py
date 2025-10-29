@@ -25,6 +25,17 @@ VOIGT_MAP_INV = {
     (1, 0): 5,
 }
 
+_VMAP = np.array(
+    [
+        [0, 0],
+        [1, 1],
+        [2, 2],
+        [1, 2],
+        [0, 2],
+        [0, 1],
+    ]
+)
+
 
 def _check_minor_symmetry(C: np.ndarray) -> bool:
     """Check minor symmetries of a rank-4 tensor.
@@ -84,7 +95,7 @@ def _check_elastic_tensor_symmetry(C: np.ndarray) -> bool:
     return _check_minor_symmetry(C) and _check_major_symmetry(C)
 
 
-def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
+def elastic_tensor_to_voigt_loop(C: np.ndarray) -> np.ndarray:
     """
     Convert a 4th order elastic tensor (3x3x3x3) to Voigt notation (6x6).
 
@@ -118,6 +129,40 @@ def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
                     n = VOIGT_MAP_INV[(k, l)]
                     C_voigt[m, n] = C[i, j, k, l]
     return C_voigt
+
+
+def elastic_tensor_to_voigt_vec(C: np.ndarray) -> np.ndarray:
+    """
+    Convert a fully symmetric 4th-order elastic tensor (C_ijkl) to 6x6 Voigt notation (C_voigt).
+
+    Assumes:
+      - C has both minor and major symmetries:
+        C_ijkl = C_jikl = C_ijlk = C_jilk = C_klij = C_lkij = C_klji = C_lkji
+      - Voigt order: [11, 22, 33, 23, 13, 12]
+
+    Parameters
+    ----------
+    C : ndarray, shape (3, 3, 3, 3)
+        Fourth order elastic tensor
+
+    Returns
+    -------
+    C_voigt : ndarray, shape (6, 6)
+        Elastic tensor in Voigt notation
+    """
+    C_voigt = np.zeros((6, 6), dtype=C.dtype)
+
+    # vectorised outer products of index pairs
+    ij = _VMAP[:, None, :]  # shape (6,1,2)
+    kl = _VMAP[None, :, :]  # shape (1,6,2)
+
+    # gather C[i,j,k,l] for all Voigt combinations
+    C_voigt[:, :] = C[ij[..., 0], ij[..., 1], kl[..., 0], kl[..., 1]]
+
+    return C_voigt
+
+
+elastic_tensor_to_voigt = elastic_tensor_to_voigt_vec
 
 
 def voigt_to_elastic_tensor(C_voigt: np.ndarray) -> np.ndarray:

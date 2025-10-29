@@ -4,11 +4,13 @@ import numpy as np
 import pytest
 
 from tti.elastic import (
-    _check_major_symmetry,
-    _check_minor_symmetry,
     VOIGT_MAP,
     VOIGT_MAP_INV,
+    _check_major_symmetry,
+    _check_minor_symmetry,
     elastic_tensor_to_voigt,
+    elastic_tensor_to_voigt_loop,
+    elastic_tensor_to_voigt_vec,
     voigt_to_elastic_tensor,
 )
 
@@ -78,6 +80,15 @@ def test_voigt_map() -> None:
         i, j = VOIGT_MAP[m]
         m_back = VOIGT_MAP_INV[(i, j)]
         assert m == m_back, f"VOIGT_MAP and VOIGT_MAP_INV are inconsistent for m={m}"
+
+
+def test_elastic_tensor_to_voigt_loop_vs_vec(C4: np.ndarray) -> None:
+    """Test that the vectorised and naive implementations of elastic_tensor_to_voigt agree."""
+
+    C_voigt_vec = elastic_tensor_to_voigt_vec(C4)
+
+    C_voigt_loop = elastic_tensor_to_voigt_loop(C4)
+    np.testing.assert_array_almost_equal(C_voigt_vec, C_voigt_loop)
 
 
 def test_elastic_tensor_to_voigt(C4: np.ndarray) -> None:
