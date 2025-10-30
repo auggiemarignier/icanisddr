@@ -1,3 +1,7 @@
+# ruff: noqa: E741
+# a fair bit of tensor notation is involved here so stop
+# ruff from complaining about variable names like l
+
 """Rotation matrices."""
 
 import numpy as np
@@ -121,7 +125,7 @@ def bonds_law_einsum(R: np.ndarray) -> np.ndarray:
     i = ij[..., 0]  # shape (6, 1)
     j = ij[..., 1]  # shape (6, 1)
     k = kl[..., 0]  # shape (1, 6)
-    l = kl[..., 1]  # shape (1, 6)  # noqa: E741
+    l = kl[..., 1]  # shape (1, 6)
 
     # Base contribution: A[i, j, k, L]
     A6 = A[i, j, k, l]

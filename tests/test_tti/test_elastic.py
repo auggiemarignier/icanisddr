@@ -1,3 +1,7 @@
+# ruff: noqa: E741
+# a fair bit of tensor notation is involved here so stop
+# ruff from complaining about variable names like l
+
 """Test the elastic module."""
 
 import numpy as np
@@ -43,7 +47,6 @@ def test_check_major_symmetry() -> None:
     assert not _check_major_symmetry(C)
 
 
-
 @pytest.fixture
 def C4() -> np.ndarray:
     """Fixture for a sample 4th order elastic tensor."""
@@ -57,7 +60,7 @@ def C4() -> np.ndarray:
     i = 0
     j = 1  # (i,j) = (0, 1) -> Voigt index 5
     k = 2
-    l = 0  # noqa: E741 # (k,l) = (2,0) -> Voigt index 4
+    l = 0  # (k,l) = (2,0) -> Voigt index 4
     C[i, j, k, l] = 4.0
     C[j, i, k, l] = 4.0
     C[i, j, l, k] = 4.0

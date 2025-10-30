@@ -1,3 +1,7 @@
+# ruff: noqa: E741
+# a fair bit of tensor notation is involved here so stop
+# ruff from complaining about variable names like l
+
 """Elastic tensor functions for TTI."""
 
 import numpy as np
@@ -125,7 +129,7 @@ def elastic_tensor_to_voigt_loop(C: np.ndarray) -> np.ndarray:
         for j in range(3):
             m = VOIGT_MAP_INV[(i, j)]
             for k in range(3):
-                for l in range(3):  # noqa: E741
+                for l in range(3):
                     n = VOIGT_MAP_INV[(k, l)]
                     C_voigt[m, n] = C[i, j, k, l]
     return C_voigt
@@ -189,7 +193,7 @@ def voigt_to_elastic_tensor(C_voigt: np.ndarray) -> np.ndarray:
     for m in range(6):
         i, j = VOIGT_MAP[m]
         for n in range(6):
-            k, l = VOIGT_MAP[n]  # noqa: E741
+            k, l = VOIGT_MAP[n]
             C[i, j, k, l] = C_voigt[m, n]
             C[j, i, k, l] = C_voigt[m, n]
             C[i, j, l, k] = C_voigt[m, n]
