@@ -46,8 +46,8 @@ def _check_minor_symmetry(C: np.ndarray) -> bool:
     bool
         True if the tensor has the required symmetries, False otherwise.
     """
-    ijkl_eq_jikl = np.array_equal(C, np.swapaxes(C, 0, 1))
-    ijkl_eq_ijlk = np.array_equal(C, np.swapaxes(C, 2, 3))
+    ijkl_eq_jikl = np.allclose(C, np.swapaxes(C, 0, 1))
+    ijkl_eq_ijlk = np.allclose(C, np.swapaxes(C, 2, 3))
     return ijkl_eq_jikl and ijkl_eq_ijlk
 
 
@@ -66,7 +66,7 @@ def _check_major_symmetry(C: np.ndarray) -> bool:
     bool
         True if the tensor has the required symmetry, False otherwise.
     """
-    return np.array_equal(C, np.transpose(C, (2, 3, 0, 1)))
+    return np.allclose(C, np.transpose(C, (2, 3, 0, 1)))
 
 
 def _check_elastic_tensor_symmetry(C: np.ndarray) -> bool:
