@@ -14,12 +14,6 @@ from tti.rotation import (
 )
 
 
-@pytest.fixture
-def rng() -> np.random.Generator:
-    """Random number generator fixture."""
-    return np.random.default_rng(42)
-
-
 @pytest.mark.parametrize("R", [rotation_matrix_z, rotation_matrix_y, rotation_matrix_x])
 def test_rotation_matrix_0(R: Callable[[float], np.ndarray]) -> None:
     """Test rotation matrices at 0 radians."""
