@@ -15,6 +15,8 @@ from tti.elastic import (
     elastic_tensor_to_voigt,
     elastic_tensor_to_voigt_loop,
     elastic_tensor_to_voigt_vec,
+    isotropic_tensor,
+    transverse_isotropic_tensor,
     voigt_to_elastic_tensor,
 )
 
@@ -120,3 +122,29 @@ def test_elastic_to_voigt_and_back(C4: np.ndarray) -> None:
     C_reconstructed = voigt_to_elastic_tensor(C_voigt)
 
     np.testing.assert_array_almost_equal(C4, C_reconstructed)
+
+
+def test_isotropic_symmetry(rng: np.random.Generator) -> None:
+    """Test that an isotropic elastic tensor has the required symmetries."""
+
+    lambda_ = rng.uniform(1, 10)
+    mu = rng.uniform(1, 10)
+
+    C_voigt = isotropic_tensor(lambda_, mu)
+
+    np.testing.assert_array_equal(C_voigt, C_voigt.T)
+    assert len(np.unique(C_voigt)) == 4  # lambda, lambda+2mu, mu, 0
+
+
+def test_transverse_isotropic_symmetry(rng: np.random.Generator) -> None:
+    """Test that a transverse isotropic elastic tensor has the required symmetries."""
+
+    A = rng.uniform(1, 10)
+    C = rng.uniform(1, 10)
+    F = rng.uniform(1, 10)
+    L = rng.uniform(1, 10)
+    N = rng.uniform(1, 10)
+
+    C_voigt = transverse_isotropic_tensor(A, C, F, L, N)
+    np.testing.assert_array_equal(C_voigt, C_voigt.T)
+    assert len(np.unique(C_voigt)) == 7  # A, C, F, L, N, A-2N, 0
