@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from .elastic import elastic_tensor_to_voigt, _VMAP
+from .elastic import _VMAP
 
 
 def rotation_matrix_z(angle: float) -> np.ndarray:
@@ -96,28 +96,6 @@ def rotation_matrix_zy(alpha: float, beta: float) -> np.ndarray:
 
     return R
 
-def transformation_tensor_to_voigt(B: np.ndarray) -> np.ndarray:
-    """
-    Map a 4th-order transformation tensor B[i,j,k,l] to a 6x6 matrix appropriate for acting on symmetric 2nd-order tensors.
-
-    This function expects B to have (at least) minor symmetry in (k<->l)
-    OR to have already been prepared as B_sum = B + B.swapaxes(2,3).
-    It does NOT assume major symmetry.
-    Voigt order: [11, 22, 33, 23, 13, 12].
-    """
-    # Ensure input is array and shape is correct
-    B = np.ascontiguousarray(B)
-    assert B.shape == (3, 3, 3, 3)
-
-    # Build indexing arrays (6,1,2) and (1,6,2) and gather
-    ij = _VMAP[:, None, :]   # (6,1,2)
-    kl = _VMAP[None, :, :]   # (1,6,2)
-
-    # result shape (6,6) where each entry is B[i,j,k,l] (no extra averaging)
-    C6 = B[ij[..., 0], ij[..., 1], kl[..., 0], kl[..., 1]]
-
-    return C6
-
 
 def bonds_law_einsum(R: np.ndarray) -> np.ndarray:
     """
@@ -134,14 +112,22 @@ def bonds_law_einsum(R: np.ndarray) -> np.ndarray:
         Bond's law rotation tensor.
     """
     A = np.einsum("ik,jl->ijkl", R, R)
-    A6 = np.zeros((6, 6), dtype=R.dtype)
 
-    for m, (i, j) in enumerate(_VMAP):
-        for n, (k, l) in enumerate(_VMAP):
-            if k == l:
-                # normal column/row: only one contribution
-                A6[m, n] = A[i, j, k, k]
-            else:
-                # shear column/row: contributions from (k,l) and (l,k)
-                A6[m, n] = A[i, j, k, l] + A[i, j, l, k]
+    # Build indexing arrays: ij is (6,1,2), kl is (1,6,2)
+    ij = _VMAP[:, None, :]  # shape (6, 1, 2)
+    kl = _VMAP[None, :, :]  # shape (1, 6, 2)
+
+    # Extract i, j, k, L indices with broadcasting
+    i = ij[..., 0]  # shape (6, 1)
+    j = ij[..., 1]  # shape (6, 1)
+    k = kl[..., 0]  # shape (1, 6)
+    l = kl[..., 1]  # shape (1, 6)  # noqa: E741
+
+    # Base contribution: A[i, j, k, L]
+    A6 = A[i, j, k, l]
+
+    # Add symmetric contribution A[i, j, L, k] only where k != L
+    mask = k != l
+    A6 = np.where(mask, A6 + A[i, j, l, k], A6)
+
     return A6
