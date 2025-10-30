@@ -6,8 +6,6 @@
 
 import numpy as np
 
-from .elastic import _VMAP
-
 
 def rotation_matrix_z(angle: float) -> np.ndarray:
     """
@@ -101,37 +99,21 @@ def rotation_matrix_zy(alpha: float, beta: float) -> np.ndarray:
     return R
 
 
-def bonds_law_einsum(R: np.ndarray) -> np.ndarray:
+def transformation_4th_order(R: np.ndarray) -> np.ndarray:
     """
-    Construct the Bond's law rotation tensor using Einstein summation.
+    Construct a 4th order tensor from a 3D transformation matrix.
+
+    Given a transformation matrix R, a second order tensor T transforms as T' = R T R^T.
+    In Einstein notation, this is T'_{ij} = R_{ik} R_{jl} T_{kl}.
 
     Parameters
     ----------
     R : ndarray, shape (3, 3)
-        Rotation matrix.
+        Transformation matrix.
 
     Returns
     -------
-    A6 : ndarray, shape (6, 6)
-        Bond's law rotation tensor.
+    R4 : ndarray, shape (3, 3, 3, 3)
+        4th order transformation tensor.
     """
-    A = np.einsum("ik,jl->ijkl", R, R)
-
-    # Build indexing arrays: ij is (6,1,2), kl is (1,6,2)
-    ij = _VMAP[:, None, :]  # shape (6, 1, 2)
-    kl = _VMAP[None, :, :]  # shape (1, 6, 2)
-
-    # Extract i, j, k, L indices with broadcasting
-    i = ij[..., 0]  # shape (6, 1)
-    j = ij[..., 1]  # shape (6, 1)
-    k = kl[..., 0]  # shape (1, 6)
-    l = kl[..., 1]  # shape (1, 6)
-
-    # Base contribution: A[i, j, k, L]
-    A6 = A[i, j, k, l]
-
-    # Add symmetric contribution A[i, j, L, k] only where k != L
-    mask = k != l
-    A6 = np.where(mask, A6 + A[i, j, l, k], A6)
-
-    return A6
+    return np.einsum("ik,jl->ijkl", R, R)

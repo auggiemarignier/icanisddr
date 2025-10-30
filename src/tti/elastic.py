@@ -206,6 +206,45 @@ def voigt_to_elastic_tensor(C_voigt: np.ndarray) -> np.ndarray:
     return C
 
 
+def transformation_to_voigt(T: np.ndarray) -> np.ndarray:
+    """
+    Convert a 4th order transformation tensor to Voigt notation.
+
+    Enforces the minor symmetries of the transformation tensor expected by Voigt notation.
+
+    Parameters
+    ----------
+    T : ndarray, shape (3, 3, 3, 3)
+        Fourth order transformation tensor
+
+    Returns
+    -------
+    T_voigt : ndarray, shape (6, 6)
+        Transformation tensor in Voigt notation
+    """
+
+    T_voigt = np.zeros((6, 6))
+
+    # Build indexing arrays: ij is (6,1,2), kl is (1,6,2)
+    ij = _VMAP[:, None, :]  # shape (6, 1, 2)
+    kl = _VMAP[None, :, :]  # shape (1, 6, 2)
+
+    # Extract i, j, k, L indices with broadcasting
+    i = ij[..., 0]  # shape (6, 1)
+    j = ij[..., 1]  # shape (6, 1)
+    k = kl[..., 0]  # shape (1, 6)
+    l = kl[..., 1]  # shape (1, 6)
+
+    # Base contribution: T[i, j, k, L]
+    T_voigt = T[i, j, k, l]
+
+    # Add symmetric contribution T[i, j, L, k] only where k != l
+    mask = k != l
+    T_voigt = np.where(mask, T_voigt + T[i, j, l, k], T_voigt)
+
+    return T_voigt
+
+
 def transverse_isotropic_tensor(
     A: float, C: float, L: float, N: float, F: float
 ) -> np.ndarray:

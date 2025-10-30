@@ -6,11 +6,11 @@ import numpy as np
 import pytest
 
 from tti.rotation import (
-    bonds_law_einsum,
     rotation_matrix_x,
     rotation_matrix_y,
     rotation_matrix_z,
     rotation_matrix_zy,
+    transformation_4th_order,
 )
 
 
@@ -118,53 +118,47 @@ def test_rotation_matrix_zy(rng: np.random.Generator) -> None:
     np.testing.assert_array_almost_equal(Rzy, expected)
 
 
-def test_bond_tensor_voigt(rng: np.random.Generator) -> None:
-    """Test that the bond tensor in Voigt notation is symmetric."""
+def test_transformation_4th_order(rng: np.random.Generator) -> None:
+    """Test the construction of a 4th order transformation tensor from a 3D rotation matrix."""
 
-    r = rotation_matrix_z(rng.uniform(0, 2 * np.pi))
-    R = bonds_law_einsum(r)
+    angle = rng.uniform(0, 2 * np.pi)
+    R = rotation_matrix_z(angle)
 
-    # get the notation the same as in Brett et al., 2024
-    r11 = r[0, 0]
-    r12 = r[0, 1]
-    r13 = r[0, 2]
-    r21 = r[1, 0]
-    r22 = r[1, 1]
-    r23 = r[1, 2]
-    r31 = r[2, 0]
-    r32 = r[2, 1]
-    r33 = r[2, 2]
+    R4 = transformation_4th_order(R)
 
-    expected = np.array(
+    # write out the expected result manually
+    c = np.cos(angle)
+    s = np.sin(angle)
+
+    R4_expected = np.array(
         [
-            [r11**2, r12**2, r13**2, 2 * r12 * r13, 2 * r11 * r13, 2 * r11 * r12],
-            [r21**2, r22**2, r23**2, 2 * r22 * r23, 2 * r21 * r23, 2 * r21 * r22],
-            [r31**2, r32**2, r33**2, 2 * r32 * r33, 2 * r31 * r33, 2 * r31 * r32],
+            # i = 0 (row), j = 0,1,2 (columns)
             [
-                r21 * r31,
-                r22 * r32,
-                r23 * r33,
-                r22 * r33 + r23 * r32,
-                r21 * r33 + r23 * r31,
-                r21 * r32 + r22 * r31,
+                # j = 0 -> B[0][0][k][l]
+                [[c * c, -c * s, 0], [-c * s, s * s, 0], [0, 0, 0]],
+                # j = 1 -> B[0][1][k][l]
+                [[c * s, c * c, 0], [-s * s, -c * s, 0], [0, 0, 0]],
+                # j = 2 -> B[0][2][k][l]
+                [[0, 0, c], [0, 0, -s], [0, 0, 0]],
             ],
+            # i = 1
             [
-                r11 * r31,
-                r12 * r32,
-                r13 * r33,
-                r12 * r33 + r13 * r32,
-                r11 * r33 + r13 * r31,
-                r11 * r32 + r12 * r31,
+                # j = 0
+                [[s * c, -s * s, 0], [c * c, -c * s, 0], [0, 0, 0]],
+                # j = 1
+                [[s * s, s * c, 0], [s * c, c * c, 0], [0, 0, 0]],
+                # j = 2
+                [[0, 0, s], [0, 0, c], [0, 0, 0]],
             ],
+            # i = 2
             [
-                r11 * r21,
-                r12 * r22,
-                r13 * r23,
-                r12 * r23 + r13 * r22,
-                r11 * r23 + r13 * r21,
-                r11 * r22 + r12 * r21,
+                # j = 0
+                [[0, 0, 0], [0, 0, 0], [c, -s, 0]],
+                # j = 1
+                [[0, 0, 0], [0, 0, 0], [s, c, 0]],
+                # j = 2
+                [[0, 0, 0], [0, 0, 0], [0, 0, 1]],
             ],
         ]
     )
-
-    np.testing.assert_array_almost_equal(R, expected)
+    np.testing.assert_array_equal(R4, R4_expected)
