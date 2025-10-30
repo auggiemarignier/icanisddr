@@ -9,19 +9,61 @@ import pytest
 
 from tti.elastic import (
     VOIGT_MAP,
-    VOIGT_MAP_INV,
+    _check_elastic_tensor_symmetry,
     _check_major_symmetry,
     _check_minor_symmetry,
     elastic_tensor_to_voigt,
-    elastic_tensor_to_voigt_loop,
-    elastic_tensor_to_voigt_vec,
-    isotropic_tensor,
     isotropic_tensor_4th,
+    isotropic_tensor_voigt,
     transformation_to_voigt,
-    transverse_isotropic_tensor,
     transverse_isotropic_tensor_4th,
+    transverse_isotropic_tensor_voigt,
     voigt_to_elastic_tensor,
 )
+
+VOIGT_MAP_INV = {
+    (0, 0): 0,
+    (1, 1): 1,
+    (2, 2): 2,
+    (1, 2): 3,
+    (2, 1): 3,
+    (0, 2): 4,
+    (2, 0): 4,
+    (0, 1): 5,
+    (1, 0): 5,
+}
+
+
+def _elastic_tensor_to_voigt_reference(C: np.ndarray) -> np.ndarray:
+    """
+    Reference loop implementation for validating vectorised elastic_tensor_to_voigt.
+
+    Convert a 4th order elastic tensor (3x3x3x3) to Voigt notation (6x6).
+
+    Parameters
+    ----------
+    C : ndarray, shape (3, 3, 3, 3)
+        Fourth order elastic tensor
+
+    Returns
+    -------
+    C_voigt : ndarray, shape (6, 6)
+        Elastic tensor in Voigt notation
+    """
+
+    if not _check_elastic_tensor_symmetry(C):
+        raise ValueError("Input elastic tensor does not have the required symmetries.")
+
+    C_voigt = np.zeros((6, 6))
+
+    for i in range(3):
+        for j in range(3):
+            m = VOIGT_MAP_INV[(i, j)]
+            for k in range(3):
+                for l in range(3):
+                    n = VOIGT_MAP_INV[(k, l)]
+                    C_voigt[m, n] = C[i, j, k, l]
+    return C_voigt
 
 
 def test_check_minor_symmetry() -> None:
@@ -90,13 +132,12 @@ def test_voigt_map() -> None:
         assert m == m_back, f"VOIGT_MAP and VOIGT_MAP_INV are inconsistent for m={m}"
 
 
-def test_elastic_tensor_to_voigt_loop_vs_vec(C4: np.ndarray) -> None:
-    """Test that the vectorised and naive implementations of elastic_tensor_to_voigt agree."""
+def test_elastic_tensor_to_voigt_correctness(C4: np.ndarray) -> None:
+    """Test that the vectorised implementation matches reference loop implementation."""
 
-    C_voigt_vec = elastic_tensor_to_voigt_vec(C4)
-
-    C_voigt_loop = elastic_tensor_to_voigt_loop(C4)
-    np.testing.assert_array_almost_equal(C_voigt_vec, C_voigt_loop)
+    C_voigt_fast = elastic_tensor_to_voigt(C4)
+    C_voigt_ref = _elastic_tensor_to_voigt_reference(C4)
+    np.testing.assert_array_almost_equal(C_voigt_fast, C_voigt_ref)
 
 
 def test_elastic_tensor_to_voigt(C4: np.ndarray) -> None:
@@ -133,7 +174,7 @@ def test_isotropic_symmetry(rng: np.random.Generator) -> None:
     lambda_ = rng.uniform(1, 10)
     mu = rng.uniform(1, 10)
 
-    C_voigt = isotropic_tensor(lambda_, mu)
+    C_voigt = isotropic_tensor_voigt(lambda_, mu)
 
     np.testing.assert_array_equal(C_voigt, C_voigt.T)
     assert len(np.unique(C_voigt)) == 4  # lambda, lambda+2mu, mu, 0
@@ -148,7 +189,7 @@ def test_transverse_isotropic_symmetry(rng: np.random.Generator) -> None:
     L = rng.uniform(1, 10)
     N = rng.uniform(1, 10)
 
-    C_voigt = transverse_isotropic_tensor(A, C, F, L, N)
+    C_voigt = transverse_isotropic_tensor_voigt(A, C, F, L, N)
     np.testing.assert_array_equal(C_voigt, C_voigt.T)
     assert len(np.unique(C_voigt)) == 7  # A, C, F, L, N, A-2N, 0
 
@@ -161,7 +202,7 @@ def test_isotropic_4th_matches_voigt(rng: np.random.Generator) -> None:
 
     C4 = isotropic_tensor_4th(lam, mu)
     C_voigt_from_4th = elastic_tensor_to_voigt(C4)
-    C_voigt_direct = isotropic_tensor(lam, mu)
+    C_voigt_direct = isotropic_tensor_voigt(lam, mu)
 
     np.testing.assert_array_almost_equal(C_voigt_from_4th, C_voigt_direct)
 
@@ -177,7 +218,7 @@ def test_tti_4th_matches_voigt(rng: np.random.Generator) -> None:
 
     C4 = transverse_isotropic_tensor_4th(A, C, F, L, N)
     C_voigt_from_4th = elastic_tensor_to_voigt(C4)
-    C_voigt_direct = transverse_isotropic_tensor(A, C, F, L, N)
+    C_voigt_direct = transverse_isotropic_tensor_voigt(A, C, F, L, N)
 
     np.testing.assert_array_almost_equal(C_voigt_from_4th, C_voigt_direct)
 
