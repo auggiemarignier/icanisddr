@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from .elastic import elastic_tensor_to_voigt
+from .elastic import elastic_tensor_to_voigt, _VMAP
 
 
 def rotation_matrix_z(angle: float) -> np.ndarray:
@@ -96,6 +96,28 @@ def rotation_matrix_zy(alpha: float, beta: float) -> np.ndarray:
 
     return R
 
+def transformation_tensor_to_voigt(B: np.ndarray) -> np.ndarray:
+    """
+    Map a 4th-order transformation tensor B[i,j,k,l] to a 6x6 matrix appropriate for acting on symmetric 2nd-order tensors.
+
+    This function expects B to have (at least) minor symmetry in (k<->l)
+    OR to have already been prepared as B_sum = B + B.swapaxes(2,3).
+    It does NOT assume major symmetry.
+    Voigt order: [11, 22, 33, 23, 13, 12].
+    """
+    # Ensure input is array and shape is correct
+    B = np.ascontiguousarray(B)
+    assert B.shape == (3, 3, 3, 3)
+
+    # Build indexing arrays (6,1,2) and (1,6,2) and gather
+    ij = _VMAP[:, None, :]   # (6,1,2)
+    kl = _VMAP[None, :, :]   # (1,6,2)
+
+    # result shape (6,6) where each entry is B[i,j,k,l] (no extra averaging)
+    C6 = B[ij[..., 0], ij[..., 1], kl[..., 0], kl[..., 1]]
+
+    return C6
+
 
 def bonds_law_einsum(R: np.ndarray) -> np.ndarray:
     """
@@ -108,8 +130,18 @@ def bonds_law_einsum(R: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    A : ndarray, shape (6, 6)
+    A6 : ndarray, shape (6, 6)
         Bond's law rotation tensor.
     """
     A = np.einsum("ik,jl->ijkl", R, R)
-    return elastic_tensor_to_voigt(A)
+    A6 = np.zeros((6, 6), dtype=R.dtype)
+
+    for m, (i, j) in enumerate(_VMAP):
+        for n, (k, l) in enumerate(_VMAP):
+            if k == l:
+                # normal column/row: only one contribution
+                A6[m, n] = A[i, j, k, k]
+            else:
+                # shear column/row: contributions from (k,l) and (l,k)
+                A6[m, n] = A[i, j, k, l] + A[i, j, l, k]
+    return A6
