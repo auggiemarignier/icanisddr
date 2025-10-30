@@ -276,24 +276,17 @@ def transverse_isotropic_tensor(
     C_voigt : ndarray, shape (6, 6)
         Transverse isotropic elastic tensor in Voigt notation
     """
-
-    C_voigt = np.zeros((6, 6))
-
-    C_voigt[0, 0] = A
-    C_voigt[1, 1] = A
-    C_voigt[2, 2] = C
-    C_voigt[3, 3] = L
-    C_voigt[4, 4] = L
-    C_voigt[5, 5] = N
-
-    C_voigt[0, 1] = A - 2 * N
-    C_voigt[1, 0] = A - 2 * N
-
-    C_voigt[0, 2] = F
-    C_voigt[2, 0] = F
-
-    C_voigt[1, 2] = F
-    C_voigt[2, 1] = F
+    A_2N = A - 2 * N
+    C_voigt = np.array(
+        [
+            [A, A_2N, F, 0, 0, 0],
+            [A_2N, A, F, 0, 0, 0],
+            [F, F, C, 0, 0, 0],
+            [0, 0, 0, L, 0, 0],
+            [0, 0, 0, 0, L, 0],
+            [0, 0, 0, 0, 0, N],
+        ]
+    )
 
     return C_voigt
 
@@ -321,23 +314,16 @@ def isotropic_tensor(lam: float, mu: float) -> np.ndarray:
     C_voigt : ndarray, shape (6, 6)
         Isotropic elastic tensor in Voigt notation
     """
-
-    C_voigt = np.zeros((6, 6))
-
-    C_voigt[0, 0] = lam + 2 * mu
-    C_voigt[1, 1] = lam + 2 * mu
-    C_voigt[2, 2] = lam + 2 * mu
-    C_voigt[3, 3] = mu
-    C_voigt[4, 4] = mu
-    C_voigt[5, 5] = mu
-
-    C_voigt[0, 1] = lam
-    C_voigt[1, 0] = lam
-
-    C_voigt[0, 2] = lam
-    C_voigt[2, 0] = lam
-
-    C_voigt[1, 2] = lam
-    C_voigt[2, 1] = lam
+    lam_2mu = lam + 2 * mu
+    C_voigt = np.array(
+        [
+            [lam_2mu, lam, lam, 0, 0, 0],
+            [lam, lam_2mu, lam, 0, 0, 0],
+            [lam, lam, lam_2mu, 0, 0, 0],
+            [0, 0, 0, mu, 0, 0],
+            [0, 0, 0, 0, mu, 0],
+            [0, 0, 0, 0, 0, mu],
+        ]
+    )
 
     return C_voigt
