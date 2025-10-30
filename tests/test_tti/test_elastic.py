@@ -16,8 +16,10 @@ from tti.elastic import (
     elastic_tensor_to_voigt_loop,
     elastic_tensor_to_voigt_vec,
     isotropic_tensor,
+    isotropic_tensor_4th,
     transformation_to_voigt,
     transverse_isotropic_tensor,
+    transverse_isotropic_tensor_4th,
     voigt_to_elastic_tensor,
 )
 
@@ -146,9 +148,38 @@ def test_transverse_isotropic_symmetry(rng: np.random.Generator) -> None:
     L = rng.uniform(1, 10)
     N = rng.uniform(1, 10)
 
-    C_voigt = transverse_isotropic_tensor(A, C, F, L, N)
+    C_voigt = transverse_isotropic_tensor(A, C, L, N, F)
     np.testing.assert_array_equal(C_voigt, C_voigt.T)
     assert len(np.unique(C_voigt)) == 7  # A, C, F, L, N, A-2N, 0
+
+
+def test_isotropic_4th_matches_voigt(rng: np.random.Generator) -> None:
+    """Isotropic 4th-order constructor should match Voigt constructor after mapping."""
+
+    lam = rng.uniform(1, 10)
+    mu = rng.uniform(1, 10)
+
+    C4 = isotropic_tensor_4th(lam, mu)
+    C_voigt_from_4th = elastic_tensor_to_voigt(C4)
+    C_voigt_direct = isotropic_tensor(lam, mu)
+
+    np.testing.assert_array_almost_equal(C_voigt_from_4th, C_voigt_direct)
+
+
+def test_tti_4th_matches_voigt(rng: np.random.Generator) -> None:
+    """TTI 4th-order constructor should match Voigt constructor after mapping."""
+
+    A = rng.uniform(1, 10)
+    C = rng.uniform(1, 10)
+    F = rng.uniform(1, 10)
+    L = rng.uniform(1, 10)
+    N = rng.uniform(1, 10)
+
+    C4 = transverse_isotropic_tensor_4th(A, C, L, N, F)
+    C_voigt_from_4th = elastic_tensor_to_voigt(C4)
+    C_voigt_direct = transverse_isotropic_tensor(A, C, L, N, F)
+
+    np.testing.assert_array_almost_equal(C_voigt_from_4th, C_voigt_direct)
 
 
 def test_transformation_to_voigt(rng: np.random.Generator) -> None:

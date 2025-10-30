@@ -327,3 +327,101 @@ def isotropic_tensor(lam: float, mu: float) -> np.ndarray:
     )
 
     return C_voigt
+
+
+def transverse_isotropic_tensor_4th(
+    A: float, C: float, L: float, N: float, F: float
+) -> np.ndarray:
+    """
+    Construct a transverse isotropic elastic tensor directly as a 4th-order tensor.
+
+    Assumes the symmetry axis is along the z-axis.
+
+    Parameters
+    ----------
+    A : float
+        Elastic constant C11 = C22
+    C : float
+        Elastic constant C33
+    L : float
+        Elastic constant C44 = C55
+    N : float
+        Elastic constant C66
+    F : float
+        Elastic constant C13 = C23
+
+    Returns
+    -------
+    C : ndarray, shape (3, 3, 3, 3)
+        Transverse isotropic elastic tensor (fully symmetric) in index form.
+    """
+    C_tensor = np.zeros((3, 3, 3, 3), dtype=float)
+
+    # Normal components
+    C_tensor[0, 0, 0, 0] = A
+    C_tensor[1, 1, 1, 1] = A
+    C_tensor[2, 2, 2, 2] = C
+
+    # Cross normal terms implied by Voigt: C12 = A-2N, C13 = C23 = F
+    A_2N = A - 2 * N
+
+    # C1122 and symmetric permutations
+    C_tensor[0, 0, 1, 1] = A_2N
+    C_tensor[1, 1, 0, 0] = A_2N
+    C_tensor[0, 1, 0, 1] = N
+    C_tensor[1, 0, 1, 0] = N
+    C_tensor[0, 1, 1, 0] = N
+    C_tensor[1, 0, 0, 1] = N
+
+    # Coupling with symmetry axis (F): C1133 = C2233 = F and symmetries
+    C_tensor[0, 0, 2, 2] = F
+    C_tensor[2, 2, 0, 0] = F
+    C_tensor[1, 1, 2, 2] = F
+    C_tensor[2, 2, 1, 1] = F
+
+    # Shear components (minor symmetries enforced explicitly)
+    # yz shear: C2323 = L and permutations
+    C_tensor[1, 2, 1, 2] = L
+    C_tensor[1, 2, 2, 1] = L
+    C_tensor[2, 1, 1, 2] = L
+    C_tensor[2, 1, 2, 1] = L
+
+    # xz shear: C1313 = L and permutations
+    C_tensor[0, 2, 0, 2] = L
+    C_tensor[0, 2, 2, 0] = L
+    C_tensor[2, 0, 0, 2] = L
+    C_tensor[2, 0, 2, 0] = L
+
+    # xy shear: C1212 = N and permutations
+    C_tensor[0, 1, 0, 1] = N
+    C_tensor[0, 1, 1, 0] = N
+    C_tensor[1, 0, 0, 1] = N
+    C_tensor[1, 0, 1, 0] = N
+
+    # Major symmetry (ij <-> kl) is ensured by the explicit mirrored assignments above.
+    return C_tensor
+
+
+def isotropic_tensor_4th(lam: float, mu: float) -> np.ndarray:
+    """
+    Construct an isotropic elastic tensor directly as a 4th-order tensor.
+
+    Uses the compact expression: C_ijkl = lam δ_ij δ_kl + mu (δ_ik δ_jl + δ_il δ_jk)
+
+    Parameters
+    ----------
+    lam : float
+        Lamé constant (λ)
+    mu : float
+        Shear modulus (μ)
+
+    Returns
+    -------
+    C : ndarray, shape (3, 3, 3, 3)
+        Isotropic elastic tensor in full index notation.
+    """
+    delta = np.eye(3)
+    C = lam * np.einsum("ij,kl->ijkl", delta, delta) + mu * (
+        np.einsum("ik,jl->ijkl", delta, delta) + np.einsum("il,jk->ijkl", delta, delta)
+    )
+    return C
