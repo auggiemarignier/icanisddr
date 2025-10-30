@@ -246,7 +246,7 @@ def transformation_to_voigt(T: np.ndarray) -> np.ndarray:
 
 
 def transverse_isotropic_tensor(
-    A: float, C: float, L: float, N: float, F: float
+    A: float, C: float, F: float, L: float, N: float
 ) -> np.ndarray:
     """
     Construct a transverse isotropic elastic tensor in Voigt notation.
@@ -264,12 +264,12 @@ def transverse_isotropic_tensor(
         Elastic constant C11 = C22
     C : float
         Elastic constant C33
+    F : float
+        Elastic constant C13 = C23
     L : float
         Elastic constant C44 = C55
     N : float
         Elastic constant C66
-    F : float
-        Elastic constant C13 = C23
 
     Returns
     -------
@@ -330,7 +330,7 @@ def isotropic_tensor(lam: float, mu: float) -> np.ndarray:
 
 
 def transverse_isotropic_tensor_4th(
-    A: float, C: float, L: float, N: float, F: float
+    A: float, C: float, F: float, L: float, N: float
 ) -> np.ndarray:
     """
     Construct a transverse isotropic elastic tensor directly as a 4th-order tensor.
@@ -343,12 +343,12 @@ def transverse_isotropic_tensor_4th(
         Elastic constant C11 = C22
     C : float
         Elastic constant C33
+    F : float
+        Elastic constant C13 = C23
     L : float
         Elastic constant C44 = C55
     N : float
         Elastic constant C66
-    F : float
-        Elastic constant C13 = C23
 
     Returns
     -------

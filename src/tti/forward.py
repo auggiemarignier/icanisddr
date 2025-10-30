@@ -40,7 +40,7 @@ def construct_general_tti_tensor(
     C_rotated : ndarray, shape (6, 6)
         Rotated transverse isotropic elastic tensor in Voigt notation.
     """
-    C_tti = transverse_isotropic_tensor(A, C, L, N, F)
+    C_tti = transverse_isotropic_tensor(A, C, F, L, N)
     R6 = transformation_to_voigt(
         transformation_4th_order(rotation_matrix_zy(eta1, eta2))
     )
