@@ -2,16 +2,16 @@
 
 import numpy as np
 
-from .elastic import transformation_to_voigt, transverse_isotropic_tensor
-from .rotation import rotation_matrix_zy, transformation_4th_order
+from .elastic import transverse_isotropic_tensor
+from .rotation import rotation_matrix_zy
 
 
 def construct_general_tti_tensor(
     A: float,
     C: float,
+    F: float,
     L: float,
     N: float,
-    F: float,
     eta1: float,
     eta2: float,
 ) -> np.ndarray:
@@ -24,12 +24,12 @@ def construct_general_tti_tensor(
         Elastic constant C11 = C22
     C : float
         Elastic constant C33
+    F : float
+        Elastic constant C13 = C23
     L : float
         Elastic constant C44 = C55
     N : float
         Elastic constant C66
-    F : float
-        Elastic constant C13 = C23
     eta1 : float
         Tilt angle in radians.
     eta2 : float
@@ -41,10 +41,9 @@ def construct_general_tti_tensor(
         Rotated transverse isotropic elastic tensor in Voigt notation.
     """
     C_tti = transverse_isotropic_tensor(A, C, F, L, N)
-    R6 = transformation_to_voigt(
-        transformation_4th_order(rotation_matrix_zy(eta1, eta2))
-    )
-    C_rotated = R6 @ C_tti @ R6.T
+    R = rotation_matrix_zy(eta1, eta2)
+
+    C_rotated = np.einsum("pi,qj,rk,sl,ijkl->pqrs", R, R, R, R, C_tti)
 
     return C_rotated
 
