@@ -6,10 +6,12 @@ import pytest
 from tti.elastic import (
     _check_elastic_tensor_symmetry,
     elastic_tensor_to_voigt,
+    isotropic_tensor_4th,
     transformation_to_voigt,
+    transverse_isotropic_tensor_4th,
     transverse_isotropic_tensor_voigt,
 )
-from tti.forward import construct_general_tti_tensor
+from tti.forward import calculate_relative_traveltime, construct_general_tti_tensor
 from tti.rotation import rotation_matrix_zy, transformation_4th_order
 
 
@@ -93,3 +95,93 @@ def test_4th_order_gives_same_as_voigt(C4: np.ndarray, C6: np.ndarray) -> None:
     """Test that the 4th-order and Voigt implementations give the same result."""
 
     np.testing.assert_allclose(elastic_tensor_to_voigt(C4), C6)
+
+
+def test_traveltime_zero_for_zero_perturbation() -> None:
+    """Zero perturbation tensor gives zero traveltime anomaly."""
+
+    D = np.zeros((3, 3, 3, 3))
+    n = np.array([0.0, 0.0, 1.0])
+
+    dt = calculate_relative_traveltime(n, D)
+
+    assert dt == 0.0
+
+
+def test_traveltime_isotropic_independent_of_direction(
+    rng: np.random.Generator,
+) -> None:
+    """Isotropic perturbation gives same result for all ray directions."""
+
+    lam, mu = 12.0, 5.0
+    D = isotropic_tensor_4th(lam, mu)
+
+    # Try several random directions
+    directions = rng.normal(size=(10, 3))
+    directions = directions / np.linalg.norm(directions, axis=1, keepdims=True)
+
+    results = [calculate_relative_traveltime(n, D) for n in directions]
+
+    # All should be equal for isotropic medium
+    np.testing.assert_allclose(results, results[0], rtol=1e-12)
+
+
+def test_traveltime_linear_in_perturbation(
+    A: float, C: float, F: float, L: float, N: float
+) -> None:
+    """Doubling the perturbation tensor doubles the traveltime anomaly."""
+
+    D = transverse_isotropic_tensor_4th(A, C, F, L, N)
+    n = np.array([1.0, 0.0, 0.0])
+
+    dt1 = calculate_relative_traveltime(n, D)
+    dt2 = calculate_relative_traveltime(n, 2 * D)
+
+    np.testing.assert_allclose(dt2, 2 * dt1, rtol=1e-12)
+
+
+def test_traveltime_known_diagonal_tensor() -> None:
+    """Test against hand-calculated result for simple diagonal tensor."""
+
+    # D_iijj = δ_ij for i,j in {0,1,2}
+    D = np.zeros((3, 3, 3, 3))
+    D[0, 0, 0, 0] = 1.0
+    D[1, 1, 1, 1] = 2.0
+    D[2, 2, 2, 2] = 3.0
+
+    # Only non-zero components are when i=j=k=l D_0000, D_1111, D_2222
+    # For n = (nx, ny, nz), result should be nx^4 + 2*ny^4 + 3*nz^4
+    n = np.array([0.6, 0.0, 0.8])  # normalised
+    expected = 1.0 * (0.6**4) + 3.0 * (0.8**4)
+
+    dt = calculate_relative_traveltime(n, D)
+
+    np.testing.assert_allclose(dt, expected, rtol=1e-12)
+
+
+def test_traveltime_antiparallel_rays_equal(
+    A: float, C: float, F: float, L: float, N: float
+) -> None:
+    """Ray and its opposite give the same traveltime (even power)."""
+
+    D = transverse_isotropic_tensor_4th(A, C, F, L, N)
+
+    n = np.array([0.6, 0.8, 0.0])
+    dt_forward = calculate_relative_traveltime(n, D)
+    dt_backward = calculate_relative_traveltime(-n, D)
+
+    np.testing.assert_allclose(dt_forward, dt_backward, rtol=1e-12)
+
+
+def test_traveltime_shape_validation() -> None:
+    """Function raises appropriate error for wrong input shapes."""
+
+    D = np.zeros((3, 3, 3, 3))
+
+    with pytest.raises((ValueError, IndexError)):
+        calculate_relative_traveltime(np.array([1.0, 0.0]), D)  # n wrong shape
+
+    with pytest.raises((ValueError, IndexError)):
+        calculate_relative_traveltime(
+            np.array([1.0, 0.0, 0.0]), np.zeros((3, 3))
+        )  # D wrong shape
