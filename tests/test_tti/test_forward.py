@@ -36,13 +36,13 @@ def F() -> float:
 @pytest.fixture
 def L() -> float:
     """Fixture for elastic constant L."""
-    return 5.0
+    return 0.15
 
 
 @pytest.fixture
 def N() -> float:
     """Fixture for elastic constant N."""
-    return 7.0
+    return 0.1
 
 
 @pytest.fixture
@@ -185,3 +185,104 @@ def test_traveltime_shape_validation() -> None:
         calculate_relative_traveltime(
             np.array([1.0, 0.0, 0.0]), np.zeros((3, 3))
         )  # D wrong shape
+
+
+def calc_dt_creager(theta: float, a: float, b: float, c: float) -> float:
+    """Calculate the traveltime anomaly according to Creager 1992 formula.
+
+    delta t / t = a + b cos^2(theta) + c cos^4(theta)
+
+    where a, b, c are functions of the elastic constants, theta is the angle from the symmetry axis (z-axis, ERA). Assumes symmetry axis is vertical.
+
+    a = C11 (equatorial velocity perturbation)
+    b = (C33 - C11) / (2C11) = (C - A) / (2A)
+    c = (4C44 + 2C13 - C11 - C33) / (8C11) = (4L + 2F - A - C) / (8A)
+    """
+    return a + b * (np.cos(theta) ** 2) + c * (np.cos(theta) ** 4)
+
+
+def test_traveltime_equivalence_with_creager_isotropic(
+    F: float, L: float, rng: np.random.Generator
+) -> None:
+    """Test that the traveltime calculation matches Creager 1992 in the isotropic case.
+
+    In the isotropic case,
+        b = c = 0
+        a = A = C = 2L + F = lambda + 2mu
+        F = lambda
+        L = N = mu
+    The traveltime should be independent of direction and equal to a i.e the P-wave velocity.
+    """
+    lambda_ = F
+    lambda_plus_two_mu = 2 * L + F
+    mu = L
+    D = construct_general_tti_tensor(
+        lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu, 0.0, 0.0
+    )
+    a = lambda_plus_two_mu
+    b = 0
+    c = 0
+
+    theta = rng.uniform(0, 2 * np.pi)
+    n = np.array([np.sin(theta), 0.0, np.cos(theta)])
+
+    dt_tti = calculate_relative_traveltime(n, D)
+    dt_creager = calc_dt_creager(theta, a, b, c)
+    np.testing.assert_allclose(dt_tti, dt_creager, rtol=1e-12)
+
+
+def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
+    A: float, C: float, F: float, L: float, N: float
+) -> None:
+    """Test that the traveltime calculation matches Creager 1992 in the TI case when parallel to symmetry axis.
+
+    The symmetry axis is vertical (eta1 = eta2 = 0).
+
+    If theta = 0 (ray along symmetry axis), then I would expect the traveltime perturbation to be C_33 i.e. the velocity perturbation along the symmetry axis.
+    """
+
+    D = construct_general_tti_tensor(A, C, F, L, N, 0.0, 0.0)
+    a = C - (3 * C - 5 * A + 4 * L + 2 * F) / (8 * A)
+    b = (C - A) / (2 * A)
+    c = (4 * L + 2 * F - A - C) / (8 * A)
+
+    theta = 0
+    n = np.array([np.sin(theta), 0.0, np.cos(theta)])
+
+    dt_tti = calculate_relative_traveltime(n, D)
+    dt_creager = calc_dt_creager(theta, a, b, c)
+
+    # what I expect intuitively
+    expected = C
+    np.testing.assert_allclose(dt_tti, expected, rtol=1e-12)
+
+    np.testing.assert_allclose(dt_creager, expected, rtol=1e-12)
+
+    np.testing.assert_allclose(dt_tti, dt_creager, rtol=1e-12)
+
+
+def test_traveltime_equivalence_with_creager_transverse_isotropic_perpendicular(
+    A: float, C: float, F: float, L: float, N: float
+) -> None:
+    """Test that the traveltime calculation matches Creager 1992 in the TI case when perpendicular to symmetry axis.
+
+    The symmetry axis is vertical (eta1 = eta2 = 0).
+
+    If theta = pi/2 (ray perpendicular to symmetry axis i.e. equatorial), then the traveltime should be equal to the velocity in that direction, C_11 = A.
+    """
+
+    D = construct_general_tti_tensor(A, C, F, L, N, 0.0, 0.0)
+    a = A
+    b = (C - A) / (2 * A)
+    c = (4 * L + 2 * F - A - C) / (8 * A)
+
+    theta = np.pi / 2
+    n = np.array([np.sin(theta), 0.0, np.cos(theta)])
+
+    dt_tti = calculate_relative_traveltime(n, D)
+    dt_creager = calc_dt_creager(theta, a, b, c)
+
+    # what I expect intuitively
+    np.testing.assert_allclose(dt_creager, A, rtol=1e-12)
+
+    np.testing.assert_allclose(dt_tti, dt_creager, rtol=1e-12)
