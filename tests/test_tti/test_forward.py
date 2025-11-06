@@ -1,8 +1,12 @@
 """Test the forward modelling functions for TTI media."""
 
+from typing import Literal
+
 import numpy as np
 import pytest
 
+from tti.creager import calculate_traveltime as calc_dt_creager
+from tti.creager import love_to_creager
 from tti.elastic import (
     _check_elastic_tensor_symmetry,
     elastic_tensor_to_voigt,
@@ -187,24 +191,16 @@ def test_traveltime_shape_validation() -> None:
         )  # D wrong shape
 
 
-def calc_dt_creager(theta: float, a: float, b: float, c: float) -> float:
-    """Calculate the traveltime anomaly according to Creager 1992 formula.
-
-    delta t / t = a + b cos^2(theta) + c cos^4(theta)
-
-    where a, b, c are functions of the elastic constants, theta is the angle from the symmetry axis (z-axis, ERA). Assumes symmetry axis is vertical.
-
-    a = C11 (equatorial velocity perturbation)
-    b = (C33 - C11) / (2C11) = (C - A) / (2A)
-    c = (4C44 + 2C13 - C11 - C33) / (8C11) = (4L + 2F - A - C) / (8A)
-    """
-    return a + b * (np.cos(theta) ** 2) + c * (np.cos(theta) ** 4)
-
-
+@pytest.mark.parametrize("direction", ["polar", "equatorial"])
 def test_traveltime_equivalence_with_creager_isotropic(
-    F: float, L: float, rng: np.random.Generator
+    direction: Literal["polar", "equatorial"],
+    F: float,
+    L: float,
+    rng: np.random.Generator,
 ) -> None:
     """Test that the traveltime calculation matches Creager 1992 in the isotropic case.
+
+    Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
 
     In the isotropic case,
         b = c = 0
@@ -219,9 +215,9 @@ def test_traveltime_equivalence_with_creager_isotropic(
     D = construct_general_tti_tensor(
         lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu, 0.0, 0.0
     )
-    a = lambda_plus_two_mu
-    b = 0
-    c = 0
+    a, b, c = love_to_creager(
+        direction, lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu
+    )
 
     theta = rng.uniform(0, 2 * np.pi)
     n = np.array([np.sin(theta), 0.0, np.cos(theta)])
@@ -236,15 +232,13 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
 ) -> None:
     """Test that the traveltime calculation matches Creager 1992 in the TI case when parallel to symmetry axis.
 
-    The symmetry axis is vertical (eta1 = eta2 = 0).
+    Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
 
     If theta = 0 (ray along symmetry axis), then I would expect the traveltime perturbation to be C_33 i.e. the velocity perturbation along the symmetry axis.
     """
 
     D = construct_general_tti_tensor(A, C, F, L, N, 0.0, 0.0)
-    a = C - (3 * C - 5 * A + 4 * L + 2 * F) / (8 * A)
-    b = (C - A) / (2 * A)
-    c = (4 * L + 2 * F - A - C) / (8 * A)
+    a, b, c = love_to_creager("polar", A, C, F, L, N)
 
     theta = 0
     n = np.array([np.sin(theta), 0.0, np.cos(theta)])
@@ -266,15 +260,13 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_perpendicular(
 ) -> None:
     """Test that the traveltime calculation matches Creager 1992 in the TI case when perpendicular to symmetry axis.
 
-    The symmetry axis is vertical (eta1 = eta2 = 0).
+    Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
 
     If theta = pi/2 (ray perpendicular to symmetry axis i.e. equatorial), then the traveltime should be equal to the velocity in that direction, C_11 = A.
     """
 
     D = construct_general_tti_tensor(A, C, F, L, N, 0.0, 0.0)
-    a = A
-    b = (C - A) / (2 * A)
-    c = (4 * L + 2 * F - A - C) / (8 * A)
+    a, b, c = love_to_creager("equatorial", A, C, F, L, N)
 
     theta = np.pi / 2
     n = np.array([np.sin(theta), 0.0, np.cos(theta)])
