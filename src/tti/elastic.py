@@ -17,18 +17,6 @@ VOIGT_MAP = {
     5: [0, 1],
 }
 
-VOIGT_MAP_INV = {
-    (0, 0): 0,
-    (1, 1): 1,
-    (2, 2): 2,
-    (1, 2): 3,
-    (2, 1): 3,
-    (0, 2): 4,
-    (2, 0): 4,
-    (0, 1): 5,
-    (1, 0): 5,
-}
-
 _VMAP = np.array(
     [
         [0, 0],
@@ -58,8 +46,8 @@ def _check_minor_symmetry(C: np.ndarray) -> bool:
     bool
         True if the tensor has the required symmetries, False otherwise.
     """
-    ijkl_eq_jikl = np.array_equal(C, np.swapaxes(C, 0, 1))
-    ijkl_eq_ijlk = np.array_equal(C, np.swapaxes(C, 2, 3))
+    ijkl_eq_jikl = np.allclose(C, np.swapaxes(C, 0, 1))
+    ijkl_eq_ijlk = np.allclose(C, np.swapaxes(C, 2, 3))
     return ijkl_eq_jikl and ijkl_eq_ijlk
 
 
@@ -78,7 +66,7 @@ def _check_major_symmetry(C: np.ndarray) -> bool:
     bool
         True if the tensor has the required symmetry, False otherwise.
     """
-    return np.array_equal(C, np.transpose(C, (2, 3, 0, 1)))
+    return np.allclose(C, np.transpose(C, (2, 3, 0, 1)))
 
 
 def _check_elastic_tensor_symmetry(C: np.ndarray) -> bool:
@@ -99,43 +87,7 @@ def _check_elastic_tensor_symmetry(C: np.ndarray) -> bool:
     return _check_minor_symmetry(C) and _check_major_symmetry(C)
 
 
-def elastic_tensor_to_voigt_loop(C: np.ndarray) -> np.ndarray:
-    """
-    Convert a 4th order elastic tensor (3x3x3x3) to Voigt notation (6x6).
-
-    There is no imposition of symmetries in this implementation.
-    As a result, the input tensor is expected to already have the major and minor symmetries of the elastic tensor.
-
-    C_ijkl = C_jikl = C_ijlk = C_jilk = C_klij = C_lkij = C_klji = C_lkji
-
-    The value of C_mn will be the last value assigned from the corresponding C_ijkl components.
-
-    Parameters
-    ----------
-    C : ndarray, shape (3, 3, 3, 3)
-        Fourth order elastic tensor
-
-    Returns
-    -------
-    C_voigt : ndarray, shape (6, 6)
-        Elastic tensor in Voigt notation
-    """
-    if not _check_elastic_tensor_symmetry(C):
-        raise ValueError("Input elastic tensor does not have the required symmetries.")
-
-    C_voigt = np.zeros((6, 6))
-
-    for i in range(3):
-        for j in range(3):
-            m = VOIGT_MAP_INV[(i, j)]
-            for k in range(3):
-                for l in range(3):
-                    n = VOIGT_MAP_INV[(k, l)]
-                    C_voigt[m, n] = C[i, j, k, l]
-    return C_voigt
-
-
-def elastic_tensor_to_voigt_vec(C: np.ndarray) -> np.ndarray:
+def elastic_tensor_to_voigt(C: np.ndarray) -> np.ndarray:
     """
     Convert a fully symmetric 4th-order elastic tensor (C_ijkl) to 6x6 Voigt notation (C_voigt).
 
@@ -164,9 +116,6 @@ def elastic_tensor_to_voigt_vec(C: np.ndarray) -> np.ndarray:
     C_voigt[:, :] = C[ij[..., 0], ij[..., 1], kl[..., 0], kl[..., 1]]
 
     return C_voigt
-
-
-elastic_tensor_to_voigt = elastic_tensor_to_voigt_vec
 
 
 def voigt_to_elastic_tensor(C_voigt: np.ndarray) -> np.ndarray:
@@ -245,8 +194,8 @@ def transformation_to_voigt(T: np.ndarray) -> np.ndarray:
     return T_voigt
 
 
-def transverse_isotropic_tensor(
-    A: float, C: float, L: float, N: float, F: float
+def transverse_isotropic_tensor_voigt(
+    A: float, C: float, F: float, L: float, N: float
 ) -> np.ndarray:
     """
     Construct a transverse isotropic elastic tensor in Voigt notation.
@@ -264,12 +213,12 @@ def transverse_isotropic_tensor(
         Elastic constant C11 = C22
     C : float
         Elastic constant C33
+    F : float
+        Elastic constant C13 = C23
     L : float
         Elastic constant C44 = C55
     N : float
         Elastic constant C66
-    F : float
-        Elastic constant C13 = C23
 
     Returns
     -------
@@ -291,7 +240,7 @@ def transverse_isotropic_tensor(
     return C_voigt
 
 
-def isotropic_tensor(lam: float, mu: float) -> np.ndarray:
+def isotropic_tensor_voigt(lam: float, mu: float) -> np.ndarray:
     """
     Construct an isotropic elastic tensor in Voigt notation.
 
@@ -327,3 +276,161 @@ def isotropic_tensor(lam: float, mu: float) -> np.ndarray:
     )
 
     return C_voigt
+
+
+def transverse_isotropic_tensor_4th(
+    A: float, C: float, F: float, L: float, N: float
+) -> np.ndarray:
+    """
+    Construct a transverse isotropic elastic tensor directly as a 4th-order tensor.
+
+    Assumes the symmetry axis is along the z-axis.
+
+    Parameters
+    ----------
+    A : float
+        Elastic constant C11 = C22
+    C : float
+        Elastic constant C33
+    F : float
+        Elastic constant C13 = C23
+    L : float
+        Elastic constant C44 = C55
+    N : float
+        Elastic constant C66
+
+    Returns
+    -------
+    C : ndarray, shape (3, 3, 3, 3)
+        Transverse isotropic elastic tensor (fully symmetric) in index form.
+    """
+    C_tensor = np.zeros((3, 3, 3, 3), dtype=float)
+
+    # Normal components
+    C_tensor[0, 0, 0, 0] = A
+    C_tensor[1, 1, 1, 1] = A
+    C_tensor[2, 2, 2, 2] = C
+
+    # Cross normal terms implied by Voigt: C12 = A-2N, C13 = C23 = F
+    A_2N = A - 2 * N
+
+    # C1122 and symmetric permutations
+    C_tensor[0, 0, 1, 1] = A_2N
+    C_tensor[1, 1, 0, 0] = A_2N
+
+    # Coupling with symmetry axis (F): C1133 = C2233 = F and symmetries
+    C_tensor[0, 0, 2, 2] = F
+    C_tensor[2, 2, 0, 0] = F
+    C_tensor[1, 1, 2, 2] = F
+    C_tensor[2, 2, 1, 1] = F
+
+    # Shear components (minor symmetries enforced explicitly)
+    # yz shear: C2323 = L and permutations
+    C_tensor[1, 2, 1, 2] = L
+    C_tensor[1, 2, 2, 1] = L
+    C_tensor[2, 1, 1, 2] = L
+    C_tensor[2, 1, 2, 1] = L
+
+    # xz shear: C1313 = L and permutations
+    C_tensor[0, 2, 0, 2] = L
+    C_tensor[0, 2, 2, 0] = L
+    C_tensor[2, 0, 0, 2] = L
+    C_tensor[2, 0, 2, 0] = L
+
+    # xy shear: C1212 = N and permutations
+    C_tensor[0, 1, 0, 1] = N
+    C_tensor[0, 1, 1, 0] = N
+    C_tensor[1, 0, 0, 1] = N
+    C_tensor[1, 0, 1, 0] = N
+
+    # Major symmetry (ij <-> kl) is ensured by the explicit mirrored assignments above.
+    return C_tensor
+
+
+def isotropic_tensor_4th(lam: float, mu: float) -> np.ndarray:
+    """
+    Construct an isotropic elastic tensor directly as a 4th-order tensor.
+
+    Uses the compact expression: C_ijkl = lam δ_ij δ_kl + mu (δ_ik δ_jl + δ_il δ_jk)
+
+    Parameters
+    ----------
+    lam : float
+        Lamé constant (λ)
+    mu : float
+        Shear modulus (μ)
+
+    Returns
+    -------
+    C : ndarray, shape (3, 3, 3, 3)
+        Isotropic elastic tensor in full index notation.
+    """
+    delta = np.eye(3)
+    C = lam * np.einsum("ij,kl->ijkl", delta, delta) + mu * (
+        np.einsum("ik,jl->ijkl", delta, delta) + np.einsum("il,jk->ijkl", delta, delta)
+    )
+    return C
+
+
+def transverse_isotropic_tensor(
+    A: float, C: float, F: float, L: float, N: float
+) -> np.ndarray:
+    """
+    Construct a transverse isotropic elastic tensor (4th-order representation).
+
+    This returns the tensor as a 3x3x3x3 array, suitable for direct tensor operations
+    like rotations and contractions. For 6x6 Voigt notation, use
+    transverse_isotropic_tensor_voigt() instead.
+
+    Parameters
+    ----------
+    A : float
+        Elastic constant C11 = C22
+    C : float
+        Elastic constant C33
+    F : float
+        Elastic constant C13 = C23
+    L : float
+        Elastic constant C44 = C55
+    N : float
+        Elastic constant C66
+
+    Returns
+    -------
+    C : ndarray, shape (3, 3, 3, 3)
+        Transverse isotropic elastic tensor in 4th-order form.
+
+    See Also
+    --------
+    transverse_isotropic_tensor_voigt : Voigt notation (6x6) version
+    transverse_isotropic_tensor_4th : Direct alias to this implementation
+    """
+    return transverse_isotropic_tensor_4th(A, C, F, L, N)
+
+
+def isotropic_tensor(lam: float, mu: float) -> np.ndarray:
+    """
+    Construct an isotropic elastic tensor (4th-order representation).
+
+    This returns the tensor as a 3x3x3x3 array, suitable for direct tensor operations
+    like rotations and contractions. For 6x6 Voigt notation, use
+    isotropic_tensor_voigt() instead.
+
+    Parameters
+    ----------
+    lam : float
+        Lamé constant (λ)
+    mu : float
+        Shear modulus (μ)
+
+    Returns
+    -------
+    C : ndarray, shape (3, 3, 3, 3)
+        Isotropic elastic tensor in 4th-order form.
+
+    See Also
+    --------
+    isotropic_tensor_voigt : Voigt notation (6x6) version
+    isotropic_tensor_4th : Direct alias to this implementation
+    """
+    return isotropic_tensor_4th(lam, mu)

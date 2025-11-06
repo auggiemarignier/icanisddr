@@ -5,6 +5,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "cSpell.words": [
+        "creager",
         "ijkl",
         "ijlk",
         "jikl",
@@ -13,6 +14,7 @@
         "klji",
         "lkij",
         "lkji",
+        "traveltime",
         "VMAP"
     ]
 }
