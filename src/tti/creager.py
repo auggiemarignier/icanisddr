@@ -1,5 +1,4 @@
-"""
-Functions relating to Creager 1992 traveltime perturbation calculations.
+"""Functions relating to Creager 1992 traveltime perturbation calculations.
 
 The traveltime perturbation according to Creager 1992 is given by:
 
@@ -11,23 +10,35 @@ From Brett et al. (2024) the parameters b and c are given in terms of the elasti
     b = (C_33 - C_11) / (2 * C_11)
     c = (4 * C_44 + 2 * C_13 - C_11 - C_33) / (8 * C_11)
 
-In the case of a polar path (theta = 0), the traveltime perturbation simplifies to:
+So we have 3 equations and 4 unknowns (dt, a, b, c). We can determine a in terms of the elastic constants for the polar and equatorial paths, as for these paths we know the traveltime perturbation directly from the elastic constants.
+
+For the polar path (theta = 0) the ray is along the symmetry axis (z, 3, ERA) so the traveltime perturbation should be equal to C_33, i.e.
     dt(0) = a + b + c = C_33
-where the last equality comes from the fact that direction 3 (z) is along the symmetry axis (ERA).
-Thus, we can derive the parameter a as:
-    a = C_33 - (3 * C_33 - 5 * C_11 + 4 * C_44 + 2 * C_13) / (8 * C_11)
+Solving for a gives:
+    a = C_33 - b - c
+
+For the equatorial path (theta = pi/2) the ray is perpendicular to the symmetry axis (x or y, 1 or 2) so the traveltime perturbation should be equal to C_11, i.e.
+    dt(pi/2) = a = C_11
 """
+
+from typing import Literal
 
 import numpy as np
 
 
 def love_to_creager(
-    A: float, C: float, F: float, L: float, N: float = 0.0
+    direction: Literal["polar", "equatorial"],
+    A: float,
+    C: float,
+    F: float,
+    L: float,
+    N: float = 0.0,
 ) -> tuple[float, float, float]:
     """Convert from Love parameters to Creager 1992 parameters a, b, c.
 
     Parameters
     ----------
+    direction : Literal['polar', 'equatorial']
     A : float
         Love parameter A (C_11)
     C : float
@@ -48,9 +59,17 @@ def love_to_creager(
     c : float
         Creager parameter c
     """
-    a = C - (3 * C - 5 * A + 4 * L + 2 * F) / (8 * A)
     b = (C - A) / (2 * A)
     c = (4 * L + 2 * F - A - C) / (8 * A)
+
+    match direction.lower():
+        case "polar":
+            a = C - b - c
+        case "equatorial":
+            a = A
+        case _:
+            raise ValueError("direction must be 'polar' or 'equatorial'")
+
     return a, b, c
 
 
