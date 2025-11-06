@@ -16,7 +16,7 @@ def construct_general_tti_tensor(
     eta2: float,
 ) -> np.ndarray:
     """
-    Construct a rotated transverse isotropic elastic tensor in Voigt notation.
+    Construct a rotated transverse isotropic elastic tensor.
 
     Parameters
     ----------
