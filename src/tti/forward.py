@@ -37,8 +37,8 @@ def construct_general_tti_tensor(
 
     Returns
     -------
-    C_rotated : ndarray, shape (6, 6)
-        Rotated transverse isotropic elastic tensor in Voigt notation.
+    C_rotated : ndarray, shape (3, 3, 3, 3)
+        Rotated transverse isotropic elastic tensor as a 4th-order tensor (not in Voigt notation).
     """
     C_tti = transverse_isotropic_tensor(A, C, F, L, N)
     R = rotation_matrix_zy(eta1, eta2)
