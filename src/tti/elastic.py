@@ -317,10 +317,6 @@ def transverse_isotropic_tensor_4th(
     # C1122 and symmetric permutations
     C_tensor[0, 0, 1, 1] = A_2N
     C_tensor[1, 1, 0, 0] = A_2N
-    C_tensor[0, 1, 0, 1] = N
-    C_tensor[1, 0, 1, 0] = N
-    C_tensor[0, 1, 1, 0] = N
-    C_tensor[1, 0, 0, 1] = N
 
     # Coupling with symmetry axis (F): C1133 = C2233 = F and symmetries
     C_tensor[0, 0, 2, 2] = F
