@@ -79,33 +79,35 @@ def calculate_path_direction_vector(
 
     Parameters
     ----------
-    ic_in : ndarray, shape (3,)
+    ic_in : ndarray, shape (..., 3)
         Where the path enters the inner core (longitude (deg), latitude (deg), radius (km)).
-    ic_out : ndarray, shape (3,)
+    ic_out : ndarray, shape (..., 3)
         Where the path exits the inner core (longitude (deg), latitude (deg), radius (km)).
 
     Returns
     -------
-    n : ndarray, shape (3,)
+    n : ndarray, shape (..., 3)
         Path direction unit vector.
     """
-    ic_in = _spherical_to_cartesian(*ic_in)
-    ic_out = _spherical_to_cartesian(*ic_out)
-    path_vector = ic_out - ic_in
-    return path_vector / np.linalg.norm(path_vector)
+    ic_in_xyz = _spherical_to_cartesian(ic_in[..., 0], ic_in[..., 1], ic_in[..., 2])
+    ic_out_xyz = _spherical_to_cartesian(ic_out[..., 0], ic_out[..., 1], ic_out[..., 2])
+    path_vector = ic_out_xyz - ic_in_xyz
+    return path_vector / np.linalg.norm(path_vector, axis=-1, keepdims=True)
 
 
-def _spherical_to_cartesian(lon: float, lat: float, r: float) -> np.ndarray:
+def _spherical_to_cartesian(
+    lon: float | np.ndarray, lat: float | np.ndarray, r: float | np.ndarray
+) -> np.ndarray:
     """
     Convert spherical coordinates to Cartesian coordinates.
 
     Parameters
     ----------
-    lon : float
+    lon : float | np.ndarray
         Longitude in degrees.
-    lat : float
+    lat : float | np.ndarray
         Latitude in degrees.
-    r : float
+    r : float | np.ndarray
         Radius.
 
     Returns
@@ -113,10 +115,14 @@ def _spherical_to_cartesian(lon: float, lat: float, r: float) -> np.ndarray:
     ndarray, shape (3,)
         Cartesian coordinates (x, y, z).
     """
+    lon = np.asarray(lon)
+    lat = np.asarray(lat)
+    r = np.asarray(r)
+
     colat = np.radians(90 - lat)
     lon = np.radians(lon)
     x = r * np.sin(colat) * np.cos(lon)
     y = r * np.sin(colat) * np.sin(lon)
     z = r * np.cos(colat)
 
-    return np.array([x, y, z])
+    return np.stack((x, y, z), axis=-1)
