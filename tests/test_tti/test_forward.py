@@ -117,6 +117,31 @@ def test_traveltime_zero_for_zero_perturbation() -> None:
     assert dt == 0.0
 
 
+def test_traveltime_batch() -> None:
+    """Test traveltime calculation for a batch of ray directions."""
+
+    D = np.zeros((3, 3, 3, 3))
+    D[0, 0, 0, 0] = 1.0
+    D[1, 1, 1, 1] = 2.0
+    D[2, 2, 2, 2] = 3.0
+
+    # Batch of 3 normalised ray directions
+    n_batch = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+
+    dt_batch = calculate_relative_traveltime(n_batch, D)
+
+    expected = np.array([1.0, 2.0, 3.0])
+
+    assert dt_batch.shape == (3,)
+    np.testing.assert_allclose(dt_batch, expected)
+
+
 def test_traveltime_isotropic_independent_of_direction(
     rng: np.random.Generator,
 ) -> None:
@@ -129,7 +154,7 @@ def test_traveltime_isotropic_independent_of_direction(
     directions = rng.normal(size=(10, 3))
     directions = directions / np.linalg.norm(directions, axis=1, keepdims=True)
 
-    results = [calculate_relative_traveltime(n, D) for n in directions]
+    results = calculate_relative_traveltime(directions, D)
 
     # All should be equal for isotropic medium
     np.testing.assert_allclose(results, results[0])

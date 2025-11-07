@@ -48,7 +48,7 @@ def construct_general_tti_tensor(
     return C_rotated
 
 
-def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> float:
+def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> np.ndarray:
     r"""
     Calculate relative traveltime perturbation.
 
@@ -57,17 +57,17 @@ def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> float:
 
     Parameters
     ----------
-    n : ndarray, shape (3,)
+    n : ndarray, shape (..., 3)
         Ray direction unit vector.
     D : ndarray, shape (3, 3, 3, 3)
         4th-order perturbation tensor.
 
     Returns
     -------
-    float
+    np.ndarray, shape (...)
         Relative traveltime perturbation.
     """
-    return np.einsum("ijkl,i,j,k,l", D, n, n, n, n)
+    return np.einsum("ijkl,...i,...j,...k,...l", D, n, n, n, n)
 
 
 def calculate_path_direction_vector(
