@@ -67,5 +67,56 @@ def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> float:
     float
         Relative traveltime perturbation.
     """
-    dt_over_t = np.einsum("ijkl,i,j,k,l", D, n, n, n, n)
-    return dt_over_t
+    return np.einsum("ijkl,i,j,k,l", D, n, n, n, n)
+
+
+def calculate_path_direction_vector(
+    ic_in: np.ndarray,
+    ic_out: np.ndarray,
+) -> np.ndarray:
+    """
+    Calculate the path direction unit vector from ic_in to ic_out.
+
+    Parameters
+    ----------
+    ic_in : ndarray, shape (3,)
+        Where the path enters the inner core (longitude (deg), latitude (deg), radius (km)).
+    ic_out : ndarray, shape (3,)
+        Where the path exits the inner core (longitude (deg), latitude (deg), radius (km)).
+
+    Returns
+    -------
+    n : ndarray, shape (3,)
+        Path direction unit vector.
+    """
+    ic_in = _spherical_to_cartesian(*ic_in)
+    ic_out = _spherical_to_cartesian(*ic_out)
+    path_vector = ic_out - ic_in
+    return path_vector / np.linalg.norm(path_vector)
+
+
+def _spherical_to_cartesian(lon: float, lat: float, r: float) -> np.ndarray:
+    """
+    Convert spherical coordinates to Cartesian coordinates.
+
+    Parameters
+    ----------
+    lon : float
+        Longitude in degrees.
+    lat : float
+        Latitude in degrees.
+    r : float
+        Radius.
+
+    Returns
+    -------
+    ndarray, shape (3,)
+        Cartesian coordinates (x, y, z).
+    """
+    colat = np.radians(90 - lat)
+    lon = np.radians(lon)
+    x = r * np.sin(colat) * np.cos(lon)
+    y = r * np.sin(colat) * np.sin(lon)
+    z = r * np.cos(colat)
+
+    return np.array([x, y, z])
