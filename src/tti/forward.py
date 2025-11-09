@@ -148,6 +148,24 @@ class TravelTimeCalculator:
         self.ic_out = ic_out
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
 
+    def __call__(self, m: np.ndarray) -> np.ndarray:
+        """
+        Calculate relative traveltime perturbations for all paths given TTI model parameters.
+
+        Parameters
+        ----------
+        m : ndarray, shape (7,)
+            Model parameters: [A, C, F, L, N, eta1, eta2]
+
+        Returns
+        -------
+        ndarray, shape (num_paths,)
+            Relative traveltime perturbations for each path.
+        """
+        A, C, F, L, N, eta1, eta2 = m
+        D = construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
+        return self.calculate_traveltimes(D)
+
     def calculate_traveltimes(self, D: np.ndarray) -> np.ndarray:
         """
         Calculate relative traveltime perturbations for all paths.
