@@ -126,3 +126,59 @@ def _spherical_to_cartesian(
     z = r * np.cos(colat)
 
     return np.stack((x, y, z), axis=-1)
+
+
+class TravelTimeCalculator:
+    """Class to calculate travel times in TTI media for a set of paths."""
+
+    def __init__(self, ic_in: np.ndarray, ic_out: np.ndarray):
+        """Initialise calculator.
+
+        Parameters
+        ----------
+        ic_in : ndarray, shape (..., 3)
+            Where the path enters the inner core (longitude (deg), latitude (deg), radius (km)).
+        ic_out : ndarray, shape (..., 3)
+            Where the path exits the inner core (longitude (deg), latitude (deg), radius (km)).
+        """
+
+        self._validate_paths(ic_in, ic_out)
+        self._npaths = ic_in.shape[0]
+        self.ic_in = ic_in
+        self.ic_out = ic_out
+        self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
+
+    def calculate_traveltimes(self, D: np.ndarray) -> np.ndarray:
+        """
+        Calculate relative traveltime perturbations for all paths.
+
+        Parameters
+        ----------
+        D : ndarray, shape (3, 3, 3, 3)
+            4th-order perturbation tensor.
+
+        Returns
+        -------
+        ndarray, shape (num_paths,)
+            Relative traveltime perturbations for each path.
+        """
+        return calculate_relative_traveltime(self.path_directions, D)
+
+    @property
+    def npaths(self) -> int:
+        """Number of paths."""
+        return self._npaths
+
+    def _validate_paths(self, ic_in: np.ndarray, ic_out: np.ndarray) -> None:
+        """Validate the in and out coordinates."""
+        if ic_in.shape[-1] != 3 or ic_out.shape[-1] != 3:
+            raise ValueError("In and out coordinates must have shape (..., 3)")
+
+        if ic_in.shape != ic_out.shape:
+            raise ValueError("In and out coordinates must have the same shape")
+
+        if np.any(np.all(ic_in == ic_out, axis=-1)):
+            raise ValueError("In and out coordinates must be different for each path")
+
+        if np.any(ic_in[..., 2] <= 0) or np.any(ic_out[..., 2] <= 0):
+            raise ValueError("Radius must be positive")
