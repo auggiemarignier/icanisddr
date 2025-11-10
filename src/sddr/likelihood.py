@@ -9,6 +9,7 @@ def gaussian_likelihood_factory(
     forward_fn: Callable[[np.ndarray], np.ndarray],
     observed_data: np.ndarray,
     covar: np.ndarray,
+    example_model: None | np.ndarray = None,
 ) -> Callable[[np.ndarray], float]:
     """
     Create a Gaussian likelihood function.
@@ -21,6 +22,8 @@ def gaussian_likelihood_factory(
         Observed data.
     covar : ndarray, shape (n, n)
         Covariance matrix of the observed data. Must be symmetric and positive semidefinite.
+    example_model : None | ndarray, optional
+        Example model parameters to validate the forward function. If None, no validation is performed.
 
     Returns
     -------
@@ -34,7 +37,8 @@ def gaussian_likelihood_factory(
     """
     _validate_data_vector(observed_data)
     _validate_covariance_matrix(covar, observed_data.size)
-    _validate_forward_function(forward_fn, observed_data.size)
+    if example_model is not None:
+        _validate_forward_function(forward_fn, example_model, observed_data.size)
 
     inv_covar = np.linalg.inv(covar)
 
@@ -92,7 +96,7 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
 
 
 def _validate_forward_function(
-    forward_fn: Callable[[np.ndarray], np.ndarray], N: int
+    forward_fn: Callable[[np.ndarray], np.ndarray], example_model: np.ndarray, N: int
 ) -> None:
     """
     Validate that the forward function returns data of the correct shape.
@@ -101,6 +105,8 @@ def _validate_forward_function(
     ----------
     forward_fn : Callable[[np.ndarray], np.ndarray]
         Forward model function to validate.
+    example_model : ndarray
+        Example model parameters to test the forward function.
     N : int
         Expected size of the output data vector.
 
@@ -109,7 +115,6 @@ def _validate_forward_function(
     ValueError
         If the forward function does not return data of the correct shape.
     """
-    test_params = np.zeros(1)  # Dummy input
-    predicted_data = forward_fn(test_params)
+    predicted_data = forward_fn(example_model)
     if predicted_data.shape != (N,):
         raise ValueError(f"Forward function must return prediction of shape ({N},).")
