@@ -78,4 +78,5 @@ convention = "numpy"
 dev = [
     "matplotlib>=3.10.7",
     "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
 ]
