@@ -76,5 +76,6 @@ convention = "numpy"
 
 [dependency-groups]
 dev = [
+    "matplotlib>=3.10.7",
     "pytest>=8.4.2",
 ]

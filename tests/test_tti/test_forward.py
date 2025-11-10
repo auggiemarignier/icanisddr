@@ -15,7 +15,13 @@ from tti.elastic import (
     transverse_isotropic_tensor_4th,
     transverse_isotropic_tensor_voigt,
 )
-from tti.forward import calculate_relative_traveltime, construct_general_tti_tensor
+from tti.forward import (
+    TravelTimeCalculator,
+    _spherical_to_cartesian,
+    calculate_path_direction_vector,
+    calculate_relative_traveltime,
+    construct_general_tti_tensor,
+)
 from tti.rotation import rotation_matrix_zy, transformation_4th_order
 
 
@@ -112,6 +118,31 @@ def test_traveltime_zero_for_zero_perturbation() -> None:
     assert dt == 0.0
 
 
+def test_traveltime_batch() -> None:
+    """Test traveltime calculation for a batch of ray directions."""
+
+    D = np.zeros((3, 3, 3, 3))
+    D[0, 0, 0, 0] = 1.0
+    D[1, 1, 1, 1] = 2.0
+    D[2, 2, 2, 2] = 3.0
+
+    # Batch of 3 normalised ray directions
+    n_batch = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+
+    dt_batch = calculate_relative_traveltime(n_batch, D)
+
+    expected = np.array([1.0, 2.0, 3.0])
+
+    assert dt_batch.shape == (3,)
+    np.testing.assert_allclose(dt_batch, expected)
+
+
 def test_traveltime_isotropic_independent_of_direction(
     rng: np.random.Generator,
 ) -> None:
@@ -124,7 +155,7 @@ def test_traveltime_isotropic_independent_of_direction(
     directions = rng.normal(size=(10, 3))
     directions = directions / np.linalg.norm(directions, axis=1, keepdims=True)
 
-    results = [calculate_relative_traveltime(n, D) for n in directions]
+    results = calculate_relative_traveltime(directions, D)
 
     # All should be equal for isotropic medium
     np.testing.assert_allclose(results, results[0])
@@ -307,3 +338,166 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_perpendicular(
     dt_creager = calc_dt_creager(theta, a, b, c)
 
     np.testing.assert_allclose(dt_tti, dt_creager)
+
+
+def test__spherical_to_cartesian() -> None:
+    """Test conversion from spherical to cartesian coordinates."""
+
+    lon, lat, r = 0.0, 0.0, 1.0
+    x, y, z = _spherical_to_cartesian(lon, lat, r)
+    np.testing.assert_allclose([x, y, z], [1.0, 0.0, 0.0], atol=1e-12)
+
+    lon, lat, r = 90.0, 0.0, 1.0
+    x, y, z = _spherical_to_cartesian(lon, lat, r)
+    np.testing.assert_allclose([x, y, z], [0.0, 1.0, 0.0], atol=1e-12)
+
+    lon, lat, r = 0.0, 90.0, 1.0
+    x, y, z = _spherical_to_cartesian(lon, lat, r)
+    np.testing.assert_allclose([x, y, z], [0.0, 0.0, 1.0], atol=1e-12)
+
+
+def test__spherical_to_cartesian_batch() -> None:
+    """Test conversion from spherical to cartesian coordinates with batch inputs."""
+
+    # Batch of 3 coordinates
+    coords_spherical = np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0], [0.0, 90.0, 1.0]])
+    coords_cartesian = _spherical_to_cartesian(
+        coords_spherical[:, 0], coords_spherical[:, 1], coords_spherical[:, 2]
+    )
+    expected = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+    np.testing.assert_allclose(coords_cartesian, expected, atol=1e-12)
+
+    # Single coordinate as 1-element arrays
+    lon, lat, r = np.array([0.0]), np.array([0.0]), np.array([1.0])
+    coords = _spherical_to_cartesian(lon, lat, r)
+    expected = np.array([[1.0, 0.0, 0.0]])
+    np.testing.assert_allclose(coords, expected, atol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "ic_in, ic_out, expected",
+    [
+        (
+            np.array([0.0, 0.0, 1.0]),  # in at equator prime meridian
+            np.array([180.0, 0.0, 1.0]),  # out at the antipode
+            np.array([-1.0, 0.0, 0.0]),
+        ),
+        (
+            np.array([90.0, 0.0, 1.0]),  # in at equator 90 degrees east
+            np.array([0.0, 0.0, 1.0]),  # out at the prime meridian
+            np.array([1.0, -1.0, 0.0]) / np.sqrt(2),
+        ),
+        (
+            np.array([0.0, 90.0, 1.0]),  # in at north pole
+            np.array([0.0, -90.0, 1.0]),  # out at south pole
+            np.array([0.0, 0.0, -1.0]),
+        ),
+        (  # off-centre polar path
+            np.array([45.0, 45.0, 1.0]),  # in at 45N 45E
+            np.array([45.0, -45.0, 1.0]),  # out at antipode
+            np.array([0.0, 0.0, -1.0]),
+        ),
+    ],
+)
+def test_calculate_path_direction_vector(
+    ic_in: np.ndarray, ic_out: np.ndarray, expected: np.ndarray
+) -> None:
+    """Test calculation of path direction unit vector."""
+    n = calculate_path_direction_vector(ic_in, ic_out)
+    np.testing.assert_allclose(n, expected, atol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "ic_in_batch, ic_out_batch, expected_batch",
+    [
+        # Batch with 2 paths: east-west and north-south
+        (
+            np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0]]),
+            np.array([[180.0, 0.0, 1.0], [270.0, 0.0, 1.0]]),
+            np.array([[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0]]),
+        ),
+        # Batch with 3 paths including diagonal
+        (
+            np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0], [45.0, 0.0, 1.0]]),
+            np.array([[180.0, 0.0, 1.0], [270.0, 0.0, 1.0], [225.0, 0.0, 1.0]]),
+            np.array(
+                [
+                    [-1.0, 0.0, 0.0],
+                    [0.0, -1.0, 0.0],
+                    [-1 / np.sqrt(2), -1 / np.sqrt(2), 0.0],
+                ]
+            ),
+        ),
+        # Single path as 1×3 array
+        (
+            np.array([[0.0, 0.0, 1.0]]),
+            np.array([[180.0, 0.0, 1.0]]),
+            np.array([[-1.0, 0.0, 0.0]]),
+        ),
+    ],
+)
+def test_calculate_path_direction_vector_batch(
+    ic_in_batch: np.ndarray, ic_out_batch: np.ndarray, expected_batch: np.ndarray
+) -> None:
+    """Test calculation of path direction unit vectors for batch inputs."""
+    n_batch = calculate_path_direction_vector(ic_in_batch, ic_out_batch)
+    assert n_batch.shape == expected_batch.shape
+    np.testing.assert_allclose(n_batch, expected_batch, atol=1e-12)
+
+
+class TestTravelTimeCalculator:
+    """Test the TravelTimeCalculator class."""
+
+    @pytest.fixture
+    def valid_paths(self) -> tuple[np.ndarray, np.ndarray]:
+        """Fixture for valid input paths."""
+        ic_in = np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0]])
+        ic_out = np.array([[180.0, 0.0, 1.0], [-90.0, 0.0, 1.0]])
+        return ic_in, ic_out
+
+    @pytest.fixture
+    def calculator(
+        self, valid_paths: tuple[np.ndarray, np.ndarray]
+    ) -> TravelTimeCalculator:
+        """Fixture for a TravelTimeCalculator instance with valid paths."""
+        ic_in, ic_out = valid_paths
+        return TravelTimeCalculator(ic_in, ic_out)
+
+    def test_initialisation_npaths(self, calculator: TravelTimeCalculator) -> None:
+        """Test that the class initialises correctly with valid inputs."""
+        assert calculator.npaths == 2
+
+    def test_initialisation_direction_vectors(
+        self, calculator: TravelTimeCalculator
+    ) -> None:
+        """Test that the direction vectors are calculated correctly upon initialisation."""
+        expected_directions = np.array([[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0]])
+        np.testing.assert_allclose(
+            calculator.path_directions, expected_directions, atol=1e-12
+        )
+
+    def test_initialisation_invalid_in_out_same(self) -> None:
+        """Test that initialisation fails if an in coordinate is the same as the corresponding out coordinate."""
+        ic_in = np.array([[1.0, 2.0, 3.0], [0.0, 0.0, 1.0]])
+        ic_out = np.array([[0.0, 0.0, 1.0], [0.0, 0.0, 1.0]])
+        with pytest.raises(ValueError):
+            TravelTimeCalculator(ic_in, ic_out)
+
+    def test_initialisation_inconsistent_npaths(self) -> None:
+        """Test that initialisation fails if the number of in and out coordinates differ."""
+        ic_in = np.array([[0.0, 0.0, 1.0]])
+        ic_out = np.array([[180.0, 0.0, 1.0], [-90.0, 0.0, 1.0]])
+        with pytest.raises(ValueError):
+            TravelTimeCalculator(ic_in, ic_out)
+
+    def test_call_isotropic_medium(self, calculator: TravelTimeCalculator) -> None:
+        """Test traveltime calculation for isotropic medium."""
+        # Isotropic medium parameters
+        lam, mu = 12.0, 5.0
+        a = lam + 2 * mu
+        m = np.array([a, a, lam, mu, mu, 0.0, 0.0])
+
+        dt = calculator(m)
+
+        # For isotropic medium, traveltime should be the same for all paths
+        np.testing.assert_allclose(dt, dt[0], atol=1e-12)
