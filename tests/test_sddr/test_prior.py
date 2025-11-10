@@ -244,7 +244,7 @@ class TestCompoundPriorFactory:
         )  # 1 stddev away from the mean of the gaussian prior and within uniform prior
         log_prior = compound_prior(model)
 
-        # Gaussian prior log-prob at mean is -1, uniform prior log-prob within bounds is 0
+        # Gaussian prior log-prob at [1.0, -1.0] is -1, uniform prior log-prob within bounds is 0
         expected_log_prior = -1.0
         np.testing.assert_almost_equal(log_prior, expected_log_prior)
 
