@@ -30,7 +30,7 @@ def gaussian_prior_factory(
     Raises
     ------
     ValueError
-        If the covariance matrix is not symmetric or not positive semidefinite.
+        If the covariance matrix shape doesn't match the mean dimension, is not symmetric, or is not positive semidefinite.
     """
     _validate_covariance_matrix(covar, mean.size)
 
