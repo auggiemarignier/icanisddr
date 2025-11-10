@@ -1,0 +1,115 @@
+"""Likelihood functions of MCMC sampling."""
+
+from collections.abc import Callable
+
+import numpy as np
+
+
+def gaussian_likelihood_factory(
+    forward_fn: Callable[[np.ndarray], np.ndarray],
+    observed_data: np.ndarray,
+    covar: np.ndarray,
+) -> Callable[[np.ndarray], float]:
+    """
+    Create a Gaussian likelihood function.
+
+    Parameters
+    ----------
+    forward_fn : Callable[[np.ndarray], np.ndarray]
+        Forward model function that takes model parameters and returns predicted data.
+    observed_data : ndarray, shape (n,)
+        Observed data.
+    covar : ndarray, shape (n, n)
+        Covariance matrix of the observed data. Must be symmetric and positive semidefinite.
+
+    Returns
+    -------
+    likelihood_fn : Callable[[np.ndarray], float]
+        Likelihood function that takes model parameters and returns the log-likelihood.
+
+    Raises
+    ------
+    ValueError
+        If the covariance matrix is not symmetric or not positive semidefinite.
+    """
+    _validate_data_vector(observed_data)
+    _validate_covariance_matrix(covar, observed_data.size)
+    _validate_forward_function(forward_fn, observed_data.size)
+
+    inv_covar = np.linalg.inv(covar)
+
+    def likelihood_fn(model_params: np.ndarray) -> float:
+        predicted_data = forward_fn(model_params)
+        residual = observed_data - predicted_data
+        return -0.5 * residual.T @ inv_covar @ residual
+
+    return likelihood_fn
+
+
+def _validate_data_vector(data: np.ndarray) -> None:
+    """
+    Validate that the data vector is one-dimensional.
+
+    Parameters
+    ----------
+    data : ndarray
+        Data vector to validate.
+
+    Raises
+    ------
+    ValueError
+        If the data vector is not one-dimensional.
+    """
+    if data.ndim != 1:
+        raise ValueError("Data vector must be one-dimensional.")
+
+
+def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
+    """
+    Validate that the covariance matrix is symmetric and positive semidefinite.
+
+    Parameters
+    ----------
+    covar : ndarray, shape (n, n)
+        Covariance matrix to validate.
+    N : int
+        Expected size of the covariance matrix.
+
+    Raises
+    ------
+    ValueError
+        If the covariance matrix is not symmetric or not positive semidefinite.
+    """
+    if covar.shape != (N, N):
+        raise ValueError(f"Covariance matrix must be of shape ({N}, {N}).")
+
+    if not np.allclose(covar, covar.T):
+        raise ValueError("Covariance matrix must be symmetric.")
+
+    eigenvalues = np.linalg.eigvalsh(covar)
+    if np.any(eigenvalues < -1e-10):  # Allow small numerical tolerance
+        raise ValueError("Covariance matrix must be positive semidefinite.")
+
+
+def _validate_forward_function(
+    forward_fn: Callable[[np.ndarray], np.ndarray], N: int
+) -> None:
+    """
+    Validate that the forward function returns data of the correct shape.
+
+    Parameters
+    ----------
+    forward_fn : Callable[[np.ndarray], np.ndarray]
+        Forward model function to validate.
+    N : int
+        Expected size of the output data vector.
+
+    Raises
+    ------
+    ValueError
+        If the forward function does not return data of the correct shape.
+    """
+    test_params = np.zeros(1)  # Dummy input
+    predicted_data = forward_fn(test_params)
+    if predicted_data.shape != (N,):
+        raise ValueError(f"Forward function must return prediction of shape ({N},).")
