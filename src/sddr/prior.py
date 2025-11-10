@@ -67,6 +67,10 @@ def uniform_prior_factory(
     ValueError
         If any lower bound is not less than the corresponding upper bound.
     """
+    if lower_bounds.shape != upper_bounds.shape:
+        raise ValueError(
+            f"Shape mismatch: lower_bounds has shape {lower_bounds.shape}, upper_bounds has shape {upper_bounds.shape}."
+        )
     if np.any(lower_bounds >= upper_bounds):
         raise ValueError(
             "Each lower bound must be less than the corresponding upper bound."
