@@ -1,9 +1,16 @@
 """Tests for prior functions."""
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
-from sddr.prior import gaussian_prior_factory, uniform_prior_factory
+from sddr.prior import (
+    PriorComponent,
+    compound_prior_factory,
+    gaussian_prior_factory,
+    uniform_prior_factory,
+)
 
 
 class TestGaussianPriorFactory:
@@ -203,3 +210,49 @@ class TestUniformPriorFactory:
         params_out = np.full(n_dims, 0.5)
         params_out[5] = 1.1
         assert prior_fn(params_out) == -np.inf
+
+
+class TestCompoundPriorFactory:
+    """Tests for compound prior functions combining Gaussian and Uniform priors."""
+
+    @pytest.fixture
+    def compound_prior(self) -> Callable[[np.ndarray], float]:
+        """Create a compound prior for testing."""
+        # Gaussian prior on first two parameters
+        mean = np.array([0.0, 0.0])
+        covar = np.eye(2)
+        gaussian_prior = gaussian_prior_factory(mean, covar)
+        gaussian_component = PriorComponent(prior_fn=gaussian_prior, indices=[0, 1])
+
+        # Uniform prior on last two parameters
+        lower = np.array([-1.0, -1.0])
+        upper = np.array([1.0, 1.0])
+        uniform_prior = uniform_prior_factory(lower, upper)
+        uniform_component = PriorComponent(prior_fn=uniform_prior, indices=[2, 3])
+
+        # Combine into compound prior
+        return compound_prior_factory([gaussian_component, uniform_component])
+
+    def test_compound_prior_valid_model(
+        self, compound_prior: Callable[[np.ndarray], float]
+    ) -> None:
+        """Test the compound prior with a valid model."""
+
+        # Test point within both priors
+        model = np.array(
+            [1.0, -1.0, 0.0, 0.0]
+        )  # 1 stddev away from the mean of the gaussian prior and within uniform prior
+        log_prior = compound_prior(model)
+
+        # Gaussian prior log-prob at mean is -1, uniform prior log-prob within bounds is 0
+        expected_log_prior = -1.0
+        np.testing.assert_almost_equal(log_prior, expected_log_prior)
+
+    def test_compound_prior_invalid_model(
+        self, compound_prior: Callable[[np.ndarray], float]
+    ) -> None:
+        """Test the compound prior with a model that has out-of-bounds parameters."""
+        # Test point outside uniform prior
+        model = np.array([0.1, -0.1, 2.0, -0.5])
+        log_prior_out_uniform = compound_prior(model)
+        assert log_prior_out_uniform == -np.inf

@@ -3,7 +3,8 @@
 In this application we'll deal with Gaussian and Uniform priors.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -79,5 +80,57 @@ def uniform_prior_factory(
             (model_params < lower_bounds) | (model_params > upper_bounds)
         )
         return np.where(out_of_bounds, -np.inf, 0.0)
+
+    return prior_fn
+
+
+@dataclass
+class PriorComponent:
+    """Class representing a prior component.
+
+    Multiple prior components can be combined to form a joint prior over
+    different subsets of model parameters.
+
+    Parameters
+    ----------
+    prior_fn : Callable[[np.ndarray], float]
+        Prior function that takes model parameters and returns the log-prior.
+    indices : Sequence[int]
+        Indices of the model parameters that this prior component applies to.
+    """
+
+    prior_fn: Callable[[np.ndarray], float]
+    indices: Sequence[int] | slice | np.ndarray
+
+
+def compound_prior_factory(
+    prior_components: Sequence[PriorComponent],
+) -> Callable[[np.ndarray], float]:
+    """
+    Create a compound prior function from multiple prior components.
+
+    Parameters
+    ----------
+    prior_components : Sequence[PriorComponent]
+        Sequence of PriorComponent instances.
+
+    Returns
+    -------
+    prior_fn : Callable[[np.ndarray], float]
+        Compound prior function that takes model parameters and returns the log-prior.
+    """
+
+    def prior_fn(model_params: np.ndarray) -> float:
+        """Compound log-prior."""
+        total_log_prior = 0.0
+        for component in prior_components:
+            params_subset = model_params[component.indices]
+            component_log_prior = component.prior_fn(params_subset)
+
+            if np.isinf(component_log_prior) and component_log_prior < 0:
+                return -np.inf  # Early exit if any component is -inf
+
+            total_log_prior += component_log_prior
+        return total_log_prior
 
     return prior_fn
