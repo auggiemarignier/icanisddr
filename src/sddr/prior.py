@@ -8,8 +8,6 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from sddr.likelihood import _validate_covariance_matrix
-
 
 def gaussian_prior_factory(
     mean: np.ndarray, covar: np.ndarray
@@ -134,3 +132,30 @@ def compound_prior_factory(
         return total_log_prior
 
     return prior_fn
+
+
+def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
+    """
+    Validate that the covariance matrix is symmetric and positive semidefinite.
+
+    Parameters
+    ----------
+    covar : ndarray, shape (n, n)
+        Covariance matrix to validate.
+    N : int
+        Expected size of the covariance matrix.
+
+    Raises
+    ------
+    ValueError
+        If the covariance matrix is not symmetric or not positive semidefinite.
+    """
+    if covar.shape != (N, N):
+        raise ValueError(f"Covariance matrix must be of shape ({N}, {N}).")
+
+    if not np.allclose(covar, covar.T):
+        raise ValueError("Covariance matrix must be symmetric.")
+
+    eigenvalues = np.linalg.eigvalsh(covar)
+    if np.any(eigenvalues < -1e-10):  # Allow small numerical tolerance
+        raise ValueError("Covariance matrix must be positive semidefinite.")
