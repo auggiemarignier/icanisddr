@@ -1,7 +1,6 @@
 """Forward modelling of traveltimes in TTI media."""
 
 import numpy as np
-from pydantic import BaseModel, Field
 
 from .elastic import transverse_isotropic_tensor
 from .rotation import rotation_matrix_zy
@@ -113,7 +112,7 @@ def _spherical_to_cartesian(
 
     Returns
     -------
-    ndarray, shape (3,)
+    ndarray, shape (..., 3)
         Cartesian coordinates (x, y, z).
     """
     lon = np.asarray(lon)
@@ -127,12 +126,6 @@ def _spherical_to_cartesian(
     z = r * np.cos(colat)
 
     return np.stack((x, y, z), axis=-1)
-
-
-class _Coordinate(BaseModel):
-    lon: float = Field(..., ge=-180, le=180, description="Longitude in degrees.")
-    lat: float = Field(..., ge=-90, le=90, description="Latitude in degrees.")
-    r: float = Field(..., gt=0, description="Radius in km.")
 
 
 class TravelTimeCalculator:
@@ -202,10 +195,30 @@ class TravelTimeCalculator:
         if ic_in.shape != ic_out.shape:
             raise ValueError("In and out coordinates must have the same shape")
 
-        ins = [_Coordinate(lon=ic[0], lat=ic[1], r=ic[2]) for ic in ic_in]
-        outs = [_Coordinate(lon=ic[0], lat=ic[1], r=ic[2]) for ic in ic_out]
-        for i, (in_, out_) in enumerate(zip(ins, outs)):
-            if in_ == out_:
-                raise ValueError(
-                    f"In and out coordinates must be different for each path (path {i})"
-                )
+        # Check bounds for longitude, latitude, and radius
+        if not np.all(
+            (ic_in[:, 0] >= -180)
+            & (ic_in[:, 0] <= 180)
+            & (ic_out[:, 0] >= -180)
+            & (ic_out[:, 0] <= 180)
+        ):
+            raise ValueError("Longitude must be in [-180, 180] degrees.")
+
+        if not np.all(
+            (ic_in[:, 1] >= -90)
+            & (ic_in[:, 1] <= 90)
+            & (ic_out[:, 1] >= -90)
+            & (ic_out[:, 1] <= 90)
+        ):
+            raise ValueError("Latitude must be in [-90, 90] degrees.")
+
+        if not np.all((ic_in[:, 2] > 0) & (ic_out[:, 2] > 0)):
+            raise ValueError("Radius must be greater than 0 km.")
+
+        # Ensure in and out coordinates are different for each path
+        same_mask = np.all(ic_in == ic_out, axis=-1)
+        if np.any(same_mask):
+            idx = np.where(same_mask)[0][0]
+            raise ValueError(
+                f"In and out coordinates must be different for each path (path {idx})"
+            )
