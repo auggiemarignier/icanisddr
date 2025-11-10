@@ -204,8 +204,8 @@ class TravelTimeCalculator:
 
         ins = [_Coordinate(lon=ic[0], lat=ic[1], r=ic[2]) for ic in ic_in]
         outs = [_Coordinate(lon=ic[0], lat=ic[1], r=ic[2]) for ic in ic_out]
-        for i, (inc, outc) in enumerate(zip(ins, outs)):
-            if inc == outc:
+        for i, (in_, out_) in enumerate(zip(ins, outs)):
+            if in_ == out_:
                 raise ValueError(
                     f"In and out coordinates must be different for each path (path {i})"
                 )
