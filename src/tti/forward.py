@@ -1,6 +1,7 @@
 """Forward modelling of traveltimes in TTI media."""
 
 import numpy as np
+from pydantic import BaseModel, Field
 
 from .elastic import transverse_isotropic_tensor
 from .rotation import rotation_matrix_zy
@@ -128,6 +129,12 @@ def _spherical_to_cartesian(
     return np.stack((x, y, z), axis=-1)
 
 
+class _Coordinate(BaseModel):
+    lon: float = Field(..., ge=-180, le=180, description="Longitude in degrees.")
+    lat: float = Field(..., ge=-90, le=90, description="Latitude in degrees.")
+    r: float = Field(..., gt=0, description="Radius in km.")
+
+
 class TravelTimeCalculator:
     """Class to calculate travel times in TTI media for a set of paths."""
 
@@ -195,8 +202,10 @@ class TravelTimeCalculator:
         if ic_in.shape != ic_out.shape:
             raise ValueError("In and out coordinates must have the same shape")
 
-        if np.any(np.all(ic_in == ic_out, axis=-1)):
-            raise ValueError("In and out coordinates must be different for each path")
-
-        if np.any(ic_in[..., 2] <= 0) or np.any(ic_out[..., 2] <= 0):
-            raise ValueError("Radius must be positive")
+        ins = [_Coordinate(lon=ic[0], lat=ic[1], r=ic[2]) for ic in ic_in]
+        outs = [_Coordinate(lon=ic[0], lat=ic[1], r=ic[2]) for ic in ic_out]
+        for i, (inc, outc) in enumerate(zip(ins, outs)):
+            if inc == outc:
+                raise ValueError(
+                    f"In and out coordinates must be different for each path (path {i})"
+                )

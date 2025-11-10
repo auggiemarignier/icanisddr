@@ -452,7 +452,7 @@ class TestTravelTimeCalculator:
     def valid_paths(self) -> tuple[np.ndarray, np.ndarray]:
         """Fixture for valid input paths."""
         ic_in = np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0]])
-        ic_out = np.array([[180.0, 0.0, 1.0], [270.0, 0.0, 1.0]])
+        ic_out = np.array([[180.0, 0.0, 1.0], [-90.0, 0.0, 1.0]])
         return ic_in, ic_out
 
     @pytest.fixture
@@ -486,7 +486,7 @@ class TestTravelTimeCalculator:
     def test_initialisation_inconsistent_npaths(self) -> None:
         """Test that initialisation fails if the number of in and out coordinates differ."""
         ic_in = np.array([[0.0, 0.0, 1.0]])
-        ic_out = np.array([[180.0, 0.0, 1.0], [270.0, 0.0, 1.0]])
+        ic_out = np.array([[180.0, 0.0, 1.0], [-90.0, 0.0, 1.0]])
         with pytest.raises(ValueError):
             TravelTimeCalculator(ic_in, ic_out)
 
