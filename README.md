@@ -1,5 +1,7 @@
 # Comparing Inner Core Anisotropy Models with the Savage-Dickey Density Ratio
 
+[![tests](https://github.com/auggiemarignier/icanisddr/actions/workflows/tests.yml/badge.svg)](https://github.com/auggiemarignier/icanisddr/actions/workflows/tests.yml) [![codecov](https://codecov.io/github/auggiemarignier/icanisddr/graph/badge.svg?token=WY92GUYFC7)](https://codecov.io/github/auggiemarignier/icanisddr)
+
 ## Inner Core Anisotropy
 
 Following [Brett et al., 2024](https://www.nature.com/articles/s41561-024-01539-6#Sec6).
