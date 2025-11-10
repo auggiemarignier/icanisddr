@@ -125,7 +125,7 @@ def compound_prior_factory(
             params_subset = model_params[component.indices]
             component_log_prior = component.prior_fn(params_subset)
 
-            if np.isinf(component_log_prior) and component_log_prior < 0:
+            if np.isneginf(component_log_prior):
                 return -np.inf  # Early exit if any component is -inf
 
             total_log_prior += component_log_prior
