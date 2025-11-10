@@ -152,7 +152,7 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     Raises
     ------
     ValueError
-        If the covariance matrix is not symmetric or not positive semidefinite.
+        If the covariance matrix has incorrect shape, is not symmetric, or is not positive semidefinite.
     """
     if covar.shape != (N, N):
         raise ValueError(f"Covariance matrix must be of shape ({N}, {N}).")
