@@ -80,3 +80,20 @@ dev = [
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-v", "--cov=src", "--cov-report=term-missing", "--cov-report=xml"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]   # only measure files under src/
+omit = [
+  "tests/*",
+  "*/tests/*",
+  "**/test_*.py",
+  "**/*_test.py",
+]
+
+[tool.coverage.report]
+show_missing = true
