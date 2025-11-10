@@ -93,7 +93,7 @@ class PriorComponent:
     ----------
     prior_fn : Callable[[np.ndarray], float]
         Prior function that takes model parameters and returns the log-prior.
-    indices : Sequence[int]
+    indices : Sequence[int] | slice | np.ndarray
         Indices of the model parameters that this prior component applies to.
     """
 
