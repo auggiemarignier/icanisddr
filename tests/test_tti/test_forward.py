@@ -16,6 +16,7 @@ from tti.elastic import (
     transverse_isotropic_tensor_voigt,
 )
 from tti.forward import (
+    TravelTimeCalculator,
     _spherical_to_cartesian,
     calculate_path_direction_vector,
     calculate_relative_traveltime,
@@ -442,3 +443,61 @@ def test_calculate_path_direction_vector_batch(
     n_batch = calculate_path_direction_vector(ic_in_batch, ic_out_batch)
     assert n_batch.shape == expected_batch.shape
     np.testing.assert_allclose(n_batch, expected_batch, atol=1e-12)
+
+
+class TestTravelTimeCalculator:
+    """Test the TravelTimeCalculator class."""
+
+    @pytest.fixture
+    def valid_paths(self) -> tuple[np.ndarray, np.ndarray]:
+        """Fixture for valid input paths."""
+        ic_in = np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0]])
+        ic_out = np.array([[180.0, 0.0, 1.0], [270.0, 0.0, 1.0]])
+        return ic_in, ic_out
+
+    @pytest.fixture
+    def calculator(
+        self, valid_paths: tuple[np.ndarray, np.ndarray]
+    ) -> TravelTimeCalculator:
+        """Fixture for a TravelTimeCalculator instance with valid paths."""
+        ic_in, ic_out = valid_paths
+        return TravelTimeCalculator(ic_in, ic_out)
+
+    def test_initialisation_npaths(self, calculator: TravelTimeCalculator) -> None:
+        """Test that the class initialises correctly with valid inputs."""
+        assert calculator.npaths == 2
+
+    def test_initialisation_direction_vectors(
+        self, calculator: TravelTimeCalculator
+    ) -> None:
+        """Test that the direction vectors are calculated correctly upon initialisation."""
+        expected_directions = np.array([[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0]])
+        np.testing.assert_allclose(
+            calculator.path_directions, expected_directions, atol=1e-12
+        )
+
+    def test_initialisation_invalid_in_out_same(self) -> None:
+        """Test that initialisation fails if an in coordinate is the same as the corresponding out coordinate."""
+        ic_in = np.array([[1.0, 2.0, 3.0], [0.0, 0.0, 1.0]])
+        ic_out = np.array([[0.0, 0.0, 1.0], [0.0, 0.0, 1.0]])
+        with pytest.raises(ValueError):
+            TravelTimeCalculator(ic_in, ic_out)
+
+    def test_initialisation_inconsistent_npaths(self) -> None:
+        """Test that initialisation fails if the number of in and out coordinates differ."""
+        ic_in = np.array([[0.0, 0.0, 1.0]])
+        ic_out = np.array([[180.0, 0.0, 1.0], [270.0, 0.0, 1.0]])
+        with pytest.raises(ValueError):
+            TravelTimeCalculator(ic_in, ic_out)
+
+    def test_call_isotropic_medium(self, calculator: TravelTimeCalculator) -> None:
+        """Test traveltime calculation for isotropic medium."""
+        # Isotropic medium parameters
+        lam, mu = 12.0, 5.0
+        a = lam + 2 * mu
+        m = np.array([a, a, lam, mu, mu, 0.0, 0.0])
+
+        dt = calculator(m)
+
+        # For isotropic medium, traveltime should be the same for all paths
+        np.testing.assert_allclose(dt, dt[0], atol=1e-12)
