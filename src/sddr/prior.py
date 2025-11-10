@@ -77,7 +77,7 @@ def uniform_prior_factory(
         out_of_bounds = np.any(
             (model_params < lower_bounds) | (model_params > upper_bounds)
         )
-        return np.where(out_of_bounds, -np.inf, 0.0)
+        return float(np.where(out_of_bounds, -np.inf, 0.0))
 
     return prior_fn
 
