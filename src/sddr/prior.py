@@ -39,7 +39,7 @@ def gaussian_prior_factory(
     def prior_fn(model_params: np.ndarray) -> float:
         """Gaussian log-prior."""
         diff = model_params - mean
-        return -0.5 * diff.T @ inv_covar @ diff
+        return float(-0.5 * diff.T @ inv_covar @ diff)
 
     return prior_fn
 
