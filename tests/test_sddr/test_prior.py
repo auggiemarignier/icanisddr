@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from sddr.prior import (
+    CompoundPrior,
     GaussianPrior,
     PriorComponent,
     PriorFunction,
@@ -396,6 +397,23 @@ class TestCompoundPriorFactory:
 
         # Combine into compound prior
         return compound_prior_factory([gaussian_component, uniform_component])
+
+    def test_compound_prior_prior_components_sorting(
+        self, compound_prior: CompoundPrior
+    ) -> None:
+        """Test that any UniformPrior components are sorted to the front."""
+        components = compound_prior.prior_components
+        # Check that all UniformPrior components come before any GaussianPrior components
+        # Fixture was created with Gaussian first, so we expect re-ordering
+        found_gaussian = False
+        for component in components:
+            if isinstance(component.prior_fn, UniformPrior):
+                if found_gaussian:
+                    pytest.fail(
+                        "UniformPrior component found after GaussianPrior component."
+                    )
+            elif isinstance(component.prior_fn, GaussianPrior):
+                found_gaussian = True
 
     def test_compound_prior_valid_model(
         self, compound_prior: Callable[[np.ndarray], float]
