@@ -126,6 +126,29 @@ class TestUniformPriorFactory:
         """Create a valid uniform prior function for testing."""
         return uniform_prior_factory(lower, upper)
 
+    def test_uniform_config_params_expose_bounds(
+        self,
+        valid_uniform_prior: Callable[[np.ndarray], float],
+        lower: np.ndarray,
+        upper: np.ndarray,
+    ) -> None:
+        """Uniform prior should expose lower and upper bounds via config_params in order and by reference."""
+        assert isinstance(valid_uniform_prior, UniformPrior)
+
+        cfg = valid_uniform_prior.config_params
+        assert isinstance(cfg, list)
+        assert len(cfg) == 2
+
+        # Check identity and values
+        assert cfg[0] is lower
+        assert cfg[1] is upper
+        np.testing.assert_array_equal(cfg[0], lower)
+        np.testing.assert_array_equal(cfg[1], upper)
+
+        # Shape sanity
+        assert cfg[0].shape == lower.shape
+        assert cfg[1].shape == upper.shape
+
     def test_uniform_prior_in_bounds(
         self, valid_uniform_prior: Callable[[np.ndarray], float]
     ) -> None:
@@ -299,24 +322,3 @@ class TestConfigParams:
         # Shape sanity
         assert cfg[0].shape == mean.shape
         assert cfg[1].shape == covar.shape
-
-    def test_uniform_config_params_expose_bounds(self) -> None:
-        """Uniform prior should expose lower and upper bounds via config_params in order and by reference."""
-        lower = np.array([-1.0, 0.0, 10.0, -5.0])
-        upper = np.array([1.0, 2.0, 20.0, 0.0])
-        prior = uniform_prior_factory(lower, upper)
-        assert isinstance(prior, UniformPrior)
-
-        cfg = prior.config_params
-        assert isinstance(cfg, list)
-        assert len(cfg) == 2
-
-        # Check identity and values
-        assert cfg[0] is lower
-        assert cfg[1] is upper
-        np.testing.assert_array_equal(cfg[0], lower)
-        np.testing.assert_array_equal(cfg[1], upper)
-
-        # Shape sanity
-        assert cfg[0].shape == lower.shape
-        assert cfg[1].shape == upper.shape
