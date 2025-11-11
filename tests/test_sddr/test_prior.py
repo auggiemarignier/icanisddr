@@ -109,61 +109,71 @@ class TestGaussianPriorFactory:
 class TestUniformPriorFactory:
     """Tests for uniform_prior_factory."""
 
-    def test_uniform_prior_in_bounds(self) -> None:
+    @pytest.fixture
+    def lower(self) -> np.ndarray:
+        """Create lower bounds for testing."""
+        return np.array([0.0, 0.0])
+
+    @pytest.fixture
+    def upper(self) -> np.ndarray:
+        """Create upper bounds for testing."""
+        return np.array([1.0, 1.0])
+
+    @pytest.fixture
+    def valid_uniform_prior(
+        self, lower: np.ndarray, upper: np.ndarray
+    ) -> Callable[[np.ndarray], float]:
+        """Create a valid uniform prior function for testing."""
+        return uniform_prior_factory(lower, upper)
+
+    def test_uniform_prior_in_bounds(
+        self, valid_uniform_prior: Callable[[np.ndarray], float]
+    ) -> None:
         """Test that log-prior is zero for parameters within bounds."""
-        lower = np.array([0.0, 0.0])
-        upper = np.array([1.0, 1.0])
-        prior_fn = uniform_prior_factory(lower, upper)
 
         params = np.array([0.5, 0.5])
-        log_prior = prior_fn(params)
+        log_prior = valid_uniform_prior(params)
 
         assert log_prior == 0.0
 
-    def test_uniform_prior_at_boundaries(self) -> None:
-        """Test that log-prior is zero at the boundaries."""
-        lower = np.array([0.0, 0.0])
-        upper = np.array([1.0, 1.0])
-        prior_fn = uniform_prior_factory(lower, upper)
-
-        # Test lower boundary
-        log_prior_lower = prior_fn(lower)
+    def test_uniform_prior_at_lower_boundary(
+        self, valid_uniform_prior: Callable[[np.ndarray], float], lower: np.ndarray
+    ) -> None:
+        """Test that log-prior is zero at the lower boundaries."""
+        log_prior_lower = valid_uniform_prior(lower)
         assert log_prior_lower == 0.0
 
-        # Test upper boundary
-        log_prior_upper = prior_fn(upper)
+    def test_uniform_prior_at_upper_boundary(
+        self, valid_uniform_prior: Callable[[np.ndarray], float], upper: np.ndarray
+    ) -> None:
+        """Test that log-prior is zero at the upper boundaries."""
+        log_prior_upper = valid_uniform_prior(upper)
         assert log_prior_upper == 0.0
 
-    def test_uniform_prior_out_of_bounds_below(self) -> None:
+    def test_uniform_prior_out_of_bounds_below(
+        self, valid_uniform_prior: Callable[[np.ndarray], float]
+    ) -> None:
         """Test that log-prior is -inf for parameters below lower bound."""
-        lower = np.array([0.0, 0.0])
-        upper = np.array([1.0, 1.0])
-        prior_fn = uniform_prior_factory(lower, upper)
-
         params = np.array([-0.1, 0.5])
-        log_prior = prior_fn(params)
+        log_prior = valid_uniform_prior(params)
 
         assert log_prior == -np.inf
 
-    def test_uniform_prior_out_of_bounds_above(self) -> None:
+    def test_uniform_prior_out_of_bounds_above(
+        self, valid_uniform_prior: Callable[[np.ndarray], float]
+    ) -> None:
         """Test that log-prior is -inf for parameters above upper bound."""
-        lower = np.array([0.0, 0.0])
-        upper = np.array([1.0, 1.0])
-        prior_fn = uniform_prior_factory(lower, upper)
-
         params = np.array([0.5, 1.1])
-        log_prior = prior_fn(params)
+        log_prior = valid_uniform_prior(params)
 
         assert log_prior == -np.inf
 
-    def test_uniform_prior_multiple_out_of_bounds(self) -> None:
+    def test_uniform_prior_multiple_out_of_bounds(
+        self, valid_uniform_prior: Callable[[np.ndarray], float]
+    ) -> None:
         """Test that log-prior is -inf when multiple parameters are out of bounds."""
-        lower = np.array([0.0, 0.0])
-        upper = np.array([1.0, 1.0])
-        prior_fn = uniform_prior_factory(lower, upper)
-
         params = np.array([-0.1, 1.1])
-        log_prior = prior_fn(params)
+        log_prior = valid_uniform_prior(params)
 
         assert log_prior == -np.inf
 
