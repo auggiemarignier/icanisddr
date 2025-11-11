@@ -206,6 +206,36 @@ class PriorComponent:
     indices: Sequence[int] | slice | np.ndarray
 
 
+class CompoundPrior:
+    """Class representing a compound prior from multiple prior components.
+
+    Parameters
+    ----------
+    prior_components : Sequence[PriorComponent]
+        Sequence of PriorComponent instances.
+    """
+
+    def __init__(self, prior_components: Sequence[PriorComponent]) -> None:
+        # Bring any UniformPriors to the front for early exit
+        self.prior_components = sorted(
+            prior_components,
+            key=lambda c: not isinstance(c.prior_fn, UniformPrior),
+        )
+
+    def __call__(self, model_params: np.ndarray) -> float:
+        """Compound log-prior."""
+        total_log_prior = 0.0
+        for component in self.prior_components:
+            params_subset = model_params[component.indices]
+            component_log_prior = component.prior_fn(params_subset)
+
+            if np.isneginf(component_log_prior):
+                return -np.inf  # Early exit if any component is -inf
+
+            total_log_prior += component_log_prior
+        return total_log_prior
+
+
 def compound_prior_factory(
     prior_components: Sequence[PriorComponent],
 ) -> Callable[[np.ndarray], float]:
@@ -223,20 +253,7 @@ def compound_prior_factory(
         Compound prior function that takes model parameters and returns the log-prior.
     """
 
-    def prior_fn(model_params: np.ndarray) -> float:
-        """Compound log-prior."""
-        total_log_prior = 0.0
-        for component in prior_components:
-            params_subset = model_params[component.indices]
-            component_log_prior = component.prior_fn(params_subset)
-
-            if np.isneginf(component_log_prior):
-                return -np.inf  # Early exit if any component is -inf
-
-            total_log_prior += component_log_prior
-        return total_log_prior
-
-    return prior_fn
+    return CompoundPrior(prior_components)
 
 
 def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
