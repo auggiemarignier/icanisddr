@@ -170,6 +170,10 @@ def marginalise_prior(
         if isinstance(indices, slice)
         else np.asarray(indices, dtype=int)
     )
+    if idx.size == 0:
+        raise ValueError(
+            "At least one index should be kept after marginalisation.  Check the 'indices' parameter."
+        )
 
     marginalised_params: list[np.ndarray] = []
     for param in prior.config_params:

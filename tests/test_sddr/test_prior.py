@@ -372,7 +372,7 @@ class TestMarginalisation:
         """Test that marginalising over all variables raises a ValueError."""
         prior_fn = request.getfixturevalue(fixture_name)
 
-        with pytest.raises(ValueError, match="at least one index"):
+        with pytest.raises(ValueError, match="At least one index"):
             marginalise_prior(prior_fn, np.array([]))
 
 
