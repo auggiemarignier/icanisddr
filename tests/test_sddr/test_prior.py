@@ -18,6 +18,33 @@ from sddr.prior import (
 class TestGaussianPriorFactory:
     """Tests for gaussian_prior_factory."""
 
+    def test_gaussian_config_params_expose_mean_and_covar(self) -> None:
+        """Gaussian prior should expose mean and covariance via config_params in order and by reference."""
+        mean = np.array([1.0, -2.0, 3.0])
+        covar = np.array(
+            [
+                [2.0, 0.1, 0.0],
+                [0.1, 1.5, 0.2],
+                [0.0, 0.2, 3.0],
+            ]
+        )
+        prior = gaussian_prior_factory(mean, covar)
+        assert isinstance(prior, GaussianPrior)
+
+        cfg = prior.config_params
+        assert isinstance(cfg, list)
+        assert len(cfg) == 2
+
+        # Check identity and values
+        assert cfg[0] is mean
+        assert cfg[1] is covar
+        np.testing.assert_array_equal(cfg[0], mean)
+        np.testing.assert_array_equal(cfg[1], covar)
+
+        # Shape sanity
+        assert cfg[0].shape == mean.shape
+        assert cfg[1].shape == covar.shape
+
     def test_gaussian_prior_at_mean(self) -> None:
         """Test that log-prior is zero at the mean."""
         mean = np.array([1.0, 2.0, 3.0])
@@ -291,34 +318,3 @@ class TestCompoundPriorFactory:
         model = np.array([0.1, -0.1, 2.0, -0.5])
         log_prior_out_uniform = compound_prior(model)
         assert log_prior_out_uniform == -np.inf
-
-
-class TestConfigParams:
-    """Tests for the config_params property of priors."""
-
-    def test_gaussian_config_params_expose_mean_and_covar(self) -> None:
-        """Gaussian prior should expose mean and covariance via config_params in order and by reference."""
-        mean = np.array([1.0, -2.0, 3.0])
-        covar = np.array(
-            [
-                [2.0, 0.1, 0.0],
-                [0.1, 1.5, 0.2],
-                [0.0, 0.2, 3.0],
-            ]
-        )
-        prior = gaussian_prior_factory(mean, covar)
-        assert isinstance(prior, GaussianPrior)
-
-        cfg = prior.config_params
-        assert isinstance(cfg, list)
-        assert len(cfg) == 2
-
-        # Check identity and values
-        assert cfg[0] is mean
-        assert cfg[1] is covar
-        np.testing.assert_array_equal(cfg[0], mean)
-        np.testing.assert_array_equal(cfg[1], covar)
-
-        # Shape sanity
-        assert cfg[0].shape == mean.shape
-        assert cfg[1].shape == covar.shape
