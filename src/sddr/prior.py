@@ -139,6 +139,50 @@ def uniform_prior_factory(
     return UniformPrior(lower_bounds, upper_bounds)
 
 
+def marginalise_prior(
+    prior: PriorFunction, indices: Sequence[int] | slice | np.ndarray
+) -> PriorFunction:
+    r"""
+    Create a marginalised prior function over specified parameter indices.
+
+    This assumes that the all the random variables are independent.
+
+    .. math::
+        p(m_{\text{remaining}}) = \int p(m_{\text{remaining}}, m_{\text{marginalised}}) \, dm_{\text{marginalised}}
+        = \int p(m_{\text{remaining}}) p(m_{\text{marginalised}}) \, dm_{\text{marginalised}}
+        = p(m_{\text{remaining}}) \int p(m_{\text{marginalised}}) \, dm_{\text{marginalised}}
+        = p(m_{\text{remaining}})
+
+    Parameters
+    ----------
+    prior : PriorFunction
+        Original prior function to marginalise.
+    indices : Sequence[int] | slice | np.ndarray
+        Indices of the model parameters to keep after marginalisation i.e. $m_{\text{remaining}}$.
+
+    Returns
+    -------
+    marginal_prior_fn : PriorFunction
+        Marginalised prior function that takes model parameters and returns the log-prior.
+    """
+    idx = (
+        np.arange(prior.config_params[0].size)[indices]
+        if isinstance(indices, slice)
+        else np.asarray(indices, dtype=int)
+    )
+
+    marginalised_params: list[np.ndarray] = []
+    for param in prior.config_params:
+        # repeat idx for each dimension of param
+        # e.g. for a covariance matrix, we need to select both rows and columns
+        ndim_repeat = tuple([idx] * param.ndim)
+        # create the n-dimensional index selector
+        selector = np.ix_(*ndim_repeat)
+        marginalised_params.append(param[selector])
+
+    return type(prior)(*marginalised_params)
+
+
 @dataclass
 class PriorComponent:
     """Class representing a prior component.
