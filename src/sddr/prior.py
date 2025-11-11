@@ -5,8 +5,50 @@ In this application we'll deal with Gaussian and Uniform priors.
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from typing import Protocol
 
 import numpy as np
+
+
+class PriorFunction(Protocol):
+    """Protocol for prior functions.
+
+    Stores configuration parameters for the prior.
+    Helpful for marginalisation routines that need to access these parameters.
+    """
+
+    config_params: list[np.ndarray]
+
+    def __call__(self, model_params: np.ndarray) -> float:
+        """Calculate the log-prior for given model parameters."""
+
+
+class GaussianPrior:
+    """Class representing a Gaussian prior.
+
+    Parameters
+    ----------
+    mean : ndarray, shape (n,)
+        Mean of the Gaussian prior e.g. a reference model.
+    covar : ndarray, shape (n, n)
+        Covariance matrix of the Gaussian prior.
+    """
+
+    def __init__(self, mean: np.ndarray, covar: np.ndarray) -> None:
+        _validate_covariance_matrix(covar, mean.size)
+        self.mean = mean
+        self.covar = covar
+        self.inv_covar = np.linalg.inv(covar)
+
+    def __call__(self, model_params: np.ndarray) -> float:
+        """Gaussian log-prior."""
+        diff = model_params - self.mean
+        return float(-0.5 * diff.T @ self.inv_covar @ diff)
+
+    @property
+    def config_params(self) -> list[np.ndarray]:
+        """Configuration parameters of the prior."""
+        return [self.mean, self.covar]
 
 
 def gaussian_prior_factory(
@@ -32,16 +74,43 @@ def gaussian_prior_factory(
     ValueError
         If the covariance matrix shape doesn't match the mean dimension, is not symmetric, or is not positive semidefinite.
     """
-    _validate_covariance_matrix(covar, mean.size)
+    return GaussianPrior(mean, covar)
 
-    inv_covar = np.linalg.inv(covar)
 
-    def prior_fn(model_params: np.ndarray) -> float:
-        """Gaussian log-prior."""
-        diff = model_params - mean
-        return float(-0.5 * diff.T @ inv_covar @ diff)
+class UniformPrior:
+    """Class representing a Uniform prior.
 
-    return prior_fn
+    Parameters
+    ----------
+    lower_bounds : ndarray, shape (n,)
+        Lower bounds of the uniform prior.
+    upper_bounds : ndarray, shape (n,)
+        Upper bounds of the uniform prior.
+    """
+
+    def __init__(self, lower_bounds: np.ndarray, upper_bounds: np.ndarray) -> None:
+        if lower_bounds.shape != upper_bounds.shape:
+            raise ValueError(
+                f"Shape mismatch: lower_bounds has shape {lower_bounds.shape}, upper_bounds has shape {upper_bounds.shape}."
+            )
+        if np.any(lower_bounds >= upper_bounds):
+            raise ValueError(
+                "Each lower bound must be less than the corresponding upper bound."
+            )
+        self.lower_bounds = lower_bounds
+        self.upper_bounds = upper_bounds
+
+    def __call__(self, model_params: np.ndarray) -> float:
+        """Uniform log-prior."""
+        out_of_bounds = np.any(
+            (model_params < self.lower_bounds) | (model_params > self.upper_bounds)
+        )
+        return float(np.where(out_of_bounds, -np.inf, 0.0))
+
+    @property
+    def config_params(self) -> list[np.ndarray]:
+        """Configuration parameters of the prior."""
+        return [self.lower_bounds, self.upper_bounds]
 
 
 def uniform_prior_factory(
@@ -67,23 +136,7 @@ def uniform_prior_factory(
     ValueError
         If any lower bound is not less than the corresponding upper bound.
     """
-    if lower_bounds.shape != upper_bounds.shape:
-        raise ValueError(
-            f"Shape mismatch: lower_bounds has shape {lower_bounds.shape}, upper_bounds has shape {upper_bounds.shape}."
-        )
-    if np.any(lower_bounds >= upper_bounds):
-        raise ValueError(
-            "Each lower bound must be less than the corresponding upper bound."
-        )
-
-    def prior_fn(model_params: np.ndarray) -> float:
-        """Uniform log-prior."""
-        out_of_bounds = np.any(
-            (model_params < lower_bounds) | (model_params > upper_bounds)
-        )
-        return float(np.where(out_of_bounds, -np.inf, 0.0))
-
-    return prior_fn
+    return UniformPrior(lower_bounds, upper_bounds)
 
 
 @dataclass
