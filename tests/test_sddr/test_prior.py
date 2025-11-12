@@ -329,7 +329,7 @@ class TestMarginalisation:
         log_prior = marginalised_prior(test_point)
         np.testing.assert_almost_equal(log_prior, expected_result)
 
-    @pytest.mark.parametrize(("fixture_name"), [("gaussian_prior"), ("uniform_prior")])
+    @pytest.mark.parametrize("fixture_name", ["gaussian_prior", "uniform_prior"])
     def test_marginalise_invalid_indices(
         self, fixture_name: str, request: pytest.FixtureRequest
     ) -> None:
@@ -339,7 +339,7 @@ class TestMarginalisation:
         with pytest.raises(IndexError, match="out of bounds"):
             marginalise_prior(prior_fn, [0, 5])  # 5 is out of bounds
 
-    @pytest.mark.parametrize(("fixture_name"), [("gaussian_prior"), ("uniform_prior")])
+    @pytest.mark.parametrize("fixture_name", ["gaussian_prior", "uniform_prior"])
     def test_marginalise_slice(
         self, fixture_name: str, request: pytest.FixtureRequest
     ) -> None:
@@ -353,7 +353,7 @@ class TestMarginalisation:
         log_prior_slice = marginalised_prior_slice(test_point)
         np.testing.assert_almost_equal(log_prior_list, log_prior_slice)
 
-    @pytest.mark.parametrize(("fixture_name"), [("gaussian_prior"), ("uniform_prior")])
+    @pytest.mark.parametrize("fixture_name", ["gaussian_prior", "uniform_prior"])
     def test_marginalise_all_indices(
         self, fixture_name: str, request: pytest.FixtureRequest
     ) -> None:
@@ -372,7 +372,7 @@ class TestMarginalisation:
 
         np.testing.assert_almost_equal(log_prior_original, log_prior_marginalised)
 
-    @pytest.mark.parametrize(("fixture_name"), [("gaussian_prior"), ("uniform_prior")])
+    @pytest.mark.parametrize("fixture_name", ["gaussian_prior", "uniform_prior"])
     def test_marginalise_no_indices(
         self, fixture_name: str, request: pytest.FixtureRequest
     ) -> None:
