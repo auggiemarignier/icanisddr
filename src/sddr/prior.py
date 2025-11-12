@@ -3,7 +3,7 @@
 In this application we'll deal with Gaussian and Uniform priors.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -18,6 +18,7 @@ class PriorFunction(Protocol):
     """
 
     config_params: list[np.ndarray]
+    n: int
 
     def __call__(self, model_params: np.ndarray) -> float:
         """Calculate the log-prior for given model parameters."""
@@ -57,9 +58,7 @@ class GaussianPrior:
         return self._n
 
 
-def gaussian_prior_factory(
-    mean: np.ndarray, covar: np.ndarray
-) -> Callable[[np.ndarray], float]:
+def gaussian_prior_factory(mean: np.ndarray, covar: np.ndarray) -> GaussianPrior:
     """
     Create a Gaussian prior function.
 
@@ -72,7 +71,7 @@ def gaussian_prior_factory(
 
     Returns
     -------
-    prior_fn : Callable[[np.ndarray], float]
+    prior_fn : GaussianPrior
         Prior function that takes model parameters and returns the log-prior.
 
     Raises
@@ -127,7 +126,7 @@ class UniformPrior:
 
 def uniform_prior_factory(
     lower_bounds: np.ndarray, upper_bounds: np.ndarray
-) -> Callable[[np.ndarray], float]:
+) -> UniformPrior:
     """
     Create a Uniform prior function.
 
@@ -140,7 +139,7 @@ def uniform_prior_factory(
 
     Returns
     -------
-    prior_fn : Callable[[np.ndarray], float]
+    prior_fn : UniformPrior
         Prior function that takes model parameters and returns the log-prior.
 
     Raises
@@ -208,13 +207,13 @@ class PriorComponent:
 
     Parameters
     ----------
-    prior_fn : Callable[[np.ndarray], float]
+    prior_fn : PriorFunction
         Prior function that takes model parameters and returns the log-prior.
     indices : Sequence[int] | slice | np.ndarray
         Indices of the model parameters that this prior component applies to.
     """
 
-    prior_fn: Callable[[np.ndarray], float]
+    prior_fn: PriorFunction
     indices: Sequence[int] | slice | np.ndarray
 
     @property
@@ -267,7 +266,7 @@ class CompoundPrior:
 
 def compound_prior_factory(
     prior_components: Sequence[PriorComponent],
-) -> Callable[[np.ndarray], float]:
+) -> CompoundPrior:
     """
     Create a compound prior function from multiple prior components.
 
@@ -278,7 +277,7 @@ def compound_prior_factory(
 
     Returns
     -------
-    prior_fn : Callable[[np.ndarray], float]
+    prior_fn : CompoundPrior
         Compound prior function that takes model parameters and returns the log-prior.
     """
 

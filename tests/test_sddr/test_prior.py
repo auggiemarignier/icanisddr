@@ -158,21 +158,17 @@ class TestUniformPriorFactory:
         return np.array([1.0, 1.0])
 
     @pytest.fixture
-    def valid_uniform_prior(
-        self, lower: np.ndarray, upper: np.ndarray
-    ) -> Callable[[np.ndarray], float]:
+    def valid_uniform_prior(self, lower: np.ndarray, upper: np.ndarray) -> UniformPrior:
         """Create a valid uniform prior function for testing."""
         return uniform_prior_factory(lower, upper)
 
-    def test_uniform_prior_n(
-        self, valid_uniform_prior: Callable[[np.ndarray], float]
-    ) -> None:
+    def test_uniform_prior_n(self, valid_uniform_prior: UniformPrior) -> None:
         """Test that uniform prior has correct number of parameters."""
         assert valid_uniform_prior.n == 2
 
     def test_uniform_config_params_expose_bounds(
         self,
-        valid_uniform_prior: Callable[[np.ndarray], float],
+        valid_uniform_prior: UniformPrior,
         lower: np.ndarray,
         upper: np.ndarray,
     ) -> None:
