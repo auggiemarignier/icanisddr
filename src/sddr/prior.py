@@ -69,6 +69,12 @@ class UniformPrior:
         Lower bounds of the uniform prior.
     upper_bounds : ndarray, shape (n,)
         Upper bounds of the uniform prior.
+
+    Raises
+    ------
+    ValueError
+        If `lower_bounds` and `upper_bounds` have mismatched shapes,
+        or if any lower bound is not less than the corresponding upper bound.
     """
 
     def __init__(self, lower_bounds: np.ndarray, upper_bounds: np.ndarray) -> None:
