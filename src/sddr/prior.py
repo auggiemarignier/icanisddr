@@ -235,6 +235,13 @@ def marginalise_prior(
     -------
     marginal_prior_fn : PriorFunction
         Marginalised prior function that takes model parameters and returns the log-prior.
+
+    Raises
+    ------
+    ValueError
+        If no indices are provided (i.e., the indices array is empty).
+    IndexError
+        If any of the provided indices are out of bounds for the parameter array.
     """
     idx = (
         np.arange(prior.config_params[0].size)[indices]
