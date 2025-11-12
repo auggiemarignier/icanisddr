@@ -284,7 +284,7 @@ class TestUniformPrior:
 
 
 class TestMarginalisation:
-    """Tests for marginalisation the base distributions."""
+    """Tests for marginalising the base distributions."""
 
     @pytest.fixture
     def gaussian_prior(self) -> Callable[[np.ndarray], float]:
