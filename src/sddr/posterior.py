@@ -34,7 +34,7 @@ def posterior_factory(
     return posterior_fn
 
 
-def marginalise_posterior_samples(
+def marginalise_samples(
     samples: np.ndarray, param_indices: Sequence[int] | slice
 ) -> np.ndarray:
     """

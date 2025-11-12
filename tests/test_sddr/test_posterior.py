@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from sddr.posterior import marginalise_posterior_samples, posterior_factory
+from sddr.posterior import marginalise_samples, posterior_factory
 
 
 def test_posterior_factory():
@@ -42,7 +42,7 @@ def samples() -> np.ndarray:
 def test_marginalise_posterior_samples_with_indices(samples):
     """Test the marginalisation of posterior samples using indices to select which parameters we want to keep."""
 
-    marginal_samples = marginalise_posterior_samples(samples, [0, 1])
+    marginal_samples = marginalise_samples(samples, [0, 1])
 
     expected_marginal_samples = np.array(
         [
@@ -58,7 +58,7 @@ def test_marginalise_posterior_samples_with_indices(samples):
 def test_marginalise_posterior_samples_with_slice(samples):
     """Test the marginalisation of posterior samples using a slice to select which parameters we want to keep."""
 
-    marginal_samples = marginalise_posterior_samples(samples, slice(1, 4))
+    marginal_samples = marginalise_samples(samples, slice(1, 4))
 
     expected_marginal_samples = np.array(
         [
