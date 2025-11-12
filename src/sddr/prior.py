@@ -306,6 +306,11 @@ def _(
     -------
     marginal_compound_prior : CompoundPrior
         Marginalised compound prior function that takes model parameters and returns the log-prior.
+
+    Raises
+    ------
+    ValueError
+        If no indices are provided to keep after marginalisation, or if no prior components remain after marginalisation.
     """
     idx = (
         np.arange(compound_prior.n)[indices]
