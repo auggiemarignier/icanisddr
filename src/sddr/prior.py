@@ -134,13 +134,7 @@ class PriorComponent:
     @property
     def n(self) -> int:
         """Number of parameters in this prior component."""
-        if isinstance(self.indices, slice):
-            start = self.indices.start or 0
-            stop = self.indices.stop
-            step = self.indices.step or 1
-            return (stop - start + (step - 1)) // step
-        else:
-            return len(self.indices)
+        return len(_indices_to_array(self.indices))
 
 
 class CompoundPrior:
@@ -323,13 +317,7 @@ def _(
 
     for component in compound_prior.prior_components:
         # Convert component indices to array
-        if isinstance(component.indices, slice):
-            start = component.indices.start or 0
-            stop = component.indices.stop
-            step = component.indices.step or 1
-            component_indices = np.array(range(start, stop, step))
-        else:
-            component_indices = np.asarray(component.indices)
+        component_indices = _indices_to_array(component.indices)
 
         # Find which requested indices belong to this component
         mask = np.isin(idx, component_indices)
@@ -361,6 +349,40 @@ def _(
         )
 
     return CompoundPrior(new_components)
+
+
+def _indices_to_array(indices: Sequence[int] | slice | np.ndarray) -> np.ndarray:
+    """
+    Convert indices (slice, sequence, or array) to a numpy array.
+
+    For slices, converts to an array of indices using the slice's start, stop, and step.
+    Note: For slices without an explicit stop value, this cannot determine the array size
+    and will require the stop value to be specified.
+
+    Parameters
+    ----------
+    indices : Sequence[int] | slice | np.ndarray
+        Indices to convert. If slice, must have an explicit stop value.
+
+    Returns
+    -------
+    ndarray
+        Array of indices.
+
+    Raises
+    ------
+    ValueError
+        If indices is a slice without an explicit stop value.
+    """
+    if isinstance(indices, slice):
+        start = indices.start or 0
+        stop = indices.stop
+        if stop is None:
+            raise ValueError("Slice must have an explicit stop value")
+        step = indices.step or 1
+        return np.array(range(start, stop, step))
+    else:
+        return np.asarray(indices, dtype=int)
 
 
 def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
