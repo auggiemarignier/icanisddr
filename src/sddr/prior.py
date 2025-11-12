@@ -325,7 +325,7 @@ def _(
         # Convert component indices to array
         if isinstance(component.indices, slice):
             start = component.indices.start or 0
-            stop = component.indices.stop
+            stop = component.indices.stop or compound_prior.n
             step = component.indices.step or 1
             component_indices = np.array(range(start, stop, step))
         else:
