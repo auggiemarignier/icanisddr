@@ -144,12 +144,33 @@ class PriorComponent:
 
 
 class CompoundPrior:
-    """Class representing a compound prior from multiple prior components.
+    """
+    Represents a compound prior formed by combining multiple prior components.
+
+    A compound prior is a joint prior distribution over model parameters, constructed
+    by combining several prior components, each of which acts on a subset of the parameters.
+    This is useful when different groups of parameters have different prior distributions,
+    or when the overall prior can be factorized into independent components.
+
+    When evaluating the compound prior, any UniformPrior components are reordered to be
+    evaluated first. This allows for early exit optimization: if any UniformPrior component
+    returns -inf (indicating the parameters are outside the allowed range), the evaluation
+    stops immediately and -inf is returned for the whole compound prior.
 
     Parameters
     ----------
     prior_components : Sequence[PriorComponent]
-        Sequence of PriorComponent instances.
+        Sequence of PriorComponent instances, each specifying a prior and the indices
+        of the model parameters it applies to.
+
+    Raises
+    ------
+    IndexError
+        If the indices specified in any PriorComponent are invalid for the given model parameters.
+    TypeError
+        If the input types for model parameters or prior components are incorrect.
+    ValueError
+        If the prior components do not cover the expected number of parameters, or if there is overlap.
     """
 
     def __init__(self, prior_components: Sequence[PriorComponent]) -> None:
