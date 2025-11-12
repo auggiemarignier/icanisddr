@@ -59,30 +59,6 @@ class GaussianPrior:
         return self._n
 
 
-def gaussian_prior_factory(mean: np.ndarray, covar: np.ndarray) -> GaussianPrior:
-    """
-    Create a Gaussian prior function.
-
-    Parameters
-    ----------
-    mean : ndarray, shape (n,)
-        Mean of the Gaussian prior e.g. a reference model.
-    covar : ndarray, shape (n, n)
-        Covariance matrix of the Gaussian prior.
-
-    Returns
-    -------
-    prior_fn : GaussianPrior
-        Prior function that takes model parameters and returns the log-prior.
-
-    Raises
-    ------
-    ValueError
-        If the covariance matrix shape doesn't match the mean dimension, is not symmetric, or is not positive semidefinite.
-    """
-    return GaussianPrior(mean, covar)
-
-
 class UniformPrior:
     """Class representing a Uniform prior.
 
@@ -123,32 +99,6 @@ class UniformPrior:
     def n(self) -> int:
         """Number of parameters in the Uniform prior."""
         return self._n
-
-
-def uniform_prior_factory(
-    lower_bounds: np.ndarray, upper_bounds: np.ndarray
-) -> UniformPrior:
-    """
-    Create a Uniform prior function.
-
-    Parameters
-    ----------
-    lower_bounds : ndarray, shape (n,)
-        Lower bounds of the uniform prior.
-    upper_bounds : ndarray, shape (n,)
-        Upper bounds of the uniform prior.
-
-    Returns
-    -------
-    prior_fn : UniformPrior
-        Prior function that takes model parameters and returns the log-prior.
-
-    Raises
-    ------
-    ValueError
-        If any lower bound is not less than the corresponding upper bound.
-    """
-    return UniformPrior(lower_bounds, upper_bounds)
 
 
 def marginalise_prior(
@@ -269,26 +219,6 @@ class CompoundPrior:
     def n(self) -> int:
         """Total number of parameters in the compound prior."""
         return self._n
-
-
-def compound_prior_factory(
-    prior_components: Sequence[PriorComponent],
-) -> CompoundPrior:
-    """
-    Create a compound prior function from multiple prior components.
-
-    Parameters
-    ----------
-    prior_components : Sequence[PriorComponent]
-        Sequence of PriorComponent instances.
-
-    Returns
-    -------
-    prior_fn : CompoundPrior
-        Compound prior function that takes model parameters and returns the log-prior.
-    """
-
-    return CompoundPrior(prior_components)
 
 
 def marginalise_compound_prior(

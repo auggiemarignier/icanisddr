@@ -11,22 +11,19 @@ from sddr.prior import (
     PriorComponent,
     PriorFunction,
     UniformPrior,
-    compound_prior_factory,
-    gaussian_prior_factory,
     marginalise_compound_prior,
     marginalise_prior,
-    uniform_prior_factory,
 )
 
 
-class TestGaussianPriorFactory:
-    """Tests for gaussian_prior_factory."""
+class TestGaussianPrior:
+    """Tests for GaussianPrior."""
 
     def test_gaussian_prior_n(self) -> None:
         """Test that Gaussian prior has correct number of parameters."""
         mean = np.array([1.0, 2.0, 3.0])
         covar = np.eye(3)
-        prior_fn = gaussian_prior_factory(mean, covar)
+        prior_fn = GaussianPrior(mean, covar)
         assert prior_fn.n == 3
 
     def test_gaussian_config_params_expose_mean_and_covar(self) -> None:
@@ -39,7 +36,7 @@ class TestGaussianPriorFactory:
                 [0.0, 0.2, 3.0],
             ]
         )
-        prior = gaussian_prior_factory(mean, covar)
+        prior = GaussianPrior(mean, covar)
         assert isinstance(prior, GaussianPrior)
 
         cfg = prior.config_params
@@ -60,7 +57,7 @@ class TestGaussianPriorFactory:
         """Test that log-prior is zero at the mean."""
         mean = np.array([1.0, 2.0, 3.0])
         covar = np.eye(3)
-        prior_fn = gaussian_prior_factory(mean, covar)
+        prior_fn = GaussianPrior(mean, covar)
 
         log_prior = prior_fn(mean)
         assert log_prior == 0.0
@@ -69,7 +66,7 @@ class TestGaussianPriorFactory:
         """Test that log-prior is symmetric around the mean."""
         mean = np.array([0.0, 0.0])
         covar = np.eye(2)
-        prior_fn = gaussian_prior_factory(mean, covar)
+        prior_fn = GaussianPrior(mean, covar)
 
         delta = np.array([1.0, 1.0])
         log_prior_plus = prior_fn(mean + delta)
@@ -81,7 +78,7 @@ class TestGaussianPriorFactory:
         """Test that log-prior decreases as we move away from the mean."""
         mean = np.array([0.0, 0.0])
         covar = np.eye(2)
-        prior_fn = gaussian_prior_factory(mean, covar)
+        prior_fn = GaussianPrior(mean, covar)
 
         close = np.array([0.1, 0.1])
         far = np.array([1.0, 1.0])
@@ -95,7 +92,7 @@ class TestGaussianPriorFactory:
         """Test Gaussian prior with correlated covariance."""
         mean = np.array([0.0, 0.0])
         covar = np.array([[1.0, 0.5], [0.5, 1.0]])
-        prior_fn = gaussian_prior_factory(mean, covar)
+        prior_fn = GaussianPrior(mean, covar)
 
         params = np.array([1.0, 1.0])
         log_prior = prior_fn(params)
@@ -110,7 +107,7 @@ class TestGaussianPriorFactory:
         covar = np.array([[1.0, 0.5], [0.3, 1.0]])  # Non-symmetric
 
         with pytest.raises(ValueError, match="symmetric"):
-            gaussian_prior_factory(mean, covar)
+            GaussianPrior(mean, covar)
 
     def test_gaussian_prior_invalid_negative_eigenvalue(self) -> None:
         """Test that covariance with negative eigenvalues raises ValueError."""
@@ -118,7 +115,7 @@ class TestGaussianPriorFactory:
         covar = np.array([[1.0, 2.0], [2.0, 1.0]])  # Not positive semidefinite
 
         with pytest.raises(ValueError, match="positive semidefinite"):
-            gaussian_prior_factory(mean, covar)
+            GaussianPrior(mean, covar)
 
     def test_gaussian_prior_invalid_shape_mismatch(self) -> None:
         """Test that mismatched mean and covariance shapes raise ValueError."""
@@ -126,14 +123,14 @@ class TestGaussianPriorFactory:
         covar = np.eye(3)  # Wrong size
 
         with pytest.raises(ValueError, match="shape"):
-            gaussian_prior_factory(mean, covar)
+            GaussianPrior(mean, covar)
 
     def test_gaussian_prior_diagonal_covariance(self) -> None:
         """Test Gaussian prior with diagonal covariance (independent parameters)."""
         mean = np.array([1.0, 2.0, 3.0])
         variances = np.array([0.5, 1.0, 2.0])
         covar = np.diag(variances)
-        prior_fn = gaussian_prior_factory(mean, covar)
+        prior_fn = GaussianPrior(mean, covar)
 
         # Test a point one standard deviation away in first dimension
         params = mean.copy()
@@ -144,8 +141,8 @@ class TestGaussianPriorFactory:
         np.testing.assert_allclose(log_prior, -0.5, rtol=1e-10)
 
 
-class TestUniformPriorFactory:
-    """Tests for uniform_prior_factory."""
+class TestUniformPrior:
+    """Tests for UniformPrior."""
 
     @pytest.fixture
     def lower(self) -> np.ndarray:
@@ -160,7 +157,7 @@ class TestUniformPriorFactory:
     @pytest.fixture
     def valid_uniform_prior(self, lower: np.ndarray, upper: np.ndarray) -> UniformPrior:
         """Create a valid uniform prior function for testing."""
-        return uniform_prior_factory(lower, upper)
+        return UniformPrior(lower, upper)
 
     def test_uniform_prior_n(self, valid_uniform_prior: UniformPrior) -> None:
         """Test that uniform prior has correct number of parameters."""
@@ -246,7 +243,7 @@ class TestUniformPriorFactory:
         upper = np.array([1.0, 0.5])  # Second bound is invalid
 
         with pytest.raises(ValueError, match="lower bound must be less than"):
-            uniform_prior_factory(lower, upper)
+            UniformPrior(lower, upper)
 
     def test_uniform_prior_equal_bounds(self) -> None:
         """Test that equal bounds raise ValueError."""
@@ -254,13 +251,13 @@ class TestUniformPriorFactory:
         upper = np.array([1.0, 1.0])  # Second bound is equal
 
         with pytest.raises(ValueError, match="lower bound must be less than"):
-            uniform_prior_factory(lower, upper)
+            UniformPrior(lower, upper)
 
     def test_uniform_prior_different_ranges(self) -> None:
         """Test uniform prior with different ranges per dimension."""
         lower = np.array([0.0, -10.0, 5.0])
         upper = np.array([1.0, 10.0, 15.0])
-        prior_fn = uniform_prior_factory(lower, upper)
+        prior_fn = UniformPrior(lower, upper)
 
         # In bounds
         params_in = np.array([0.5, 0.0, 10.0])
@@ -275,7 +272,7 @@ class TestUniformPriorFactory:
         n_dims = 10
         lower = np.zeros(n_dims)
         upper = np.ones(n_dims)
-        prior_fn = uniform_prior_factory(lower, upper)
+        prior_fn = UniformPrior(lower, upper)
 
         # All in bounds
         params_in = np.full(n_dims, 0.5)
@@ -295,14 +292,14 @@ class TestMarginalisation:
         """Create a Gaussian prior for testing."""
         mean = np.array([0.0, 0.0, 0.0])
         covar = np.eye(3)
-        return gaussian_prior_factory(mean, covar)
+        return GaussianPrior(mean, covar)
 
     @pytest.fixture
     def uniform_prior(self) -> Callable[[np.ndarray], float]:
         """Create a Uniform prior for testing."""
         lower = np.array([-1.0, -1.0, -1.0])
         upper = np.array([1.0, 1.0, 1.0])
-        return uniform_prior_factory(lower, upper)
+        return UniformPrior(lower, upper)
 
     @pytest.mark.parametrize(
         ("fixture_name", "return_type"),
@@ -394,7 +391,7 @@ class TestPriorComponent:
         """Test that PriorComponent stores prior function and indices correctly."""
         mean = np.array([0.0, 0.0])
         covar = np.eye(2)
-        prior_fn = gaussian_prior_factory(mean, covar)
+        prior_fn = GaussianPrior(mean, covar)
         indices = [0, 1]
 
         component = PriorComponent(prior_fn=prior_fn, indices=indices)
@@ -407,7 +404,7 @@ class TestPriorComponent:
         """Test that PriorComponent can store indices as a slice."""
         lower = np.array([-1.0, -1.0])
         upper = np.array([1.0, 1.0])
-        prior_fn = uniform_prior_factory(lower, upper)
+        prior_fn = UniformPrior(lower, upper)
         indices = slice(0, 2)
 
         component = PriorComponent(prior_fn=prior_fn, indices=indices)
@@ -417,7 +414,7 @@ class TestPriorComponent:
         assert component.n == 2
 
 
-class TestCompoundPriorFactory:
+class TestCompoundPrior:
     """Tests for compound prior functions combining Gaussian and Uniform priors."""
 
     @pytest.fixture
@@ -426,17 +423,17 @@ class TestCompoundPriorFactory:
         # Gaussian prior on first two parameters
         mean = np.array([0.0, 0.0])
         covar = np.eye(2)
-        gaussian_prior = gaussian_prior_factory(mean, covar)
+        gaussian_prior = GaussianPrior(mean, covar)
         gaussian_component = PriorComponent(prior_fn=gaussian_prior, indices=[0, 1])
 
         # Uniform prior on last two parameters
         lower = np.array([-1.0, -1.0])
         upper = np.array([1.0, 1.0])
-        uniform_prior = uniform_prior_factory(lower, upper)
+        uniform_prior = UniformPrior(lower, upper)
         uniform_component = PriorComponent(prior_fn=uniform_prior, indices=[2, 3])
 
         # Combine into compound prior
-        return compound_prior_factory([gaussian_component, uniform_component])
+        return CompoundPrior([gaussian_component, uniform_component])
 
     def test_compound_prior_n(self, compound_prior: CompoundPrior) -> None:
         """Test that compound prior infers correct number of parameters from components."""
