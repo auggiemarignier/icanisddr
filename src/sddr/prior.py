@@ -237,7 +237,7 @@ def marginalise_prior(
     r"""
     Create a marginalised prior function over specified parameter indices.
 
-    This assumes that the all the random variables are independent.
+    This assumes that all the random variables are independent.
 
     .. math::
         p(m_{\text{remaining}}) = \int p(m_{\text{remaining}}, m_{\text{marginalised}}) \, dm_{\text{marginalised}}
