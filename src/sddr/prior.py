@@ -135,13 +135,7 @@ class PriorComponent:
 
     def __post_init__(self, indices: Sequence[int] | slice | np.ndarray) -> None:
         """Convert indices to a numpy array if it's a slice."""
-        if isinstance(indices, slice):
-            start, stop, step = self._unpack_slice(indices)
-            indices_array = np.arange(start, stop, step)
-        else:
-            indices_array = np.asarray(indices, dtype=int)
-
-        self._indices = np.sort(indices_array)
+        self._indices = _normalise_indices(indices, self.prior_fn.n)
 
     @property
     def n(self) -> int:
@@ -152,15 +146,6 @@ class PriorComponent:
     def indices(self) -> np.ndarray:
         """Get the indices as a numpy array."""
         return self._indices
-
-    def _unpack_slice(self, s: slice) -> tuple[int, int, int]:
-        """Unpack the slice indices into start, stop, step."""
-        if not isinstance(s, slice):
-            raise TypeError("Indices are not a slice.")
-        start = s.start or 0
-        stop = s.stop or (self.prior_fn.n + start)
-        step = s.step or 1
-        return start, stop, step
 
 
 class CompoundPrior:
@@ -284,11 +269,7 @@ def marginalise_prior(
     IndexError
         If any of the provided indices are out of bounds for the parameter array.
     """
-    idx = (
-        np.arange(prior.config_params[0].size)[indices]
-        if isinstance(indices, slice)
-        else np.asarray(indices, dtype=int)
-    )
+    idx = _normalise_indices(indices, prior.n)
     if idx.size == 0:
         raise ValueError(
             "At least one index should be kept after marginalisation.  Check the 'indices' parameter."
@@ -332,11 +313,7 @@ def _(
     ValueError
         If no indices are provided to keep after marginalisation, or if no prior components remain after marginalisation.
     """
-    idx = (
-        np.arange(compound_prior.n)[indices]
-        if isinstance(indices, slice)
-        else np.asarray(indices, dtype=int)
-    )
+    idx = _normalise_indices(indices, compound_prior.n)
     if idx.size == 0:
         raise ValueError(
             "At least one index should be kept after marginalisation. Check the 'indices' parameter."
@@ -347,14 +324,7 @@ def _(
     next_index = 0  # Track the starting position in the new compound space
 
     for component in compound_prior.prior_components:
-        # Convert component indices to array
-        if isinstance(component.indices, slice):
-            start = component.indices.start or 0
-            stop = component.indices.stop
-            step = component.indices.step or 1
-            component_indices = np.array(range(start, stop, step))
-        else:
-            component_indices = np.asarray(component.indices)
+        component_indices = np.asarray(component.indices)
 
         # Find which requested indices belong to this component
         mask = np.isin(idx, component_indices)
@@ -413,3 +383,22 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     eigenvalues = np.linalg.eigvalsh(covar)
     if np.any(eigenvalues < -1e-10):  # Allow small numerical tolerance
         raise ValueError("Covariance matrix must be positive semidefinite.")
+
+
+def _unpack_slice(s: slice, n_total: int) -> tuple[int, int, int]:
+    """Unpack the slice indices into start, stop, step."""
+    start = s.start or 0
+    stop = s.stop or n_total
+    step = s.step or 1
+    return start, stop, step
+
+
+def _normalise_indices(
+    indices: Sequence[int] | slice | np.ndarray, n_total: int
+) -> np.ndarray:
+    """Convert various types of indices to a sorted numpy array."""
+    if isinstance(indices, slice):
+        start, stop, step = _unpack_slice(indices, n_total)
+        return np.sort(np.arange(start, stop, step))
+    else:
+        return np.sort(np.asarray(indices, dtype=int))
