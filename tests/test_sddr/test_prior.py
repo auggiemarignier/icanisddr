@@ -11,7 +11,6 @@ from sddr.prior import (
     PriorComponent,
     PriorFunction,
     UniformPrior,
-    marginalise_compound_prior,
     marginalise_prior,
 )
 
@@ -464,7 +463,7 @@ class TestCompoundPrior:
     ) -> None:
         """Test marginalisation of the compound prior."""
         # Marginalise over the first and last parameters (one from Gaussian, one from Uniform)
-        marginalised_prior = marginalise_compound_prior(compound_prior, [1, 2])
+        marginalised_prior = marginalise_prior(compound_prior, [1, 2])
 
         # test point 1 stdev away in Gaussian component, and within Uniform component
         test_point = np.array([1.0, 0.0])
