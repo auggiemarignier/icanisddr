@@ -387,6 +387,36 @@ class TestMarginalisation:
             marginalise_prior(prior_fn, np.array([]))
 
 
+class TestPriorComponent:
+    """Tests for PriorComponent dataclass."""
+
+    def test_prior_component_with_list_indices(self) -> None:
+        """Test that PriorComponent stores prior function and indices correctly."""
+        mean = np.array([0.0, 0.0])
+        covar = np.eye(2)
+        prior_fn = gaussian_prior_factory(mean, covar)
+        indices = [0, 1]
+
+        component = PriorComponent(prior_fn=prior_fn, indices=indices)
+
+        assert component.prior_fn is prior_fn
+        assert component.indices == indices
+        assert component.n == 2
+
+    def test_prior_component_with_slice(self) -> None:
+        """Test that PriorComponent can store indices as a slice."""
+        lower = np.array([-1.0, -1.0])
+        upper = np.array([1.0, 1.0])
+        prior_fn = uniform_prior_factory(lower, upper)
+        indices = slice(0, 2)
+
+        component = PriorComponent(prior_fn=prior_fn, indices=indices)
+
+        assert component.prior_fn is prior_fn
+        assert component.indices == indices
+        assert component.n == 2
+
+
 class TestCompoundPriorFactory:
     """Tests for compound prior functions combining Gaussian and Uniform priors."""
 
@@ -408,29 +438,8 @@ class TestCompoundPriorFactory:
         # Combine into compound prior
         return compound_prior_factory([gaussian_component, uniform_component])
 
-    def test_compound_prior_n_from_lists(self, compound_prior: CompoundPrior) -> None:
+    def test_compound_prior_n(self, compound_prior: CompoundPrior) -> None:
         """Test that compound prior infers correct number of parameters from components."""
-        assert compound_prior.n == 4
-
-    def test_compound_prior_n_from_slices(self):
-        """Test that compound prior infers correct number of parameters from components using slices."""
-        # Gaussian prior on first two parameters
-        mean = np.array([0.0, 0.0])
-        covar = np.eye(2)
-        gaussian_prior = gaussian_prior_factory(mean, covar)
-        gaussian_component = PriorComponent(
-            prior_fn=gaussian_prior, indices=slice(0, 2)
-        )
-
-        # Uniform prior on last two parameters
-        lower = np.array([-1.0, -1.0])
-        upper = np.array([1.0, 1.0])
-        uniform_prior = uniform_prior_factory(lower, upper)
-        uniform_component = PriorComponent(prior_fn=uniform_prior, indices=slice(2, 4))
-
-        # Combine into compound prior
-        compound_prior = compound_prior_factory([gaussian_component, uniform_component])
-
         assert compound_prior.n == 4
 
     def test_compound_prior_prior_components_sorting(
