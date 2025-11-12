@@ -22,6 +22,13 @@ from sddr.prior import (
 class TestGaussianPriorFactory:
     """Tests for gaussian_prior_factory."""
 
+    def test_gaussian_prior_n(self) -> None:
+        """Test that Gaussian prior has correct number of parameters."""
+        mean = np.array([1.0, 2.0, 3.0])
+        covar = np.eye(3)
+        prior_fn = gaussian_prior_factory(mean, covar)
+        assert prior_fn.n == 3
+
     def test_gaussian_config_params_expose_mean_and_covar(self) -> None:
         """Gaussian prior should expose mean and covariance via config_params in order and by reference."""
         mean = np.array([1.0, -2.0, 3.0])
@@ -156,6 +163,12 @@ class TestUniformPriorFactory:
     ) -> Callable[[np.ndarray], float]:
         """Create a valid uniform prior function for testing."""
         return uniform_prior_factory(lower, upper)
+
+    def test_uniform_prior_n(
+        self, valid_uniform_prior: Callable[[np.ndarray], float]
+    ) -> None:
+        """Test that uniform prior has correct number of parameters."""
+        assert valid_uniform_prior.n == 2
 
     def test_uniform_config_params_expose_bounds(
         self,
@@ -382,7 +395,7 @@ class TestCompoundPriorFactory:
     """Tests for compound prior functions combining Gaussian and Uniform priors."""
 
     @pytest.fixture
-    def compound_prior(self) -> Callable[[np.ndarray], float]:
+    def compound_prior(self) -> CompoundPrior:
         """Create a compound prior for testing."""
         # Gaussian prior on first two parameters
         mean = np.array([0.0, 0.0])
@@ -398,6 +411,31 @@ class TestCompoundPriorFactory:
 
         # Combine into compound prior
         return compound_prior_factory([gaussian_component, uniform_component])
+
+    def test_compound_prior_n_from_lists(self, compound_prior: CompoundPrior) -> None:
+        """Test that compound prior infers correct number of parameters from components."""
+        assert compound_prior.n == 4
+
+    def test_compound_prior_n_from_slices(self):
+        """Test that compound prior infers correct number of parameters from components using slices."""
+        # Gaussian prior on first two parameters
+        mean = np.array([0.0, 0.0])
+        covar = np.eye(2)
+        gaussian_prior = gaussian_prior_factory(mean, covar)
+        gaussian_component = PriorComponent(
+            prior_fn=gaussian_prior, indices=slice(0, 2)
+        )
+
+        # Uniform prior on last two parameters
+        lower = np.array([-1.0, -1.0])
+        upper = np.array([1.0, 1.0])
+        uniform_prior = uniform_prior_factory(lower, upper)
+        uniform_component = PriorComponent(prior_fn=uniform_prior, indices=slice(2, 4))
+
+        # Combine into compound prior
+        compound_prior = compound_prior_factory([gaussian_component, uniform_component])
+
+        assert compound_prior.n == 4
 
     def test_compound_prior_prior_components_sorting(
         self, compound_prior: CompoundPrior
@@ -416,9 +454,7 @@ class TestCompoundPriorFactory:
             elif isinstance(component.prior_fn, GaussianPrior):
                 found_gaussian = True
 
-    def test_compound_prior_valid_model(
-        self, compound_prior: Callable[[np.ndarray], float]
-    ) -> None:
+    def test_compound_prior_valid_model(self, compound_prior: CompoundPrior) -> None:
         """Test the compound prior with a valid model."""
 
         # Test point within both priors
@@ -431,9 +467,7 @@ class TestCompoundPriorFactory:
         expected_log_prior = -1.0
         np.testing.assert_almost_equal(log_prior, expected_log_prior)
 
-    def test_compound_prior_invalid_model(
-        self, compound_prior: Callable[[np.ndarray], float]
-    ) -> None:
+    def test_compound_prior_invalid_model(self, compound_prior: CompoundPrior) -> None:
         """Test the compound prior with a model that has out-of-bounds parameters."""
         # Test point outside uniform prior
         model = np.array([0.1, -0.1, 2.0, -0.5])
@@ -441,7 +475,7 @@ class TestCompoundPriorFactory:
         assert log_prior_out_uniform == -np.inf
 
     def test_compound_prior_marginalisation(
-        self, compound_prior: Callable[[np.ndarray], float]
+        self, compound_prior: CompoundPrior
     ) -> None:
         """Test marginalisation of the compound prior."""
         # Marginalise over the first and last parameters (one from Gaussian, one from Uniform)

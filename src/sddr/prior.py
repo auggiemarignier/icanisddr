@@ -39,6 +39,7 @@ class GaussianPrior:
         self.mean = mean
         self.covar = covar
         self.inv_covar = np.linalg.inv(covar)
+        self._n = mean.size
 
     def __call__(self, model_params: np.ndarray) -> float:
         """Gaussian log-prior."""
@@ -49,6 +50,11 @@ class GaussianPrior:
     def config_params(self) -> list[np.ndarray]:
         """Configuration parameters of the prior."""
         return [self.mean, self.covar]
+
+    @property
+    def n(self) -> int:
+        """Number of parameters in the Gaussian prior."""
+        return self._n
 
 
 def gaussian_prior_factory(
@@ -99,6 +105,7 @@ class UniformPrior:
             )
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
+        self._n = lower_bounds.size
 
     def __call__(self, model_params: np.ndarray) -> float:
         """Uniform log-prior."""
@@ -111,6 +118,11 @@ class UniformPrior:
     def config_params(self) -> list[np.ndarray]:
         """Configuration parameters of the prior."""
         return [self.lower_bounds, self.upper_bounds]
+
+    @property
+    def n(self) -> int:
+        """Number of parameters in the Uniform prior."""
+        return self._n
 
 
 def uniform_prior_factory(
@@ -205,6 +217,17 @@ class PriorComponent:
     prior_fn: Callable[[np.ndarray], float]
     indices: Sequence[int] | slice | np.ndarray
 
+    @property
+    def n(self) -> int:
+        """Number of parameters in this prior component."""
+        if isinstance(self.indices, slice):
+            start = self.indices.start or 0
+            stop = self.indices.stop
+            step = self.indices.step or 1
+            return (stop - start + (step - 1)) // step
+        else:
+            return len(self.indices)
+
 
 class CompoundPrior:
     """Class representing a compound prior from multiple prior components.
@@ -221,6 +244,7 @@ class CompoundPrior:
             prior_components,
             key=lambda c: not isinstance(c.prior_fn, UniformPrior),
         )
+        self._n = sum(c.n for c in prior_components)
 
     def __call__(self, model_params: np.ndarray) -> float:
         """Compound log-prior."""
@@ -234,6 +258,11 @@ class CompoundPrior:
 
             total_log_prior += component_log_prior
         return total_log_prior
+
+    @property
+    def n(self) -> int:
+        """Total number of parameters in the compound prior."""
+        return self._n
 
 
 def compound_prior_factory(
@@ -254,6 +283,29 @@ def compound_prior_factory(
     """
 
     return CompoundPrior(prior_components)
+
+
+def marginalise_compound_prior(
+    compound_prior: CompoundPrior, indices: Sequence[int] | slice | np.ndarray
+) -> CompoundPrior:
+    """
+    Create a marginalised compound prior function over specified parameter indices.
+
+    This assumes that all the random variables are independent.
+
+    Parameters
+    ----------
+    compound_prior : CompoundPrior
+        Original compound prior function to marginalise.
+    indices : Sequence[int] | slice | np.ndarray
+        Indices of the model parameters to keep after marginalisation.
+
+    Returns
+    -------
+    marginal_compound_prior : CompoundPrior
+        Marginalised compound prior function that takes model parameters and returns the log-prior.
+    """
+    pass
 
 
 def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
