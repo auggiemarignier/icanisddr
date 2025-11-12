@@ -35,6 +35,11 @@ class GaussianPrior:
         Mean of the Gaussian prior e.g. a reference model.
     covar : ndarray, shape (n, n)
         Covariance matrix of the Gaussian prior.
+
+    Raises
+    ------
+    ValueError
+        If the covariance matrix is not symmetric, not positive semidefinite, or has a shape mismatch with the mean.
     """
 
     def __init__(self, mean: np.ndarray, covar: np.ndarray) -> None:
