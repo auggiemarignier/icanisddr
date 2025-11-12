@@ -13,6 +13,7 @@ from sddr.prior import (
     UniformPrior,
     compound_prior_factory,
     gaussian_prior_factory,
+    marginalise_compound_prior,
     marginalise_prior,
     uniform_prior_factory,
 )
@@ -438,3 +439,17 @@ class TestCompoundPriorFactory:
         model = np.array([0.1, -0.1, 2.0, -0.5])
         log_prior_out_uniform = compound_prior(model)
         assert log_prior_out_uniform == -np.inf
+
+    def test_compound_prior_marginalisation(
+        self, compound_prior: Callable[[np.ndarray], float]
+    ) -> None:
+        """Test marginalisation of the compound prior."""
+        # Marginalise over the first and last parameters (one from Gaussian, one from Uniform)
+        marginalised_prior = marginalise_compound_prior(compound_prior, [1, 2])
+
+        # test point 1 stdev away in Gaussian component, and within Uniform component
+        test_point = np.array([1.0, 0.0])
+
+        expected_log_prior = -0.5 * (1.0**2) + 0.0  # Gaussian part + Uniform part
+        log_prior = marginalised_prior(test_point)
+        np.testing.assert_almost_equal(log_prior, expected_log_prior)
