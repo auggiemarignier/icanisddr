@@ -396,7 +396,7 @@ class TestPriorComponent:
         component = PriorComponent(prior_fn=prior_fn, indices=indices)
 
         assert component.prior_fn is prior_fn
-        assert component.indices == indices
+        np.testing.assert_array_equal(component.indices, np.array(indices))
         assert component.n == 2
 
     def test_prior_component_with_slice(self) -> None:
@@ -409,7 +409,7 @@ class TestPriorComponent:
         component = PriorComponent(prior_fn=prior_fn, indices=indices)
 
         assert component.prior_fn is prior_fn
-        assert component.indices == indices
+        np.testing.assert_array_equal(component.indices, np.arange(0, 2))
         assert component.n == 2
 
 

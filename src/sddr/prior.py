@@ -4,7 +4,7 @@ In this application we'll deal with Gaussian and Uniform priors.
 """
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import InitVar, dataclass, field
 from functools import singledispatch
 from itertools import chain
 from typing import Protocol, overload
@@ -129,18 +129,38 @@ class PriorComponent:
     """
 
     prior_fn: PriorFunction
-    indices: Sequence[int] | slice | np.ndarray
+    indices: InitVar[Sequence[int] | slice | np.ndarray]
+
+    _indices: np.ndarray = field(default_factory=lambda: np.array([]))
+
+    def __post_init__(self, indices: Sequence[int] | slice | np.ndarray) -> None:
+        """Convert indices to a numpy array if it's a slice."""
+        if isinstance(indices, slice):
+            start, stop, step = self._unpack_slice(indices)
+            indices_array = np.arange(start, stop, step)
+        else:
+            indices_array = np.asarray(indices, dtype=int)
+
+        self._indices = np.sort(indices_array)
 
     @property
     def n(self) -> int:
         """Number of parameters in this prior component."""
-        if isinstance(self.indices, slice):
-            start = self.indices.start or 0
-            stop = self.indices.stop
-            step = self.indices.step or 1
-            return (stop - start + (step - 1)) // step
-        else:
-            return len(self.indices)
+        return int(np.asarray(self.indices).size)
+
+    @property
+    def indices(self) -> np.ndarray:
+        """Get the indices as a numpy array."""
+        return self._indices
+
+    def _unpack_slice(self, s: slice) -> tuple[int, int, int]:
+        """Unpack the slice indices into start, stop, step."""
+        if not isinstance(s, slice):
+            raise TypeError("Indices are not a slice.")
+        start = s.start or 0
+        stop = s.stop or (self.prior_fn.n + start)
+        step = s.step or 1
+        return start, stop, step
 
 
 class CompoundPrior:
