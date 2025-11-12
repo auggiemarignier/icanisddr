@@ -372,7 +372,7 @@ class TestMarginalisation:
 
         np.testing.assert_almost_equal(log_prior_original, log_prior_marginalised)
 
-    @pytest.mark.parametrize(("fixture_name"), [("gaussian_prior"), ("uniform_prior")])
+    @pytest.mark.parametrize("fixture_name", ["gaussian_prior", "uniform_prior"])
     def test_marginalise_no_indices(
         self, fixture_name: str, request: pytest.FixtureRequest
     ) -> None:
