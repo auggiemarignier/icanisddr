@@ -442,23 +442,6 @@ class TestCompoundPriorFactory:
         """Test that compound prior infers correct number of parameters from components."""
         assert compound_prior.n == 4
 
-    def test_compound_prior_prior_components_sorting(
-        self, compound_prior: CompoundPrior
-    ) -> None:
-        """Test that any UniformPrior components are sorted to the front."""
-        components = compound_prior.prior_components
-        # Check that all UniformPrior components come before any GaussianPrior components
-        # Fixture was created with Gaussian first, so we expect re-ordering
-        found_gaussian = False
-        for component in components:
-            if isinstance(component.prior_fn, UniformPrior):
-                if found_gaussian:
-                    pytest.fail(
-                        "UniformPrior component found after GaussianPrior component."
-                    )
-            elif isinstance(component.prior_fn, GaussianPrior):
-                found_gaussian = True
-
     def test_compound_prior_valid_model(self, compound_prior: CompoundPrior) -> None:
         """Test the compound prior with a valid model."""
 

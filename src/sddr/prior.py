@@ -5,6 +5,7 @@ In this application we'll deal with Gaussian and Uniform priors.
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import chain
 from typing import Protocol
 
 import numpy as np
@@ -238,17 +239,23 @@ class CompoundPrior:
     """
 
     def __init__(self, prior_components: Sequence[PriorComponent]) -> None:
-        # Bring any UniformPriors to the front for early exit
-        self.prior_components = sorted(
-            prior_components,
-            key=lambda c: not isinstance(c.prior_fn, UniformPrior),
-        )
+        self.prior_components = prior_components
         self._n = sum(c.n for c in prior_components)
+
+        self._uniform_components = [
+            c for c in prior_components if isinstance(c.prior_fn, UniformPrior)
+        ]
+        self._non_uniform_components = [
+            c for c in prior_components if not isinstance(c.prior_fn, UniformPrior)
+        ]
 
     def __call__(self, model_params: np.ndarray) -> float:
         """Compound log-prior."""
+        # Bring any UniformPriors to the front for early exit
+        prior_components = chain(self._uniform_components, self._non_uniform_components)
+
         total_log_prior = 0.0
-        for component in self.prior_components:
+        for component in prior_components:
             params_subset = model_params[component.indices]
             component_log_prior = component.prior_fn(params_subset)
 
@@ -304,7 +311,60 @@ def marginalise_compound_prior(
     marginal_compound_prior : CompoundPrior
         Marginalised compound prior function that takes model parameters and returns the log-prior.
     """
-    pass
+    idx = (
+        np.arange(compound_prior.n)[indices]
+        if isinstance(indices, slice)
+        else np.asarray(indices, dtype=int)
+    )
+    if idx.size == 0:
+        raise ValueError(
+            "At least one index should be kept after marginalisation. Check the 'indices' parameter."
+        )
+
+    # For each component, find which of the requested indices belong to it
+    new_components = []
+    next_index = 0  # Track the starting position in the new compound space
+
+    for component in compound_prior.prior_components:
+        # Convert component indices to array
+        if isinstance(component.indices, slice):
+            start = component.indices.start or 0
+            stop = component.indices.stop
+            step = component.indices.step or 1
+            component_indices = np.array(range(start, stop, step))
+        else:
+            component_indices = np.asarray(component.indices)
+
+        # Find which requested indices belong to this component
+        mask = np.isin(idx, component_indices)
+        if not np.any(mask):
+            continue  # No indices from this component are being kept
+
+        kept_global_indices = idx[mask]
+
+        # Map global indices to local indices within the component
+        local_indices = np.array(
+            np.searchsorted(component_indices, kept_global_indices)
+        )
+
+        # Marginalise the prior function to just these parameters
+        marginalised_prior = marginalise_prior(component.prior_fn, local_indices)
+
+        # Create new component with indices in the new compound space
+        n_kept = local_indices.size
+        new_component = PriorComponent(
+            prior_fn=marginalised_prior,
+            indices=np.arange(next_index, next_index + n_kept),
+        )
+        new_components.append(new_component)
+        next_index += n_kept
+
+    if not new_components:
+        raise ValueError(
+            "No prior components remain after marginalisation. Check the 'indices' parameter."
+        )
+
+    return CompoundPrior(new_components)
 
 
 def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
