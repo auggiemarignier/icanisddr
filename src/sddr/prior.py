@@ -243,14 +243,22 @@ def marginalise_prior(
     IndexError
         If any of the provided indices are out of bounds for the parameter array.
     """
+    n_params = prior.config_params[0].size
     idx = (
-        np.arange(prior.config_params[0].size)[indices]
+        np.arange(n_params)[indices]
         if isinstance(indices, slice)
         else np.asarray(indices, dtype=int)
     )
     if idx.size == 0:
         raise ValueError(
             "At least one index should be kept after marginalisation.  Check the 'indices' parameter."
+        )
+
+    # Explicit bounds checking
+    if np.any(idx < 0) or np.any(idx >= n_params):
+        invalid_indices = idx[(idx < 0) | (idx >= n_params)]
+        raise IndexError(
+            f"Index {invalid_indices[0]} is out of bounds for prior with {n_params} parameters."
         )
 
     marginalised_params: list[np.ndarray] = []
@@ -286,14 +294,22 @@ def _(
     marginal_compound_prior : CompoundPrior
         Marginalised compound prior function that takes model parameters and returns the log-prior.
     """
+    n_params = compound_prior.n
     idx = (
-        np.arange(compound_prior.n)[indices]
+        np.arange(n_params)[indices]
         if isinstance(indices, slice)
         else np.asarray(indices, dtype=int)
     )
     if idx.size == 0:
         raise ValueError(
             "At least one index should be kept after marginalisation. Check the 'indices' parameter."
+        )
+
+    # Explicit bounds checking
+    if np.any(idx < 0) or np.any(idx >= n_params):
+        invalid_indices = idx[(idx < 0) | (idx >= n_params)]
+        raise IndexError(
+            f"Index {invalid_indices[0]} is out of bounds for compound prior with {n_params} parameters."
         )
 
     # For each component, find which of the requested indices belong to it
