@@ -1,7 +1,7 @@
 [project]
-name = "savagedickeyicanisotropy"
+name = "sdicani"
 version = "0.1.0"
-description = "Add your description here"
+description = "SAvage-Dickey Density Ratio for Anisotropic Seismic Tomography of the Inner Core"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
@@ -10,6 +10,7 @@ dependencies = [
     "jupyter>=1.1.1",
     "numpy>=2.3.4",
     "scipy>=1.16.2",
+    "bulkic",
 ]
 
 [build-system]
@@ -22,6 +23,14 @@ build-backend = "setuptools.build_meta"
 # distrax hasn't released anything in over a year
 # so seems unlikely to update
 override-dependencies = ["numpy>=2"]
+
+[tool.uv.workspace]
+members = [
+    "experiments/*",
+]
+
+[tool.uv.sources]
+bulkic = { workspace = true }
 
 
 [tool.ruff.lint]
