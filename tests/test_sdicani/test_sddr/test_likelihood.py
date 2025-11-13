@@ -2,7 +2,8 @@
 
 import numpy as np
 import pytest
-from sddr.likelihood import gaussian_likelihood_factory
+
+from sdicani.sddr.likelihood import gaussian_likelihood_factory
 
 
 def _dummy_forward_fn(model_params: np.ndarray) -> np.ndarray:

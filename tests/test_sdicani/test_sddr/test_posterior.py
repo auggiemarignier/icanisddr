@@ -2,7 +2,8 @@
 
 import numpy as np
 import pytest
-from sddr.posterior import marginalise_samples, posterior_factory
+
+from sdicani.sddr.posterior import marginalise_samples, posterior_factory
 
 
 def test_posterior_factory():

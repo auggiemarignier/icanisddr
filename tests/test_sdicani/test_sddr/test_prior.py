@@ -4,7 +4,8 @@ from collections.abc import Callable
 
 import numpy as np
 import pytest
-from sddr.prior import (
+
+from sdicani.sddr.prior import (
     CompoundPrior,
     GaussianPrior,
     PriorComponent,
