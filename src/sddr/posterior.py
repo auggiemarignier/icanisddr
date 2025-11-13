@@ -38,18 +38,18 @@ def marginalise_samples(
     samples: np.ndarray, param_indices: Sequence[int] | slice
 ) -> np.ndarray:
     """
-    Marginalise posterior samples over specified parameter indices.
+    Extract marginal posterior samples for specified parameter indices.
 
     Parameters
     ----------
     samples : ndarray, shape (n_samples, n_params)
         Posterior samples.
     param_indices : Sequence[int] | slice
-        Indices of parameters to keep in the marginal distribution.
+        Indices of parameters to extract (i.e., columns to keep).
 
     Returns
     -------
-    marginal_samples : ndarray, shape (n_samples, n_marginal_params)
-        Marginalised posterior samples.
+    marginal_samples : ndarray, shape (n_samples, n_selected_params)
+        Posterior samples for the selected parameters.
     """
     return samples[:, param_indices]
