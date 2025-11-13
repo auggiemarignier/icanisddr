@@ -45,7 +45,7 @@ def marginalise_samples(
     samples : ndarray, shape (n_samples, n_params)
         Posterior samples.
     param_indices : Sequence[int] | slice
-        Indices of parameters to marginalise over.
+        Indices of parameters to keep in the marginal distribution.
 
     Returns
     -------
