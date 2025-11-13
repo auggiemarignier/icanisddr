@@ -1,0 +1,10 @@
+[project]
+name = "bulkic"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12, <3.14"
+dependencies = []
+
+[project.scripts]
+bulkic = "main:main"
