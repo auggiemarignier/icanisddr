@@ -4,7 +4,6 @@ from collections.abc import Callable
 
 import numpy as np
 import pytest
-
 from tti.rotation import (
     rotation_matrix_x,
     rotation_matrix_y,

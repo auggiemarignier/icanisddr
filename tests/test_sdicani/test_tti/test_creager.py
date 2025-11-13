@@ -4,7 +4,6 @@ from typing import Literal
 
 import numpy as np
 import pytest
-
 from tti.creager import calculate_traveltime, love_to_creager
 
 

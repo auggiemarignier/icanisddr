@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-
 from sddr.likelihood import gaussian_likelihood_factory
 
 

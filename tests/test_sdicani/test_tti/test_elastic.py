@@ -6,7 +6,6 @@
 
 import numpy as np
 import pytest
-
 from tti.elastic import (
     VOIGT_MAP,
     _check_elastic_tensor_symmetry,
