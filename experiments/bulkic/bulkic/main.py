@@ -2,9 +2,14 @@
 
 import numpy as np
 
-from sddr.likelihood import gaussian_likelihood_factory
-from sddr.prior import CompoundPrior, GaussianPrior, PriorComponent, UniformPrior
-from tti.forward import TravelTimeCalculator
+from sdicani.sddr.likelihood import gaussian_likelihood_factory
+from sdicani.sddr.prior import (
+    CompoundPrior,
+    GaussianPrior,
+    PriorComponent,
+    UniformPrior,
+)
+from sdicani.tti.forward import TravelTimeCalculator
 
 from .data import create_paths, create_synthetic_bulk_ic_data
 

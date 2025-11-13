@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from tti.forward import TravelTimeCalculator
+from sdicani.tti.forward import TravelTimeCalculator
 
 
 @dataclass(frozen=True)
@@ -95,7 +95,7 @@ def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
 
 
 if __name__ == "__main__":
-    from experiments.bulkic.plotting import plot_ic_paths
+    from bulkic.plotting import plot_ic_paths
 
     ic_in, ic_out = create_paths(source_spacing=10.0)
     print("Number of paths:", ic_in.shape[0])

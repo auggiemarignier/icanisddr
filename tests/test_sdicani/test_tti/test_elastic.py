@@ -7,7 +7,7 @@
 import numpy as np
 import pytest
 
-from tti.elastic import (
+from sdicani.tti.elastic import (
     VOIGT_MAP,
     _check_elastic_tensor_symmetry,
     _check_major_symmetry,
@@ -226,7 +226,7 @@ def test_tti_4th_matches_voigt(rng: np.random.Generator) -> None:
 def test_transformation_to_voigt(rng: np.random.Generator) -> None:
     """Test that the bond tensor in Voigt notation is symmetric."""
 
-    from tti.rotation import rotation_matrix_z, transformation_4th_order
+    from sdicani.tti.rotation import rotation_matrix_z, transformation_4th_order
 
     r = rotation_matrix_z(rng.uniform(0, 2 * np.pi))
     R = transformation_4th_order(r)
