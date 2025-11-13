@@ -5,6 +5,7 @@ requires-python = ">=3.12, <3.14"
 [manifest]
 members = [
     "bulkic",
+    "profiling",
     "sdicani",
 ]
 overrides = [{ name = "numpy", specifier = ">=2" }]
@@ -1678,6 +1679,17 @@ wheels = [
 ]
 
 [[package]]
+name = "profiling"
+version = "0.1.0"
+source = { virtual = "profiling" }
+dependencies = [
+    { name = "matplotlib" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "matplotlib", specifier = ">=3.10.7" }]
+
+[[package]]
 name = "prometheus-client"
 version = "0.23.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2108,7 +2120,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "matplotlib" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -2124,7 +2135,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "matplotlib", specifier = ">=3.10.7" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
 ]

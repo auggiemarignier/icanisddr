@@ -26,6 +26,7 @@ override-dependencies = ["numpy>=2"]
 [tool.uv.workspace]
 members = [
     "experiments/*",
+    "profiling",
 ]
 
 [tool.uv.sources]
@@ -84,7 +85,6 @@ convention = "numpy"
 
 [dependency-groups]
 dev = [
-    "matplotlib>=3.10.7",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
 ]
