@@ -131,7 +131,9 @@ def _spherical_to_cartesian(
 class TravelTimeCalculator:
     """Class to calculate travel times in TTI media for a set of paths."""
 
-    def __init__(self, ic_in: np.ndarray, ic_out: np.ndarray):
+    def __init__(
+        self, ic_in: np.ndarray, ic_out: np.ndarray, nested: bool = True
+    ) -> None:
         """Initialise calculator.
 
         Parameters
@@ -140,6 +142,12 @@ class TravelTimeCalculator:
             Where the path enters the inner core (longitude (deg), latitude (deg), radius (km)).
         ic_out : ndarray, shape (..., 3)
             Where the path exits the inner core (longitude (deg), latitude (deg), radius (km)).
+        nested : bool, optional
+            Whether model parameters are nested (default is True).
+            The nested model parameter order is:
+                [A, C-A, F-A+2N, L, N-L, eta1, eta2]
+            The non-nested model parameter order is:
+                [A, C, F, L, N, eta1, eta2]
         """
 
         self._validate_paths(ic_in, ic_out)
@@ -147,6 +155,10 @@ class TravelTimeCalculator:
         self.ic_in = ic_in
         self.ic_out = ic_out
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
+
+        self._unpacking_function = (
+            _unpack_nested_model_vector if nested else _unpack_model_vector
+        )
 
     def __call__(self, m: np.ndarray) -> np.ndarray:
         """
@@ -162,7 +174,7 @@ class TravelTimeCalculator:
         ndarray, shape (num_paths,)
             Relative traveltime perturbations for each path.
         """
-        A, C, F, L, N, eta1, eta2 = m
+        A, C, F, L, N, eta1, eta2 = self._unpacking_function(m)
         D = construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
         return self.calculate_traveltimes(D)
 
@@ -222,3 +234,85 @@ class TravelTimeCalculator:
             raise ValueError(
                 f"In and out coordinates must be different for each path (path {idx})"
             )
+
+
+def _unpack_nested_model_vector(
+    m: np.ndarray,
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
+]:
+    r"""Unpack nested model vector into individual Love parameters.
+
+    Note:
+        There is NO checking of the input shape here for performance reasons.
+
+    Parameters
+    ----------
+    m : ndarray, shape (M, 7)
+        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2L}, L, \delta_{LN}, eta1, \delta_{eta1,eta2}]
+        M is the number of model vectors (e.g. number of pixels).
+
+    Returns
+    -------
+    A : ndarray, shape (M,)
+        Elastic constant C11 = C22
+    C : ndarray, shape (M,)
+        Elastic constant C33
+    F : ndarray, shape (M,)
+        Elastic constant C13 = C23
+    L : ndarray, shape (M,)
+        Elastic constant C44 = C55
+    N : ndarray, shape (M,)
+        Elastic constant C66
+    eta1 : ndarray, shape (M,)
+        Tilt angle in radians.
+    eta2 : ndarray, shape (M,)
+        Azimuthal angle in radians.
+    """
+    mT = m.T
+    return (
+        mT[0],
+        mT[1] + mT[0],
+        mT[2] + mT[0] - 2 * mT[3],
+        mT[3],
+        mT[4] + mT[3],
+        mT[5],
+        mT[6] + mT[5],
+    )
+
+
+def _unpack_model_vector(
+    m: np.ndarray,
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
+]:
+    r"""Unpack model vector into individual Love parameters.
+
+    Note:
+        There is NO checking of the input shape here for performance reasons.
+
+    Parameters
+    ----------
+    m : ndarray, shape (M, 7)
+        Nested model parameters: [A, C, F, L, N, eta1, eta2]
+        M is the number of model vectors (e.g. number of pixels).
+
+    Returns
+    -------
+    A : ndarray, shape (M,)
+        Elastic constant C11 = C22
+    C : ndarray, shape (M,)
+        Elastic constant C33
+    F : ndarray, shape (M,)
+        Elastic constant C13 = C23
+    L : ndarray, shape (M,)
+        Elastic constant C44 = C55
+    N : ndarray, shape (M,)
+        Elastic constant C66
+    eta1 : ndarray, shape (M,)
+        Tilt angle in radians.
+    eta2 : ndarray, shape (M,)
+        Azimuthal angle in radians.
+    """
+    mT = m.T
+    return mT[0], mT[1], mT[2], mT[3], mT[4], mT[5], mT[6]
