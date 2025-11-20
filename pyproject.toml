@@ -31,6 +31,7 @@ members = [
 
 [tool.uv.sources]
 bulkic = { workspace = true }
+profiling = { workspace = true }
 
 
 [tool.ruff.lint]
