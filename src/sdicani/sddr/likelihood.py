@@ -86,7 +86,10 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     Raises
     ------
     ValueError
-        If the covariance matrix is not symmetric or not positive semidefinite.
+        If the covariance matrix
+            - has incorrect shape;
+            - is not symmetric; or
+            - is not positive semidefinite.
     """
     if covar.shape != (N, N):
         raise ValueError(f"Covariance matrix must be of shape ({N}, {N}).")
@@ -94,9 +97,12 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     if not np.allclose(covar, covar.T):
         raise ValueError("Covariance matrix must be symmetric.")
 
-    eigenvalues = np.linalg.eigvalsh(covar)
-    if np.any(eigenvalues < -1e-10):  # Allow small numerical tolerance
-        raise ValueError("Covariance matrix must be positive semidefinite.")
+    try:
+        np.linalg.cholesky(covar)
+        # If Cholesky decomposition succeeds, the matrix is positive definite
+        # It is very unlikely for a realistic covariance matrix to have zero eigenvalues (positive semidefinite) so this check is sufficient
+    except np.linalg.LinAlgError as e:
+        raise ValueError("Covariance matrix must be positive semidefinite.") from e
 
 
 def _validate_forward_function(
