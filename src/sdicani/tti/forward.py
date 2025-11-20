@@ -175,7 +175,8 @@ class TravelTimeCalculator:
         Parameters
         ----------
         m : ndarray, shape (7n,)
-            Model parameters: [A, C, F, L, N, eta1, eta2] X however many subregions n.
+            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times.
+            That is, [A₁, C₁, F₁, L₁, N₁, eta1₁, eta2₁, ..., Aₙ, Cₙ, Fₙ, Lₙ, Nₙ, eta1ₙ, eta2ₙ].
 
         Returns
         -------
