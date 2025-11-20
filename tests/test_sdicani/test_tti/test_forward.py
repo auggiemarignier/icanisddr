@@ -71,7 +71,13 @@ def eta2() -> np.ndarray:
 
 @pytest.fixture
 def C4(
-    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray, eta1: np.ndarray, eta2: np.ndarray
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
 ) -> np.ndarray:
     """Fixture for a sample rotated TTI elastic tensor."""
     return construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
@@ -79,13 +85,19 @@ def C4(
 
 @pytest.fixture
 def C6(
-    A: float, C: float, F: float, L: float, N: float, eta1: float, eta2: float
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
 ) -> np.ndarray:
     """Fixture for a sample rotated TTI elastic tensor in Voigt notation."""
     C_voigt = transverse_isotropic_tensor_voigt(A, C, F, L, N)
     rotation_matrix = rotation_matrix_zy(eta1, eta2)
     R = transformation_to_voigt(transformation_4th_order(rotation_matrix))
-    return R @ C_voigt @ R.T
+    return np.einsum("...ij,...jk,...kl->...il", R, C_voigt, R.transpose(0, 2, 1))
 
 
 def test_construct_general_tti_tensor_shape(C4: np.ndarray) -> None:
@@ -94,7 +106,7 @@ def test_construct_general_tti_tensor_shape(C4: np.ndarray) -> None:
     It should return a 4th-order tensor of shape (3, 3, 3, 3).
     """
 
-    assert C4.shape == (3, 3, 3, 3)
+    assert C4.shape == (1, 3, 3, 3, 3)
 
 
 def test_construct_general_tti_tensor_is_symmetric(C4: np.ndarray) -> None:
@@ -150,7 +162,8 @@ def test_traveltime_isotropic_independent_of_direction(
 ) -> None:
     """Isotropic perturbation gives same result for all ray directions."""
 
-    lam, mu = 12.0, 5.0
+    lam = np.array([12.0])
+    mu = np.array([5.0])
     D = isotropic_tensor_4th(lam, mu)
 
     # Try several random directions

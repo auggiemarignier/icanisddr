@@ -7,43 +7,43 @@ from .rotation import rotation_matrix_zy
 
 
 def construct_general_tti_tensor(
-    A: float,
-    C: float,
-    F: float,
-    L: float,
-    N: float,
-    eta1: float,
-    eta2: float,
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
 ) -> np.ndarray:
     """
     Construct a rotated transverse isotropic elastic tensor.
 
     Parameters
     ----------
-    A : float
+    A : np.ndarray (n,)
         Elastic constant C11 = C22
-    C : float
+    C : np.ndarray (n,)
         Elastic constant C33
-    F : float
+    F : np.ndarray (n,)
         Elastic constant C13 = C23
-    L : float
+    L : np.ndarray (n,)
         Elastic constant C44 = C55
-    N : float
+    N : np.ndarray (n,)
         Elastic constant C66
-    eta1 : float
+    eta1 : np.ndarray (n,)
         Tilt angle in radians.
-    eta2 : float
+    eta2 : np.ndarray (n,)
         Azimuthal angle in radians.
 
     Returns
     -------
-    C_rotated : ndarray, shape (3, 3, 3, 3)
+    C_rotated : ndarray, shape (n, 3, 3, 3, 3)
         Rotated transverse isotropic elastic tensor as a 4th-order tensor (not in Voigt notation).
     """
     C_tti = transverse_isotropic_tensor(A, C, F, L, N)
     R = rotation_matrix_zy(eta1, eta2)
 
-    C_rotated = np.einsum("pi,qj,rk,sl,ijkl->pqrs", R, R, R, R, C_tti)
+    C_rotated = np.einsum("...pi,...qj,...rk,...sl,...ijkl->...pqrs", R, R, R, R, C_tti)
 
     return C_rotated
 
@@ -67,7 +67,7 @@ def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> np.ndarray:
     np.ndarray, shape (...)
         Relative traveltime perturbation.
     """
-    return np.einsum("ijkl,...i,...j,...k,...l", D, n, n, n, n)
+    return np.einsum("...ijkl,...i,...j,...k,...l", D, n, n, n, n)
 
 
 def calculate_path_direction_vector(
