@@ -18,6 +18,8 @@ from sdicani.tti.elastic import (
 from sdicani.tti.forward import (
     TravelTimeCalculator,
     _spherical_to_cartesian,
+    _unpack_model_vector,
+    _unpack_nested_model_vector,
     calculate_path_direction_vector,
     calculate_relative_traveltime,
     construct_general_tti_tensor,
@@ -501,3 +503,68 @@ class TestTravelTimeCalculator:
 
         # For isotropic medium, traveltime should be the same for all paths
         np.testing.assert_allclose(dt, dt[0], atol=1e-12)
+
+
+def test__unpack_nested_model_vector() -> None:
+    """Test unpacking of nested model vector into Love parameters.
+
+    Testing the case where the model is isotropic, so C=A, F=A-2N, N=L, eta2=eta1 (technically this last one is not required but included for completeness).
+    """
+
+    m_nested = np.array(
+        [
+            [10.0, 0.0, 0.0, 0.15, 0.0, np.pi / 4, 0.0],
+            [12.0, 0.0, 0.0, 0.2, 0.0, np.pi / 3, 0.0],
+        ]
+    )
+
+    A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector(m_nested)
+
+    expected_A = np.array([10.0, 12.0])
+    expected_L = np.array([0.15, 0.2])
+    expected_C = expected_A
+    expected_F = expected_A - 2 * expected_L
+    expected_N = expected_L
+    expected_eta1 = np.array([np.pi / 4, np.pi / 3])
+    expected_eta2 = expected_eta1
+
+    np.testing.assert_allclose(A, expected_A)
+    np.testing.assert_allclose(C, expected_C)
+    np.testing.assert_allclose(F, expected_F)
+    np.testing.assert_allclose(L, expected_L)
+    np.testing.assert_allclose(N, expected_N)
+    np.testing.assert_allclose(eta1, expected_eta1)
+    np.testing.assert_allclose(eta2, expected_eta2)
+
+
+def test__unpack_model_vector() -> None:
+    """Test unpacking of model vector into Love parameters.
+
+    Testing the case where the model is isotropic, so C=A, F=A-2N, N=L.
+    This function just unpacks the model directly without nested differences.
+    """
+
+    m = np.array(
+        [
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],  # dummy row to check indexing
+            [8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0],  # dummy row to check indexing
+        ]
+    )
+
+    A, C, F, L, N, eta1, eta2 = _unpack_model_vector(m)
+
+    expected_A = np.array([1.0, 8.0])
+    expected_C = np.array([2.0, 9.0])
+    expected_F = np.array([3.0, 10.0])
+    expected_L = np.array([4.0, 11.0])
+    expected_N = np.array([5.0, 12.0])
+    expected_eta1 = np.array([6.0, 13.0])
+    expected_eta2 = np.array([7.0, 14.0])
+
+    np.testing.assert_allclose(A, expected_A)
+    np.testing.assert_allclose(C, expected_C)
+    np.testing.assert_allclose(F, expected_F)
+    np.testing.assert_allclose(L, expected_L)
+    np.testing.assert_allclose(N, expected_N)
+    np.testing.assert_allclose(eta1, expected_eta1)
+    np.testing.assert_allclose(eta2, expected_eta2)
