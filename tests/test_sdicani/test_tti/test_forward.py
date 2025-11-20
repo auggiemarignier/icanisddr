@@ -28,50 +28,50 @@ from sdicani.tti.rotation import rotation_matrix_zy, transformation_4th_order
 
 
 @pytest.fixture
-def A() -> float:
+def A() -> np.ndarray:
     """Fixture for elastic constant A."""
-    return 10.0
+    return np.array([10.0])
 
 
 @pytest.fixture
-def C() -> float:
+def C() -> np.ndarray:
     """Fixture for elastic constant C."""
-    return 15.0
+    return np.array([15.0])
 
 
 @pytest.fixture
-def F() -> float:
+def F() -> np.ndarray:
     """Fixture for elastic constant F."""
-    return 8.0
+    return np.array([8.0])
 
 
 @pytest.fixture
-def L() -> float:
+def L() -> np.ndarray:
     """Fixture for elastic constant L."""
-    return 0.15
+    return np.array([0.15])
 
 
 @pytest.fixture
-def N() -> float:
+def N() -> np.ndarray:
     """Fixture for elastic constant N."""
-    return 0.1
+    return np.array([0.1])
 
 
 @pytest.fixture
-def eta1() -> float:
+def eta1() -> np.ndarray:
     """Fixture for rotation angle eta1."""
-    return np.pi / 4
+    return np.array([np.pi / 4])
 
 
 @pytest.fixture
-def eta2() -> float:
+def eta2() -> np.ndarray:
     """Fixture for rotation angle eta2."""
-    return np.pi / 6
+    return np.array([np.pi / 6])
 
 
 @pytest.fixture
 def C4(
-    A: float, C: float, F: float, L: float, N: float, eta1: float, eta2: float
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray, eta1: np.ndarray, eta2: np.ndarray
 ) -> np.ndarray:
     """Fixture for a sample rotated TTI elastic tensor."""
     return construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
