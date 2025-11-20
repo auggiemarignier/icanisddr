@@ -1,10 +1,12 @@
 """Functions for calculating the Savage-Dickey density ratio."""
 
 from dataclasses import asdict, dataclass
+from warnings import warn
 
 import harmonic as hm
 import numpy as np
 from harmonic.model import RealNVPModel
+from scipy.stats import gaussian_kde
 
 from .posterior import marginalise_samples
 from .prior import CompoundPrior
@@ -37,12 +39,45 @@ class RealNVPConfig:
     temperature: float = 0.8
 
 
+class KDEModel:
+    """Kernel Density Estimation model.
+
+    Used as a fallback in the case where we marginalise down to 1D and RealNVP is not suitable.
+    """
+
+    def __init__(self, samples: np.ndarray) -> None:
+        """Initialize the KDE model with given samples.
+
+        Parameters
+        ----------
+        samples : ndarray, shape (num_samples, 1)
+            Samples from the distribution to fit.
+        """
+        self.kde = gaussian_kde(samples.T)
+
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        """Predict the log density at given points.
+
+        Parameters
+        ----------
+        x : ndarray, shape (num_points, 1)
+            Points at which to evaluate the density.
+
+        Returns
+        -------
+        log_density : ndarray, shape (num_points,)
+            Log density values at the given points.
+        """
+        density = self.kde(x.T)
+        return np.log(density)
+
+
 def fit_marginalised_posterior(
     samples: np.ndarray,
     marginal_indices: list[int],
     model_config: RealNVPConfig | None = None,
     train_config: TrainConfig | None = None,
-) -> hm.model.FlowModel:
+) -> hm.model.FlowModel | KDEModel:
     """Fit a flow model to the marginalised posterior samples.
 
     Parameters
@@ -58,22 +93,31 @@ def fit_marginalised_posterior(
 
     Returns
     -------
-    model : FlowModel
-        Fitted flow model to the marginalised posterior.
+    model : FlowModel | KDEModel
+        Fitted flow/KDE model to the marginalised posterior.
     """
+    marginalised_samples = marginalise_samples(samples, marginal_indices)
+
+    if len(marginal_indices) == 1:
+        warn(
+            "Marginalising down to 1D; using KDEModel instead of RealNVPModel.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return KDEModel(marginalised_samples)
+
     if model_config is None:
         model_config = RealNVPConfig()
     if train_config is None:
         train_config = TrainConfig()
 
-    marginalised_samples = marginalise_samples(samples, marginal_indices)
     model = RealNVPModel(ndim_in=len(marginal_indices), **asdict(model_config))
     model.fit(X=marginalised_samples, **asdict(train_config))
     return model
 
 
 def sddr(
-    marginalised_posterior: hm.model.FlowModel,
+    marginalised_posterior: hm.model.FlowModel | KDEModel,
     marginalised_prior: CompoundPrior,
     nu: np.ndarray,
 ) -> float:
@@ -81,8 +125,8 @@ def sddr(
 
     Parameters
     ----------
-    marginalised_posterior : FlowModel
-        Fitted flow model to the marginalised posterior.
+    marginalised_posterior : FlowModel | KDEModel
+        Fitted flow model or KDE model to the marginalised posterior.
     marginalised_prior : CompoundPrior
         Marginalised prior distribution.
     nu : ndarray, shape (k,)

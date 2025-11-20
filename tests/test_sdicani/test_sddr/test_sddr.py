@@ -7,6 +7,7 @@ import pytest
 
 from sdicani.sddr.prior import CompoundPrior, GaussianPrior, PriorComponent
 from sdicani.sddr.sddr import (
+    KDEModel,
     RealNVPConfig,
     TrainConfig,
     fit_marginalised_posterior,
@@ -56,20 +57,26 @@ class TestFitMarginalisedPosterior:
 
     def test_marginalisation(self, samples):
         """Test that samples are correctly marginalised."""
+        from harmonic.model import FlowModel
+
         marginal_indices = [1, 3]
 
         model = fit_marginalised_posterior(samples, marginal_indices)
 
         # Model should be fitted to 2D marginalised samples
-        assert model is not None
+        assert isinstance(model, FlowModel)
 
     def test_single_parameter_marginalisation(self, samples):
         """Test marginalisation to a single parameter."""
+
         marginal_indices = [2]
 
-        model = fit_marginalised_posterior(samples, marginal_indices)
+        with pytest.warns(
+            UserWarning, match="Marginalising down to 1D; using KDEModel"
+        ):
+            model = fit_marginalised_posterior(samples, marginal_indices)
 
-        assert model is not None
+        assert isinstance(model, KDEModel)
 
     def test_all_parameters(self, samples):
         """Test keeping all parameters (no marginalisation)."""
