@@ -60,15 +60,15 @@ class KDEModel:
 
         Parameters
         ----------
-        x : ndarray, shape (num_points, 1)
+        x : ndarray, shape (..., k)
             Points at which to evaluate the density.
 
         Returns
         -------
-        log_density : ndarray, shape (num_points,)
+        log_density : ndarray, shape (...,)
             Log density values at the given points.
         """
-        density = self.kde(x.T)
+        density = np.atleast_1d(self.kde(x.T))
         return np.log(density)
 
 
