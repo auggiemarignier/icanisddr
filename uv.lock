@@ -1681,7 +1681,7 @@ wheels = [
 [[package]]
 name = "profiling"
 version = "0.1.0"
-source = { virtual = "profiling" }
+source = { editable = "profiling" }
 dependencies = [
     { name = "matplotlib" },
 ]

@@ -18,16 +18,16 @@ from sdicani.tti.rotation import (
 def test_rotation_matrix_0(R: Callable[[float], np.ndarray]) -> None:
     """Test rotation matrices at 0 radians."""
 
-    expected = np.eye(3)
+    expected = np.eye(3)[None, :, :]
     np.testing.assert_array_almost_equal(R(0.0), expected)
 
 
 @pytest.mark.parametrize(
     ["R", "expected"],
     [
-        (rotation_matrix_z, np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])),
-        (rotation_matrix_y, np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])),
-        (rotation_matrix_x, np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])),
+        (rotation_matrix_z, np.array([[[0, -1, 0], [1, 0, 0], [0, 0, 1]]])),
+        (rotation_matrix_y, np.array([[[0, 0, 1], [0, 1, 0], [-1, 0, 0]]])),
+        (rotation_matrix_x, np.array([[[1, 0, 0], [0, 0, -1], [0, 1, 0]]])),
     ],
 )
 def test_rotation_matrix_90(
@@ -48,7 +48,8 @@ def test_rotation_matrices_orthogonal(
     """Test that rotation matrices are orthogonal."""
 
     angle = rng.uniform(0, 2 * np.pi)
-    np.testing.assert_array_almost_equal(R(angle) @ R(angle).T, np.eye(3))
+    RRT = np.einsum("...ij,...jk->...ik", R(angle), R(angle).transpose(0, 2, 1))
+    np.testing.assert_array_almost_equal(RRT, np.eye(3)[None, :, :])
 
 
 @pytest.mark.parametrize("R", [rotation_matrix_z, rotation_matrix_y, rotation_matrix_x])
@@ -85,7 +86,9 @@ def test_rotation_matrices_inverse(
     """Test that the inverse of rotation matrices is their transpose."""
 
     angle = rng.uniform(0, 2 * np.pi)
-    np.testing.assert_array_almost_equal(R(angle).T, np.linalg.inv(R(angle)))
+    np.testing.assert_array_almost_equal(
+        np.linalg.inv(R(angle)), R(angle).transpose(0, 2, 1)
+    )
 
 
 def test_rotation_matrix_zy(rng: np.random.Generator) -> None:
@@ -97,8 +100,8 @@ def test_rotation_matrix_zy(rng: np.random.Generator) -> None:
     This should match what is given by Brett et al., 2024, Eq 8 (https://www.nature.com/articles/s41561-024-01539-6#Sec6) to ensure consistency in TTI rotation conventions.
     """
 
-    angle_z = rng.uniform(0, 2 * np.pi)  # colatitude
-    angle_y = rng.uniform(-2 * np.pi, 2 * np.pi)  # longitude
+    angle_z = rng.uniform(0, 2 * np.pi, size=2)  # colatitude
+    angle_y = rng.uniform(-2 * np.pi, 2 * np.pi, size=2)  # longitude
 
     Rzy = rotation_matrix_zy(angle_z, angle_y)
 
@@ -107,13 +110,17 @@ def test_rotation_matrix_zy(rng: np.random.Generator) -> None:
     c2 = np.cos(angle_y)
     s2 = np.sin(angle_y)
 
-    expected = np.array(  # from Brett et al., 2024, Eq 8
-        [
-            [c1 * c2, -s1, s2 * c1],
-            [s1 * c2, c1, s1 * s2],
-            [-s2, 0, c2],
-        ]
-    )
+    # from Brett et al., 2024, Eq 8
+    expected = np.zeros((angle_z.size, 3, 3), dtype=float)
+    expected[:, 0, 0] = c1 * c2
+    expected[:, 0, 1] = -s1
+    expected[:, 0, 2] = s2 * c1
+    expected[:, 1, 0] = s1 * c2
+    expected[:, 1, 1] = c1
+    expected[:, 1, 2] = s1 * s2
+    expected[:, 2, 0] = -s2
+    expected[:, 2, 1] = 0.0
+    expected[:, 2, 2] = c2
 
     np.testing.assert_array_almost_equal(Rzy, expected)
 
@@ -160,5 +167,20 @@ def test_transformation_4th_order(rng: np.random.Generator) -> None:
                 [[0, 0, 0], [0, 0, 0], [0, 0, 1]],
             ],
         ]
-    )
+    )[None, ...]
     np.testing.assert_array_equal(R4, R4_expected)
+
+
+@pytest.mark.parametrize("R", [rotation_matrix_z, rotation_matrix_y, rotation_matrix_x])
+def test_batch_rotations(
+    R: Callable[[float], np.ndarray], rng: np.random.Generator
+) -> None:
+    """Test that rotation matrices can handle batches of angles."""
+
+    num_matrices = 5
+    angles = rng.uniform(0, 2 * np.pi, size=num_matrices)
+
+    R_matrices = np.array([R(angle) for angle in angles]).squeeze()
+    R_batch = R(angles)
+
+    np.testing.assert_array_almost_equal(R_batch, R_matrices)
