@@ -69,11 +69,71 @@ def mcmc(
     with p() as pool:
         sampler = EnsembleSampler(config.nwalkers, ndim, posterior, pool=pool)
         sampler.run_mcmc(initial_pos, config.nsteps, progress=config.progress)
-        samples = np.ascontiguousarray(
-            sampler.get_chain(flat=True)[config.burn_in :: config.thin, :]
-        )
-        lnprob = np.ascontiguousarray(
-            sampler.get_log_prob(flat=True)[config.burn_in :: config.thin]
-        )
+
+    return _burn_and_thin_sampler(sampler, config.burn_in, config.thin)
+
+
+def _burn_and_thin_sampler(
+    sampler: EnsembleSampler, burn_in: int, thin: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Apply burn-in and thinning to an MCMC chain from emcee.
+
+    Parameters
+    ----------
+    chain : EnsembleSampler
+        MCMC chain from emcee.
+
+    Returns
+    -------
+    processed_chain : ndarray
+        Processed MCMC chain after burn-in and thinning.
+    processed_lnprob : ndarray
+        Processed log-probabilities after burn-in and thinning.
+    """
+    chain = sampler.get_chain()  # shape (nsteps, nwalkers, ndim)
+    chain = _burn_and_thin_array(chain, burn_in, thin)
+    samples = np.ascontiguousarray(chain.reshape(-1, sampler.ndim))
+
+    lnprob_chain = sampler.get_log_prob()  # shape (nsteps, nwalkers)
+    lnprob_chain = _burn_and_thin_array(lnprob_chain, burn_in, thin)
+    lnprob = np.ascontiguousarray(lnprob_chain.reshape(-1))
 
     return samples, lnprob
+
+
+def _burn_and_thin_array(chain: np.ndarray, burn_in: int, thin: int) -> np.ndarray:
+    """Apply burn-in and thinning to an MCMC chain.
+
+    Parameters
+    ----------
+    chain : ndarray, shape (nsteps, nwalkers, ndim) or (nsteps, nwalkers)
+        MCMC chain to process.
+    burn_in : int
+        Number of burn-in steps to discard.
+    thin : int
+        Thinning factor.
+
+    Returns
+    -------
+    processed_chain : ndarray
+        Processed MCMC chain after burn-in and thinning.
+    """
+    nd = chain.ndim
+    if nd not in (2, 3):
+        raise ValueError("Chain must be 2D or 3D ndarray.")
+
+    if nd == 2:
+        # Add dummy ndim axis for uniform processing
+        chain = chain[:, :, np.newaxis]
+
+    total_steps = chain.shape[0]
+    burn_in_eff = burn_in if burn_in < total_steps else 0
+    steps_after_burn = total_steps - burn_in_eff
+    thin_eff = thin if (thin > 0 and steps_after_burn // thin > 0) else 1
+
+    processed_chain = chain[burn_in_eff::thin_eff, :, :]
+    if nd == 2:
+        # Remove dummy ndim axis if it was added
+        processed_chain = processed_chain[:, :, 0]
+
+    return processed_chain
