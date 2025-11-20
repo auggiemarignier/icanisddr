@@ -33,7 +33,7 @@ def gaussian_likelihood_factory(
     Raises
     ------
     ValueError
-        If the covariance matrix is not symmetric or not positive semidefinite.
+        If the inverse covariance matrix is not symmetric or not positive semidefinite.
     """
     _validate_data_vector(observed_data)
     _validate_covariance_matrix(inv_covar, observed_data.size)
@@ -68,19 +68,19 @@ def _validate_data_vector(data: np.ndarray) -> None:
 
 def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     """
-    Validate that the covariance matrix is symmetric and positive semidefinite.
+    Validate that the inverse covariance matrix is symmetric and positive semidefinite.
 
     Parameters
     ----------
     covar : ndarray, shape (n, n)
-        Covariance matrix to validate.
+        Inverse covariance matrix to validate.
     N : int
-        Expected size of the covariance matrix.
+        Expected size of the inverse covariance matrix.
 
     Raises
     ------
     ValueError
-        If the covariance matrix
+        If the inverse covariance matrix
             - has incorrect shape;
             - is not symmetric; or
             - is not positive semidefinite.
@@ -94,9 +94,9 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     try:
         np.linalg.cholesky(covar)
         # If Cholesky decomposition succeeds, the matrix is positive definite
-        # It is very unlikely for a realistic covariance matrix to have zero eigenvalues (positive semidefinite) so this check is sufficient
+        # It is very unlikely for a realistic inverse covariance matrix to have zero eigenvalues (positive semidefinite) so this check is sufficient
     except np.linalg.LinAlgError as e:
-        raise ValueError("Covariance matrix must be positive semidefinite.") from e
+        raise ValueError("Inverse covariance matrix must be positive semidefinite.") from e
 
 
 def _validate_forward_function(
