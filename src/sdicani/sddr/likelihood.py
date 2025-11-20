@@ -8,7 +8,7 @@ import numpy as np
 def gaussian_likelihood_factory(
     forward_fn: Callable[[np.ndarray], np.ndarray],
     observed_data: np.ndarray,
-    covar: np.ndarray,
+    inv_covar: np.ndarray,
     example_model: None | np.ndarray = None,
 ) -> Callable[[np.ndarray], float]:
     """
@@ -20,10 +20,10 @@ def gaussian_likelihood_factory(
         Forward model function that takes model parameters and returns predicted data.
     observed_data : ndarray, shape (n,)
         Observed data.
-    covar : ndarray, shape (n, n)
-        Covariance matrix of the observed data. Must be symmetric and positive semidefinite.
+    inv_covar : ndarray, shape (n, n)
+        Inverse covariance matrix of the observed data. Must be symmetric and positive semidefinite.
     example_model : None | ndarray, optional
-        Example model parameters to validate the forward function. If None, no validation is performed.
+        Example model parameters to validate the forward function. If None (default), no validation is performed.
 
     Returns
     -------
@@ -33,14 +33,12 @@ def gaussian_likelihood_factory(
     Raises
     ------
     ValueError
-        If the covariance matrix is not symmetric or not positive semidefinite.
+        If the inverse covariance matrix is not symmetric or not positive semidefinite.
     """
     _validate_data_vector(observed_data)
-    _validate_covariance_matrix(covar, observed_data.size)
+    _validate_covariance_matrix(inv_covar, observed_data.size)
     if example_model is not None:
         _validate_forward_function(forward_fn, example_model, observed_data.size)
-
-    inv_covar = np.linalg.inv(covar)
 
     def likelihood_fn(model_params: np.ndarray) -> float:
         predicted_data = forward_fn(model_params)
@@ -70,19 +68,22 @@ def _validate_data_vector(data: np.ndarray) -> None:
 
 def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     """
-    Validate that the covariance matrix is symmetric and positive semidefinite.
+    Validate that the inverse covariance matrix is symmetric and positive semidefinite.
 
     Parameters
     ----------
     covar : ndarray, shape (n, n)
-        Covariance matrix to validate.
+        Inverse covariance matrix to validate.
     N : int
-        Expected size of the covariance matrix.
+        Expected size of the inverse covariance matrix.
 
     Raises
     ------
     ValueError
-        If the covariance matrix is not symmetric or not positive semidefinite.
+        If the inverse covariance matrix
+            - has incorrect shape;
+            - is not symmetric; or
+            - is not positive semidefinite.
     """
     if covar.shape != (N, N):
         raise ValueError(f"Covariance matrix must be of shape ({N}, {N}).")
@@ -90,9 +91,12 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     if not np.allclose(covar, covar.T):
         raise ValueError("Covariance matrix must be symmetric.")
 
-    eigenvalues = np.linalg.eigvalsh(covar)
-    if np.any(eigenvalues < -1e-10):  # Allow small numerical tolerance
-        raise ValueError("Covariance matrix must be positive semidefinite.")
+    try:
+        np.linalg.cholesky(covar)
+        # If Cholesky decomposition succeeds, the matrix is positive definite
+        # It is very unlikely for a realistic inverse covariance matrix to have zero eigenvalues (positive semidefinite) so this check is sufficient
+    except np.linalg.LinAlgError as e:
+        raise ValueError("Inverse covariance matrix must be positive semidefinite.") from e
 
 
 def _validate_forward_function(

@@ -33,20 +33,19 @@ class GaussianPrior:
     ----------
     mean : ndarray, shape (n,)
         Mean of the Gaussian prior e.g. a reference model.
-    covar : ndarray, shape (n, n)
-        Covariance matrix of the Gaussian prior.
+    inv_covar : ndarray, shape (n, n)
+        Inverse Covariance matrix of the Gaussian prior.
 
     Raises
     ------
     ValueError
-        If the covariance matrix is not symmetric, not positive semidefinite, or has a shape mismatch with the mean.
+        If the inverse covariance matrix is not symmetric, not positive semidefinite, or has a shape mismatch with the mean.
     """
 
-    def __init__(self, mean: np.ndarray, covar: np.ndarray) -> None:
-        _validate_covariance_matrix(covar, mean.size)
+    def __init__(self, mean: np.ndarray, inv_covar: np.ndarray) -> None:
+        _validate_covariance_matrix(inv_covar, mean.size)
         self.mean = mean
-        self.covar = covar
-        self.inv_covar = np.linalg.inv(covar)
+        self.inv_covar = inv_covar
         self._n = mean.size
 
     def __call__(self, model_params: np.ndarray) -> float:
@@ -57,7 +56,7 @@ class GaussianPrior:
     @property
     def config_params(self) -> list[np.ndarray]:
         """Configuration parameters of the prior."""
-        return [self.mean, self.covar]
+        return [self.mean, self.inv_covar]
 
     @property
     def n(self) -> int:
@@ -360,19 +359,22 @@ def _(
 
 def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     """
-    Validate that the covariance matrix is symmetric and positive semidefinite.
+    Validate that the inverse covariance matrix is symmetric and positive semidefinite.
 
     Parameters
     ----------
     covar : ndarray, shape (n, n)
-        Covariance matrix to validate.
+        Inverse covariance matrix to validate.
     N : int
-        Expected size of the covariance matrix.
+        Expected size of the inverse covariance matrix.
 
     Raises
     ------
     ValueError
-        If the covariance matrix has incorrect shape, is not symmetric, or is not positive semidefinite.
+        If the inverse covariance matrix
+            - has incorrect shape;
+            - is not symmetric; or
+            - is not positive semidefinite.
     """
     if covar.shape != (N, N):
         raise ValueError(f"Covariance matrix must be of shape ({N}, {N}).")
@@ -380,9 +382,12 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
     if not np.allclose(covar, covar.T):
         raise ValueError("Covariance matrix must be symmetric.")
 
-    eigenvalues = np.linalg.eigvalsh(covar)
-    if np.any(eigenvalues < -1e-10):  # Allow small numerical tolerance
-        raise ValueError("Covariance matrix must be positive semidefinite.")
+    try:
+        np.linalg.cholesky(covar)
+        # If Cholesky decomposition succeeds, the matrix is positive definite
+        # It is very unlikely for a realistic inverse covariance matrix to have zero eigenvalues (positive semidefinite) so this check is sufficient
+    except np.linalg.LinAlgError as e:
+        raise ValueError("Inverse covariance matrix must be positive semidefinite.") from e
 
 
 def _unpack_slice(s: slice, n_total: int) -> tuple[int, int, int]:

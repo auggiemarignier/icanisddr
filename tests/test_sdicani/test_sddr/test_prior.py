@@ -127,13 +127,13 @@ class TestGaussianPrior:
     def test_gaussian_prior_diagonal_covariance(self) -> None:
         """Test Gaussian prior with diagonal covariance (independent parameters)."""
         mean = np.array([1.0, 2.0, 3.0])
-        variances = np.array([0.5, 1.0, 2.0])
-        covar = np.diag(variances)
-        prior_fn = GaussianPrior(mean, covar)
+        inv_variances = np.array([0.5, 1.0, 2.0])
+        inv_covar = np.diag(inv_variances)
+        prior_fn = GaussianPrior(mean, inv_covar)
 
         # Test a point one standard deviation away in first dimension
         params = mean.copy()
-        params[0] += np.sqrt(variances[0])
+        params[0] += np.sqrt(1 / inv_variances[0])
         log_prior = prior_fn(params)
 
         # Expected: -0.5 * (1^2) = -0.5
