@@ -174,15 +174,15 @@ class TravelTimeCalculator:
 
         Parameters
         ----------
-        m : ndarray, shape (7,)
-            Model parameters: [A, C, F, L, N, eta1, eta2]
+        m : ndarray, shape (7n,)
+            Model parameters: [A, C, F, L, N, eta1, eta2] X however many subregions n.
 
         Returns
         -------
         ndarray, shape (num_paths,)
             Relative traveltime perturbations for each path.
         """
-        A, C, F, L, N, eta1, eta2 = self._unpacking_function(m)
+        A, C, F, L, N, eta1, eta2 = self._unpacking_function(m.reshape(-1, 7))
         D = construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
         return self.calculate_traveltimes(D)
 
