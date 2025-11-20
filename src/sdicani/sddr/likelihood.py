@@ -8,9 +8,8 @@ import numpy as np
 def gaussian_likelihood_factory(
     forward_fn: Callable[[np.ndarray], np.ndarray],
     observed_data: np.ndarray,
-    covar: np.ndarray,
+    inv_covar: np.ndarray,
     example_model: None | np.ndarray = None,
-    covar_is_inverse: bool = False,
 ) -> Callable[[np.ndarray], float]:
     """
     Create a Gaussian likelihood function.
@@ -21,13 +20,10 @@ def gaussian_likelihood_factory(
         Forward model function that takes model parameters and returns predicted data.
     observed_data : ndarray, shape (n,)
         Observed data.
-    covar : ndarray, shape (n, n)
-        Covariance matrix of the observed data. Must be symmetric and positive semidefinite.
-        Taken to be the inverse covariance matrix if `covar_is_inverse` is True.
+    inv_covar : ndarray, shape (n, n)
+        Inverse covariance matrix of the observed data. Must be symmetric and positive semidefinite.
     example_model : None | ndarray, optional
         Example model parameters to validate the forward function. If None (default), no validation is performed.
-    covar_is_inverse : bool, optional
-        If True, the provided covariance matrix is treated as the inverse covariance matrix (default is False).
 
     Returns
     -------
@@ -40,11 +36,9 @@ def gaussian_likelihood_factory(
         If the covariance matrix is not symmetric or not positive semidefinite.
     """
     _validate_data_vector(observed_data)
-    _validate_covariance_matrix(covar, observed_data.size)
+    _validate_covariance_matrix(inv_covar, observed_data.size)
     if example_model is not None:
         _validate_forward_function(forward_fn, example_model, observed_data.size)
-
-    inv_covar = covar if covar_is_inverse else np.linalg.inv(covar)
 
     def likelihood_fn(model_params: np.ndarray) -> float:
         predicted_data = forward_fn(model_params)
