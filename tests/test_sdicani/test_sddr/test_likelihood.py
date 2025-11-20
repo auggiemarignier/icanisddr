@@ -41,7 +41,7 @@ def test_invalid_non_positive_semidefinite_covariance_matrix() -> None:
     covar = np.array([[1.0, 2.0], [2.0, 1.0]])  # Not positive semidefinite
 
     with pytest.raises(
-        ValueError, match="Covariance matrix must be positive semidefinite."
+        ValueError, match="Inverse covariance matrix must be positive semidefinite."
     ):
         gaussian_likelihood_factory(_dummy_forward_fn, observed_data, covar)
 
