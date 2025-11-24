@@ -9,7 +9,7 @@ from harmonic.model import RealNVPModel
 from scipy.stats import gaussian_kde
 
 from .posterior import marginalise_samples
-from .prior import CompoundPrior
+from .priors import CompoundPrior
 
 
 @dataclass(frozen=True)
