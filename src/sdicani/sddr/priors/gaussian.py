@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from ._protocols import PriorType
 from .component import PriorComponent
 
 
@@ -81,7 +82,7 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
 class GaussianPriorComponentConfig:
     """Configuration for a Gaussian prior component."""
 
-    type = "gaussian"
+    type = PriorType.GAUSSIAN
 
     def __init__(
         self,

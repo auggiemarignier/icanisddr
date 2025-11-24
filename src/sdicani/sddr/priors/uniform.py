@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from ._protocols import PriorType
 from .component import PriorComponent
 
 
@@ -56,7 +57,7 @@ class UniformPrior:
 class UniformPriorComponentConfig:
     """Configuration for a Uniform prior component."""
 
-    type = "uniform"
+    type = PriorType.UNIFORM
 
     def __init__(
         self,

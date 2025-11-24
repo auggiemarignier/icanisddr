@@ -9,14 +9,14 @@ from typing import Any
 
 import numpy as np
 
-from ._protocols import PriorComponentConfig
+from ._protocols import PriorComponentConfig, PriorType
 from .component import PriorComponent
 from .gaussian import GaussianPriorComponentConfig
 from .uniform import UniformPrior, UniformPriorComponentConfig
 
-_CONFIG_FACTORIES: dict[str, type[PriorComponentConfig]] = {
-    "gaussian": GaussianPriorComponentConfig,
-    "uniform": UniformPriorComponentConfig,
+_CONFIG_FACTORIES: dict[PriorType, type[PriorComponentConfig]] = {
+    PriorType.GAUSSIAN: GaussianPriorComponentConfig,
+    PriorType.UNIFORM: UniformPriorComponentConfig,
 }
 
 

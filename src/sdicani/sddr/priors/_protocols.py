@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Protocol
+from enum import StrEnum, auto
+from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
 
 if TYPE_CHECKING:
     from .component import PriorComponent
+
+
+class PriorType(StrEnum):
+    """Enumeration of supported prior types."""
+
+    GAUSSIAN = auto()
+    UNIFORM = auto()
 
 
 class PriorFunction(Protocol):
@@ -27,7 +35,7 @@ class PriorFunction(Protocol):
 class PriorComponentConfig(Protocol):
     """Protocol for prior configuration objects."""
 
-    type: Literal["gaussian", "uniform"]
+    type: PriorType
     indices: list[int]
 
     def to_prior_component(self) -> PriorComponent:
