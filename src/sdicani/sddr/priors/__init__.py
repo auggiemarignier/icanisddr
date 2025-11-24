@@ -1,11 +1,11 @@
 """Prior definitions."""
 
-from sdicani.sddr.priors._protocols import PriorFunction
-from sdicani.sddr.priors.component import PriorComponent
-from sdicani.sddr.priors.compound import CompoundPrior
-from sdicani.sddr.priors.gaussian import GaussianPrior
-from sdicani.sddr.priors.marginalisation import marginalise_prior
-from sdicani.sddr.priors.uniform import UniformPrior
+from ._protocols import PriorFunction
+from .component import PriorComponent
+from .compound import CompoundPrior
+from .gaussian import GaussianPrior
+from .marginalisation import marginalise_prior
+from .uniform import UniformPrior
 
 __all__ = [
     "CompoundPrior",
