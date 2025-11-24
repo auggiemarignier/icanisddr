@@ -47,7 +47,7 @@ def mcmc(
     rng: np.random.Generator,
     config: MCMCConfig | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Run MCMC sampling for the synthetic bulk IC experiment.
+    """Run MCMC sampling using the ensemble sampler.
 
     Returns
     -------
