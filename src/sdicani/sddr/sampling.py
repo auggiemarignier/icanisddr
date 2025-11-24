@@ -49,6 +49,16 @@ def mcmc(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Run MCMC sampling using the ensemble sampler.
 
+    Parameters
+    ----------
+    ndim : int
+        Number of dimensions in the parameter space.
+    posterior : Callable[[np.ndarray], float]
+        Log-posterior function that takes a parameter array and returns a float.
+    rng : np.random.Generator
+        Random number generator for initializing walkers.
+    config : MCMCConfig or None, optional
+        MCMC configuration. If None, uses default configuration.
     Returns
     -------
     samples : ndarray, shape (num_samples, ndim)
