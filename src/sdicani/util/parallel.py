@@ -1,6 +1,6 @@
 """Utilities for parallel and serial execution abstraction."""
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from typing import Any, TypeVar
 
 T = TypeVar("T")
@@ -35,7 +35,7 @@ class DummyPool:
         """
         return [func(*args) for args in iterable]
 
-    def imap(self, func: Callable[[T], U], iterable: Iterable[T]):
+    def imap(self, func: Callable[[T], U], iterable: Iterable[T]) -> Iterator[U]:
         """Yield results of applying ``func`` to each item in ``iterable`` lazily.
 
         Serial equivalent of ``multiprocessing.Pool.imap``. Useful when the
