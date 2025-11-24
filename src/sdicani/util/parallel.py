@@ -48,7 +48,12 @@ class DummyPool:
         """Return self to support ``with DummyPool() as pool:`` usage."""
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> bool:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: object
+    ) -> bool:
         """Context manager exit hook; does not suppress exceptions.
 
         Returning ``False`` propagates any exception raised inside the block.
