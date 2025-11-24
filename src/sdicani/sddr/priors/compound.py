@@ -151,7 +151,7 @@ class CompoundPriorConfig:
         """
         component_configs = []
         for comp_dict in config_dict["components"]:
-            comp_type = comp_dict.get("type")
+            comp_type = comp_dict.pop("type", None)
             if comp_type is None:
                 raise ValueError("Each component config must have a 'type' key.")
 
