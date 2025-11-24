@@ -10,7 +10,7 @@ from multiprocessing import Pool
 
 import pytest
 
-from sdicani.sddr.sampling import DummyPool
+from sdicani.util import DummyPool
 
 
 def _square(x: int) -> int:
