@@ -53,7 +53,7 @@ class UniformPrior:
         return self._n
 
 
-class UniformPriorConfig:
+class UniformPriorComponentConfig:
     """Configuration for a Uniform prior component."""
 
     type = "uniform"

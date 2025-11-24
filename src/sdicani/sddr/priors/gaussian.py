@@ -78,7 +78,7 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
         ) from e
 
 
-class GaussianPriorConfig:
+class GaussianPriorComponentConfig:
     """Configuration for a Gaussian prior component."""
 
     type = "gaussian"

@@ -24,14 +24,11 @@ class PriorFunction(Protocol):
         """Calculate the log-prior for given model parameters."""
 
 
-class PriorConfig(Protocol):
-    """Protocol for prior configuration objects.
-
-    Stores configuration parameters for the prior.
-    Helpful for marginalisation routines that need to access these parameters.
-    """
+class PriorComponentConfig(Protocol):
+    """Protocol for prior configuration objects."""
 
     type: Literal["gaussian", "uniform"]
+    indices: list[int]
 
     def to_prior_component(self) -> PriorComponent:
         """Convert the configuration to a PriorComponent instance."""
