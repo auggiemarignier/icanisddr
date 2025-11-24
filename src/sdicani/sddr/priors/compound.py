@@ -1,21 +1,22 @@
 """Compound Prior combining multiple prior components."""
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from itertools import chain
 from typing import Any
 
 import numpy as np
-import yaml
 
-from ._protocols import PriorConfig
+from ._protocols import PriorComponentConfig
 from .component import PriorComponent
-from .gaussian import GaussianPriorConfig
-from .uniform import UniformPrior, UniformPriorConfig
+from .gaussian import GaussianPriorComponentConfig
+from .uniform import UniformPrior, UniformPriorComponentConfig
 
-_CONFIG_FACTORIES: dict[str, type[PriorConfig]] = {
-    "gaussian": GaussianPriorConfig,
-    "uniform": UniformPriorConfig,
+_CONFIG_FACTORIES: dict[str, type[PriorComponentConfig]] = {
+    "gaussian": GaussianPriorComponentConfig,
+    "uniform": UniformPriorComponentConfig,
 }
 
 
@@ -81,6 +82,23 @@ class CompoundPrior:
         """Total number of parameters in the compound prior."""
         return self._n
 
+    @classmethod
+    def from_dict(cls, config_dict: dict[str, Any]) -> CompoundPrior:
+        """Build a CompoundPrior from a configuration dictionary.
+
+        Parameters
+        ----------
+        config_dict : dict
+            Dictionary with a 'components' key containing a list of component configs.
+
+        Returns
+        -------
+        CompoundPrior
+            Compound prior built from the provided configuration.
+        """
+        config = CompoundPriorConfig.from_dict(config_dict)
+        return config.to_compound_prior()
+
 
 @dataclass
 class CompoundPriorConfig:
@@ -115,10 +133,10 @@ class CompoundPriorConfig:
     >>> prior = config.to_compound_prior()
     """
 
-    components: list[PriorConfig] = field(default_factory=list)
+    components: list[PriorComponentConfig] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, config_dict: dict[str, Any]) -> "CompoundPriorConfig":
+    def from_dict(cls, config_dict: dict[str, Any]) -> CompoundPriorConfig:
         """Build configuration from a dictionary (e.g., loaded from YAML).
 
         Parameters
@@ -145,24 +163,6 @@ class CompoundPriorConfig:
             component_configs.append(component_config)
 
         return cls(components=component_configs)
-
-    @classmethod
-    def from_yaml(cls, yaml_path: str) -> "CompoundPriorConfig":
-        """Load configuration from a YAML file.
-
-        Parameters
-        ----------
-        yaml_path : str
-            Path to the YAML configuration file.
-
-        Returns
-        -------
-        CompoundPriorConfig
-            Configuration instance ready to build a CompoundPrior.
-        """
-        with open(yaml_path) as f:
-            config_dict = yaml.safe_load(f)
-        return cls.from_dict(config_dict)
 
     def to_compound_prior(self) -> CompoundPrior:
         """Build a CompoundPrior from this configuration.
