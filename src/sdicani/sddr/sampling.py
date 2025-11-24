@@ -80,8 +80,8 @@ def _burn_and_thin_sampler(
 
     Parameters
     ----------
-    chain : EnsembleSampler
-        MCMC chain from emcee.
+    sampler : EnsembleSampler
+        MCMC sampler from emcee.
 
     Returns
     -------
