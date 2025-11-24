@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from .component import PriorComponent
+
 
 class UniformPrior:
     """Class representing a Uniform prior.
@@ -49,3 +51,27 @@ class UniformPrior:
     def n(self) -> int:
         """Number of parameters in the Uniform prior."""
         return self._n
+
+
+class UniformPriorConfig:
+    """Configuration for a Uniform prior component."""
+
+    type = "uniform"
+
+    def __init__(
+        self,
+        lower_bounds: list[float] | np.ndarray,
+        upper_bounds: list[float] | np.ndarray,
+        indices: list[int],
+    ) -> None:
+        self.lower_bounds = lower_bounds
+        self.upper_bounds = upper_bounds
+        self.indices = indices
+
+    def to_prior_component(self) -> PriorComponent:
+        """Build a PriorComponent from this config."""
+        lower = np.asarray(self.lower_bounds)
+        upper = np.asarray(self.upper_bounds)
+        prior_fn = UniformPrior(lower_bounds=lower, upper_bounds=upper)
+
+        return PriorComponent(prior_fn=prior_fn, indices=self.indices)

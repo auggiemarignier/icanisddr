@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from .component import PriorComponent
+
 
 class GaussianPrior:
     """Class representing a Gaussian prior.
@@ -74,3 +76,27 @@ def _validate_covariance_matrix(covar: np.ndarray, N: int) -> None:
         raise ValueError(
             "Inverse covariance matrix must be positive semidefinite."
         ) from e
+
+
+class GaussianPriorConfig:
+    """Configuration for a Gaussian prior component."""
+
+    type = "gaussian"
+
+    def __init__(
+        self,
+        mean: list[float] | np.ndarray,
+        inv_covar: list[list[float]] | np.ndarray,
+        indices: list[int],
+    ) -> None:
+        self.mean = mean
+        self.inv_covar = inv_covar
+        self.indices = indices
+
+    def to_prior_component(self) -> PriorComponent:
+        """Build a PriorComponent from this config."""
+        mean = np.asarray(self.mean)
+        inv_covar = np.asarray(self.inv_covar)
+        prior_fn = GaussianPrior(mean=mean, inv_covar=inv_covar)
+
+        return PriorComponent(prior_fn=prior_fn, indices=self.indices)

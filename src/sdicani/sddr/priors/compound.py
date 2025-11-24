@@ -1,49 +1,22 @@
 """Compound Prior combining multiple prior components."""
 
 from collections.abc import Sequence
-from dataclasses import InitVar, dataclass, field
+from dataclasses import dataclass, field
 from itertools import chain
+from typing import Any
 
 import numpy as np
+import yaml
 
-from ._protocols import PriorFunction
-from ._utils import _normalise_indices
-from .uniform import UniformPrior
+from ._protocols import PriorConfig
+from .component import PriorComponent
+from .gaussian import GaussianPriorConfig
+from .uniform import UniformPrior, UniformPriorConfig
 
-
-@dataclass
-class PriorComponent:
-    """Class representing a prior component.
-
-    Multiple prior components can be combined to form a joint prior over
-    different subsets of model parameters.
-
-    Parameters
-    ----------
-    prior_fn : PriorFunction
-        Prior function that takes model parameters and returns the log-prior.
-    indices : Sequence[int] | slice | np.ndarray
-        Indices of the model parameters that this prior component applies to.
-    """
-
-    prior_fn: PriorFunction
-    indices: InitVar[Sequence[int] | slice | np.ndarray]
-
-    _indices: np.ndarray = field(default_factory=lambda: np.array([]))
-
-    def __post_init__(self, indices: Sequence[int] | slice | np.ndarray) -> None:
-        """Convert indices to a numpy array if it's a slice."""
-        self._indices = _normalise_indices(indices, self.prior_fn.n)
-
-    @property
-    def n(self) -> int:
-        """Number of parameters in this prior component."""
-        return int(np.asarray(self.indices).size)
-
-    @property
-    def indices(self) -> np.ndarray:
-        """Get the indices as a numpy array."""
-        return self._indices
+_CONFIG_FACTORIES: dict[str, type[PriorConfig]] = {
+    "gaussian": GaussianPriorConfig,
+    "uniform": UniformPriorConfig,
+}
 
 
 class CompoundPrior:
@@ -107,3 +80,97 @@ class CompoundPrior:
     def n(self) -> int:
         """Total number of parameters in the compound prior."""
         return self._n
+
+
+@dataclass
+class CompoundPriorConfig:
+    """Configuration for a compound prior with multiple components.
+
+    Parameters
+    ----------
+    components : list[GaussianPriorConfig | UniformPriorConfig]
+        List of prior component configurations.
+
+    Examples
+    --------
+    From a YAML file:
+
+    .. code-block:: yaml
+
+        components:
+          - type: gaussian
+            mean: [0.0, 0.0]
+            inv_covar: [[1.0, 0.0], [0.0, 1.0]]
+            indices: [0, 1]
+          - type: uniform
+            lower_bounds: [-1.0, -1.0]
+            upper_bounds: [1.0, 1.0]
+            indices: [2, 3]
+
+    Load and build:
+
+    >>> with open("prior_config.yaml") as f:
+    ...     config_dict = yaml.safe_load(f)
+    >>> config = CompoundPriorConfig.from_dict(config_dict)
+    >>> prior = config.to_compound_prior()
+    """
+
+    components: list[PriorConfig] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, config_dict: dict[str, Any]) -> "CompoundPriorConfig":
+        """Build configuration from a dictionary (e.g., loaded from YAML).
+
+        Parameters
+        ----------
+        config_dict : dict
+            Dictionary with a 'components' key containing a list of component configs.
+
+        Returns
+        -------
+        CompoundPriorConfig
+            Configuration instance ready to build a CompoundPrior.
+        """
+        component_configs = []
+        for comp_dict in config_dict["components"]:
+            comp_type = comp_dict.get("type")
+            if comp_type is None:
+                raise ValueError("Each component config must have a 'type' key.")
+
+            factory_cls = _CONFIG_FACTORIES.get(comp_type)
+            if factory_cls is None:
+                raise ValueError(f"Unknown prior type: {comp_type}")
+
+            component_config = factory_cls(**comp_dict)
+            component_configs.append(component_config)
+
+        return cls(components=component_configs)
+
+    @classmethod
+    def from_yaml(cls, yaml_path: str) -> "CompoundPriorConfig":
+        """Load configuration from a YAML file.
+
+        Parameters
+        ----------
+        yaml_path : str
+            Path to the YAML configuration file.
+
+        Returns
+        -------
+        CompoundPriorConfig
+            Configuration instance ready to build a CompoundPrior.
+        """
+        with open(yaml_path) as f:
+            config_dict = yaml.safe_load(f)
+        return cls.from_dict(config_dict)
+
+    def to_compound_prior(self) -> CompoundPrior:
+        """Build a CompoundPrior from this configuration.
+
+        Returns
+        -------
+        CompoundPrior
+            Compound prior built from all component configurations.
+        """
+        prior_components = [comp.to_prior_component() for comp in self.components]
+        return CompoundPrior(prior_components)

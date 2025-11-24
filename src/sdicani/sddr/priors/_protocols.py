@@ -1,8 +1,13 @@
 """Common Prior Protocols."""
 
-from typing import Protocol
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal, Protocol
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from .component import PriorComponent
 
 
 class PriorFunction(Protocol):
@@ -17,3 +22,16 @@ class PriorFunction(Protocol):
 
     def __call__(self, model_params: np.ndarray) -> float:
         """Calculate the log-prior for given model parameters."""
+
+
+class PriorConfig(Protocol):
+    """Protocol for prior configuration objects.
+
+    Stores configuration parameters for the prior.
+    Helpful for marginalisation routines that need to access these parameters.
+    """
+
+    type: Literal["gaussian", "uniform"]
+
+    def to_prior_component(self) -> PriorComponent:
+        """Convert the configuration to a PriorComponent instance."""
