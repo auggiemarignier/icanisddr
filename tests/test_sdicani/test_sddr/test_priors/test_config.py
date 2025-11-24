@@ -597,3 +597,177 @@ class TestCompoundPriorConfig:
         params_out = np.array([5800.0, 3200.0, 2700.0, 1.0, 0.0])
         log_prior_out = prior(params_out)
         assert log_prior_out == -np.inf
+
+
+class TestCompoundPriorConfigValidation:
+    """Tests for CompoundPriorConfig __post_init__ validation."""
+
+    def test_validation_missing_type_attribute(self) -> None:
+        """Test validation catches component without type attribute."""
+
+        # Create a component config without type attribute
+        class InvalidConfig:
+            indices = [0, 1]
+
+        with pytest.raises(
+            AttributeError, match="Component configuration missing a 'type'"
+        ):
+            CompoundPriorConfig(components=[InvalidConfig()])  # type: ignore
+
+    def test_validation_invalid_prior_type_string(self) -> None:
+        """Test validation catches invalid prior type string."""
+
+        # Create a component with invalid type
+        class InvalidConfig:
+            type = "exponential"
+            indices = [0, 1]
+
+        with pytest.raises(ValueError, match="Unknown prior type"):
+            CompoundPriorConfig(components=[InvalidConfig()])  # type: ignore
+
+    def test_validation_overlapping_indices(self) -> None:
+        """Test validation catches overlapping indices between components."""
+        gaussian_config = GaussianPriorComponentConfig(
+            mean=[0.0, 0.0],
+            inv_covar=[[1.0, 0.0], [0.0, 1.0]],
+            indices=[0, 1],
+        )
+        uniform_config = UniformPriorComponentConfig(
+            lower_bounds=[-1.0, -2.0],
+            upper_bounds=[1.0, 2.0],
+            indices=[1, 2],  # Index 1 overlaps with gaussian_config
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="Prior components must cover all parameter indices without overlap",
+        ):
+            CompoundPriorConfig(components=[gaussian_config, uniform_config])
+
+    def test_validation_duplicate_indices_within_component(self) -> None:
+        """Test validation catches duplicate indices within same component."""
+        gaussian_config = GaussianPriorComponentConfig(
+            mean=[0.0, 0.0],
+            inv_covar=[[1.0, 0.0], [0.0, 1.0]],
+            indices=[0, 0],  # Duplicate index
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="Prior components must cover all parameter indices without overlap",
+        ):
+            CompoundPriorConfig(components=[gaussian_config])
+
+    def test_validation_gap_in_indices(self) -> None:
+        """Test validation catches gaps in parameter indices."""
+        gaussian_config = GaussianPriorComponentConfig(
+            mean=[0.0, 0.0],
+            inv_covar=[[1.0, 0.0], [0.0, 1.0]],
+            indices=[0, 1],
+        )
+        uniform_config = UniformPriorComponentConfig(
+            lower_bounds=[-1.0],
+            upper_bounds=[1.0],
+            indices=[3],  # Gap at index 2
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="Prior components must cover all parameter indices without overlap",
+        ):
+            CompoundPriorConfig(components=[gaussian_config, uniform_config])
+
+    def test_validation_indices_not_starting_at_zero(self) -> None:
+        """Test validation catches indices not starting from 0."""
+        uniform_config = UniformPriorComponentConfig(
+            lower_bounds=[-1.0, -2.0],
+            upper_bounds=[1.0, 2.0],
+            indices=[1, 2],  # Should start at 0
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="Prior components must cover all parameter indices without overlap",
+        ):
+            CompoundPriorConfig(components=[uniform_config])
+
+    def test_validation_unsorted_indices(self) -> None:
+        """Test validation handles unsorted indices correctly."""
+        # Validation should work regardless of order in each component
+        uniform_config1 = UniformPriorComponentConfig(
+            lower_bounds=[-1.0, -2.0],
+            upper_bounds=[1.0, 2.0],
+            indices=[1, 0],  # Unsorted but valid
+        )
+        uniform_config2 = UniformPriorComponentConfig(
+            lower_bounds=[-3.0],
+            upper_bounds=[3.0],
+            indices=[2],
+        )
+
+        # This should not raise as indices cover [0, 1, 2] without gaps/overlap
+        config = CompoundPriorConfig(components=[uniform_config1, uniform_config2])
+        assert len(config.components) == 2
+
+    def test_validation_case_insensitive_type(self) -> None:
+        """Test that type validation is case-insensitive."""
+
+        # Create a config with uppercase type
+        class UpperCaseConfig:
+            type = "GAUSSIAN"
+            indices = [0]
+
+        # Should work because validation uses .lower()
+        config = CompoundPriorConfig(components=[UpperCaseConfig()])  # type: ignore
+        assert len(config.components) == 1
+
+    def test_validation_mixed_case_type(self) -> None:
+        """Test that type validation handles mixed case."""
+
+        class MixedCaseConfig:
+            type = "GaUsSiAn"
+            indices = [0]
+
+        # Should work because validation uses .lower()
+        config = CompoundPriorConfig(components=[MixedCaseConfig()])  # type: ignore
+        assert len(config.components) == 1
+
+    def test_validation_valid_single_component(self) -> None:
+        """Test validation passes for valid single component."""
+        gaussian_config = GaussianPriorComponentConfig(
+            mean=[0.0, 0.0, 0.0],
+            inv_covar=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            indices=[0, 1, 2],
+        )
+
+        config = CompoundPriorConfig(components=[gaussian_config])
+        assert len(config.components) == 1
+
+    def test_validation_valid_multiple_components(self) -> None:
+        """Test validation passes for valid multiple components."""
+        gaussian_config = GaussianPriorComponentConfig(
+            mean=[0.0],
+            inv_covar=[[1.0]],
+            indices=[0],
+        )
+        uniform_config = UniformPriorComponentConfig(
+            lower_bounds=[-1.0, -2.0],
+            upper_bounds=[1.0, 2.0],
+            indices=[1, 2],
+        )
+        another_uniform = UniformPriorComponentConfig(
+            lower_bounds=[-5.0],
+            upper_bounds=[5.0],
+            indices=[3],
+        )
+
+        config = CompoundPriorConfig(
+            components=[gaussian_config, uniform_config, another_uniform]
+        )
+        assert len(config.components) == 3
+
+    def test_validation_empty_components(self) -> None:
+        """Test validation with empty components list."""
+        config = CompoundPriorConfig(components=[])
+        # Empty should be allowed (though not very useful)
+        assert len(config.components) == 0

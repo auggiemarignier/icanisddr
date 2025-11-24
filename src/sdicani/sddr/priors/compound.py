@@ -135,6 +135,26 @@ class CompoundPriorConfig:
 
     components: list[PriorComponentConfig] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        """Validate component configurations."""
+        for comp in self.components:
+            try:
+                PriorType(comp.type.lower())
+            except ValueError as e:
+                raise ValueError(f"Unknown prior type: {comp.type}") from e
+            except AttributeError as e:
+                raise AttributeError("Component configuration missing a 'type'.") from e
+
+        total_indices = list(
+            chain.from_iterable(comp.indices for comp in self.components)
+        )
+        n_params = len(total_indices)
+
+        if sorted(total_indices) != list(range(n_params)):
+            raise ValueError(
+                "Prior components must cover all parameter indices without overlap."
+            )
+
     @classmethod
     def from_dict(cls, config_dict: dict[str, Any]) -> CompoundPriorConfig:
         """Build configuration from a dictionary (e.g., loaded from YAML).
