@@ -142,3 +142,92 @@ def test_compound_prior_marginalisation() -> None:
     expected_log_prior = -0.5 * (1.0**2) + 0.0  # Gaussian part + Uniform part
     log_prior = marginalised_prior(test_point)
     np.testing.assert_almost_equal(log_prior, expected_log_prior)
+
+
+def test_compound_prior_marginalisation_empty_indices() -> None:
+    """Test that marginalising compound prior with empty indices raises ValueError."""
+    # Gaussian prior on first two parameters
+    mean = np.array([0.0, 0.0])
+    covar = np.eye(2)
+    gaussian_prior = GaussianPrior(mean, covar)
+    gaussian_component = PriorComponent(prior_fn=gaussian_prior, indices=[0, 1])
+
+    # Uniform prior on last two parameters
+    lower = np.array([-1.0, -1.0])
+    upper = np.array([1.0, 1.0])
+    uniform_prior = UniformPrior(lower, upper)
+    uniform_component = PriorComponent(prior_fn=uniform_prior, indices=[2, 3])
+
+    # Combine into compound prior
+    compound_prior = CompoundPrior([gaussian_component, uniform_component])
+
+    # Try to marginalise with empty indices array
+    with pytest.raises(
+        ValueError, match="At least one index should be kept after marginalisation"
+    ):
+        marginalise_prior(compound_prior, np.array([]))
+
+
+def test_compound_prior_marginalisation_skip_component() -> None:
+    """Test marginalising compound prior where one component is completely skipped."""
+    # Gaussian prior on first two parameters
+    mean = np.array([0.0, 0.0])
+    covar = np.eye(2)
+    gaussian_prior = GaussianPrior(mean, covar)
+    gaussian_component = PriorComponent(prior_fn=gaussian_prior, indices=[0, 1])
+
+    # Uniform prior on next two parameters
+    lower = np.array([-1.0, -1.0])
+    upper = np.array([1.0, 1.0])
+    uniform_prior = UniformPrior(lower, upper)
+    uniform_component = PriorComponent(prior_fn=uniform_prior, indices=[2, 3])
+
+    # Another Gaussian prior on last parameter
+    mean2 = np.array([5.0])
+    covar2 = np.array([[2.0]])
+    gaussian_prior2 = GaussianPrior(mean2, covar2)
+    gaussian_component2 = PriorComponent(prior_fn=gaussian_prior2, indices=[4])
+
+    # Combine into compound prior
+    compound_prior = CompoundPrior(
+        [gaussian_component, uniform_component, gaussian_component2]
+    )
+
+    # Marginalise to keep only indices from first and third components, skipping the uniform component
+    marginalised_prior = marginalise_prior(compound_prior, [0, 4])
+
+    # The marginalised prior should have 2 parameters
+    assert marginalised_prior.n == 2
+
+    # Test evaluation: first parameter from first Gaussian, second from third Gaussian
+    test_point = np.array([1.0, 5.0])  # 1 stdev away from first mean, at second mean
+    log_prior = marginalised_prior(test_point)
+
+    expected_log_prior = (
+        -0.5 * (1.0**2) + 0.0
+    )  # First Gaussian + second Gaussian at mean
+    np.testing.assert_almost_equal(log_prior, expected_log_prior)
+
+
+def test_compound_prior_marginalisation_no_components_remain() -> None:
+    """Test marginalising compound prior where no components remain after marginalisation."""
+    # Gaussian prior on first two parameters
+    mean = np.array([0.0, 0.0])
+    covar = np.eye(2)
+    gaussian_prior = GaussianPrior(mean, covar)
+    gaussian_component = PriorComponent(prior_fn=gaussian_prior, indices=[0, 1])
+
+    # Uniform prior on next two parameters
+    lower = np.array([-1.0, -1.0])
+    upper = np.array([1.0, 1.0])
+    uniform_prior = UniformPrior(lower, upper)
+    uniform_component = PriorComponent(prior_fn=uniform_prior, indices=[2, 3])
+
+    # Combine into compound prior
+    compound_prior = CompoundPrior([gaussian_component, uniform_component])
+
+    # Try to marginalise with indices that don't exist in any component
+    with pytest.raises(
+        ValueError, match="No prior components remain after marginalisation"
+    ):
+        marginalise_prior(compound_prior, [5, 6])
