@@ -59,6 +59,7 @@ def mcmc(
         Random number generator for initializing walkers.
     config : MCMCConfig or None, optional
         MCMC configuration. If None, uses default configuration.
+
     Returns
     -------
     samples : ndarray, shape (num_samples, ndim)

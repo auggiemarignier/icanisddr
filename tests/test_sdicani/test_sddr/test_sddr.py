@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from sdicani.sddr.prior import CompoundPrior, GaussianPrior, PriorComponent
+from sdicani.sddr.priors import CompoundPrior, GaussianPrior, PriorComponent
 from sdicani.sddr.sddr import (
     KDEModel,
     RealNVPConfig,
