@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import pytest
 
-from sdicani.sddr.likelihood import GaussianLikelihood, gaussian_likelihood_factory
+from sdicani.sddr.likelihood import GaussianLikelihood
 
 
 def _dummy_forward_fn(model_params: np.ndarray) -> np.ndarray:
@@ -18,7 +18,7 @@ def test_gaussian_likelihood_factory() -> None:
     observed_data = np.array([1.0, 2.0, 3.0])
     covar = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
 
-    likelihood_fn = gaussian_likelihood_factory(_dummy_forward_fn, observed_data, covar)
+    likelihood_fn = GaussianLikelihood(_dummy_forward_fn, observed_data, covar)
 
     model_params = observed_data / 2.0  # So that predicted data matches observed data
     log_likelihood = likelihood_fn(model_params)
@@ -34,7 +34,7 @@ def test_invalid_asymmetric_covariance_matrix() -> None:
     covar = np.array([[1.0, 2.0], [0.0, 1.0]])  # Asymmetric
 
     with pytest.raises(ValueError, match="Covariance matrix must be symmetric."):
-        gaussian_likelihood_factory(_dummy_forward_fn, observed_data, covar)
+        GaussianLikelihood(_dummy_forward_fn, observed_data, covar)
 
 
 def test_invalid_non_positive_semidefinite_covariance_matrix() -> None:
@@ -45,7 +45,7 @@ def test_invalid_non_positive_semidefinite_covariance_matrix() -> None:
     with pytest.raises(
         ValueError, match="Inverse covariance matrix must be positive semidefinite."
     ):
-        gaussian_likelihood_factory(_dummy_forward_fn, observed_data, covar)
+        GaussianLikelihood(_dummy_forward_fn, observed_data, covar)
 
 
 def test_invalid_data_vector_dimension() -> None:
@@ -54,7 +54,7 @@ def test_invalid_data_vector_dimension() -> None:
     covar = np.array([[1.0, 0.0], [0.0, 1.0]])
 
     with pytest.raises(ValueError, match="Data vector must be one-dimensional."):
-        gaussian_likelihood_factory(_dummy_forward_fn, observed_data, covar)
+        GaussianLikelihood(_dummy_forward_fn, observed_data, covar)
 
 
 def test_invalid_forward_function_output_dimension() -> None:
@@ -72,19 +72,19 @@ def test_invalid_forward_function_output_dimension() -> None:
         ValueError,
         match="shape",
     ):
-        gaussian_likelihood_factory(
+        GaussianLikelihood(
             bad_forward_fn, observed_data, covar, example_model=np.array([0.0, 0.0])
         )
 
     try:
-        _ = gaussian_likelihood_factory(
+        _ = GaussianLikelihood(
             bad_forward_fn, observed_data, covar
         )  # a bad forward function but no example_model, so no check
     except Exception as e:
         pytest.fail(f"Unexpected exception: {e}")
 
     try:
-        _ = gaussian_likelihood_factory(
+        _ = GaussianLikelihood(
             _dummy_forward_fn, observed_data, covar, example_model=np.array([0.0, 0.0])
         )  # valid forward function verification
     except Exception as e:
@@ -100,7 +100,7 @@ def test_invalid_covariance_matrix_size() -> None:
         ValueError,
         match="shape",
     ):
-        gaussian_likelihood_factory(_dummy_forward_fn, observed_data, covar)
+        GaussianLikelihood(_dummy_forward_fn, observed_data, covar)
 
 
 def test_gaussian_likelihood_picklable():

@@ -71,47 +71,6 @@ class GaussianLikelihood:
         return -0.5 * residual.T @ self.inv_covar @ residual
 
 
-def gaussian_likelihood_factory(
-    forward_fn: Callable[[np.ndarray], np.ndarray],
-    observed_data: np.ndarray,
-    inv_covar: np.ndarray,
-    example_model: None | np.ndarray = None,
-) -> Callable[[np.ndarray], float]:
-    """
-    Create a Gaussian likelihood function.
-
-    Parameters
-    ----------
-    forward_fn : Callable[[np.ndarray], np.ndarray]
-        Forward model function that takes model parameters and returns predicted data.
-    observed_data : ndarray, shape (n,)
-        Observed data.
-    inv_covar : ndarray, shape (n, n)
-        Inverse covariance matrix of the observed data. Must be symmetric and positive semidefinite.
-    example_model : None | ndarray, optional
-        Example model parameters to validate the forward function. If None (default), no validation is performed.
-
-    Returns
-    -------
-    likelihood_fn : Callable[[np.ndarray], float]
-        Likelihood function that takes model parameters and returns the log-likelihood.
-
-    Raises
-    ------
-    ValueError
-        If the inverse covariance matrix is not symmetric or not positive semidefinite.
-    """
-    from warnings import warn
-
-    warn(
-        "gaussian_likelihood_factory is deprecated and will be removed in a future release. "
-        "Please use the GaussianLikelihood class directly.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return GaussianLikelihood(forward_fn, observed_data, inv_covar, True, example_model)
-
-
 def _validate_data_vector(data: np.ndarray) -> None:
     """
     Validate that the data vector is one-dimensional.

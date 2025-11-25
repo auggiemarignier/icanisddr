@@ -50,37 +50,6 @@ class Posterior:
         return log_likelihood + log_prior
 
 
-def posterior_factory(
-    likelihood_fn: Callable[[np.ndarray], float],
-    prior_fn: Callable[[np.ndarray], float],
-) -> Callable[[np.ndarray], float]:
-    """
-    Create a posterior function from likelihood and prior functions.
-
-    Parameters
-    ----------
-    likelihood_fn : Callable[[np.ndarray], float]
-        Likelihood function that takes model parameters and returns the log-likelihood.
-    prior_fn : Callable[[np.ndarray], float]
-        Prior function that takes model parameters and returns the log-prior.
-
-    Returns
-    -------
-    posterior_fn : Callable[[np.ndarray], float]
-        Posterior function that takes model parameters and returns the log-posterior.
-    """
-
-    from warnings import warn
-
-    warn(
-        "posterior_factory is deprecated and will be removed in future versions. "
-        "Please use the Posterior class instead.",
-        DeprecationWarning,
-    )
-    posterior = Posterior(likelihood_fn, prior_fn)
-    return posterior
-
-
 def marginalise_samples(
     samples: np.ndarray, param_indices: Sequence[int] | slice
 ) -> np.ndarray:
