@@ -171,15 +171,21 @@ class CompoundPriorConfig:
         """
         component_configs = []
         for comp_dict in config_dict["components"]:
-            comp_type = comp_dict.pop("type", None)
+            _comp_dict = comp_dict.copy()
+            comp_type = _comp_dict.pop("type", None)
             if comp_type is None:
                 raise ValueError("Each component config must have a 'type' key.")
+
+            try:
+                comp_type = PriorType(comp_type.lower())
+            except ValueError as e:
+                raise ValueError(f"Unknown prior type: {comp_type}") from e
 
             factory_cls = _CONFIG_FACTORIES.get(comp_type)
             if factory_cls is None:
                 raise ValueError(f"Unknown prior type: {comp_type}")
 
-            component_config = factory_cls(**comp_dict)
+            component_config = factory_cls(**_comp_dict)
             component_configs.append(component_config)
 
         return cls(components=component_configs)
