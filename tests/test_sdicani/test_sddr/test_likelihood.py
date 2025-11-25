@@ -112,3 +112,26 @@ def test_gaussian_likelihood_picklable():
     unpickled = pickle.loads(pickled)
     params = np.array([0.0, 0.0])
     assert np.isclose(likelihood(params), unpickled(params))
+
+
+def test_gaussian_likelihood_no_covariance_validation(monkeypatch):
+    """Test that _validate_covariance_matrix is not called when validate_covariance is False."""
+    observed_data = np.array([1.0, 2.0])
+    inv_covar = np.array([[1.0, 0.0], [0.0, 1.0]])
+    called = False
+
+    def fake_validate_covariance_matrix(covar, N):
+        nonlocal called
+        called = True
+        raise AssertionError("Should not be called!")
+
+    monkeypatch.setattr(
+        "sdicani.sddr.likelihood._validate_covariance_matrix",
+        fake_validate_covariance_matrix,
+    )
+
+    # Should not raise, and should not call the fake validator
+    _ = GaussianLikelihood(
+        lambda x: observed_data, observed_data, inv_covar, validate_covariance=False
+    )
+    assert not called
