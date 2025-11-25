@@ -1,9 +1,11 @@
 """Test the likelihood functions."""
 
+import pickle
+
 import numpy as np
 import pytest
 
-from sdicani.sddr.likelihood import gaussian_likelihood_factory
+from sdicani.sddr.likelihood import GaussianLikelihood, gaussian_likelihood_factory
 
 
 def _dummy_forward_fn(model_params: np.ndarray) -> np.ndarray:
@@ -99,3 +101,14 @@ def test_invalid_covariance_matrix_size() -> None:
         match="shape",
     ):
         gaussian_likelihood_factory(_dummy_forward_fn, observed_data, covar)
+
+
+def test_gaussian_likelihood_picklable():
+    """Test that the GaussianLikelihood object is picklable."""
+    observed_data = np.array([1.0, 2.0])
+    inv_covar = np.eye(2)
+    likelihood = GaussianLikelihood(_dummy_forward_fn, observed_data, inv_covar)
+    pickled = pickle.dumps(likelihood)
+    unpickled = pickle.loads(pickled)
+    params = np.array([0.0, 0.0])
+    assert np.isclose(likelihood(params), unpickled(params))

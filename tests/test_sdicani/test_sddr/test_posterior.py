@@ -1,21 +1,27 @@
 """Test the posterior module."""
 
+import pickle
+
 import numpy as np
 import pytest
 
-from sdicani.sddr.posterior import marginalise_samples, posterior_factory
+from sdicani.sddr.posterior import Posterior, marginalise_samples, posterior_factory
+
+
+def _dummy_likelihood_fn(params):
+    """Dummy likelihood function for pickling test."""
+    return -0.5 * np.sum(params**2)
+
+
+def _dummy_prior_fn(params):
+    """Dummy prior function for pickling test."""
+    return -np.sum(np.abs(params))
 
 
 def test_posterior_factory():
     """Test the posterior factory function."""
 
-    def likelihood_fn(params: np.ndarray) -> float:
-        return -0.5 * np.sum(params**2)
-
-    def prior_fn(params: np.ndarray) -> float:
-        return -np.sum(np.abs(params))
-
-    posterior_fn = posterior_factory(likelihood_fn, prior_fn)
+    posterior_fn = posterior_factory(_dummy_likelihood_fn, _dummy_prior_fn)
 
     params = np.array([1.0, 2.0, -1.5])
     log_posterior = posterior_fn(params)
@@ -69,3 +75,12 @@ def test_marginalise_posterior_samples_with_slice(samples):
     )
 
     assert np.array_equal(marginal_samples, expected_marginal_samples)
+
+
+def test_posterior_picklable():
+    """Test that Posterior is picklable and works after unpickling."""
+    posterior = Posterior(_dummy_likelihood_fn, _dummy_prior_fn)
+    pickled = pickle.dumps(posterior)
+    unpickled = pickle.loads(pickled)
+    params = np.array([0.5, -0.5])
+    assert np.isclose(posterior(params), unpickled(params))
