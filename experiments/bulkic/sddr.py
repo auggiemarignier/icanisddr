@@ -7,12 +7,9 @@ from typing import Any
 
 import numpy as np
 from bulkic.config import load_config
-
-from sdicani.sddr.priors import (
-    CompoundPrior,
-    marginalise_prior,
-)
-from sdicani.sddr.sddr import (
+from sampling.priors import CompoundPrior
+from sddr.marginalisation import marginalise_prior
+from sddr.sddr import (
     RealNVPConfig,
     TrainConfig,
     fit_marginalised_posterior,

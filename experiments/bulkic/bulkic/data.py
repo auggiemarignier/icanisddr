@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from sdicani.tti.forward import TravelTimeCalculator
+from tti.forward import TravelTimeCalculator
 
 
 @dataclass(frozen=True)

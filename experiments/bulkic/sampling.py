@@ -9,14 +9,14 @@ from typing import Any
 import numpy as np
 from bulkic.config import load_config
 from bulkic.data import create_paths, create_synthetic_bulk_ic_data
-
-from sdicani.sddr.likelihood import GaussianLikelihood
-from sdicani.sddr.posterior import Posterior
-from sdicani.sddr.priors import (
+from sampling.likelihood import GaussianLikelihood
+from sampling.posterior import Posterior
+from sampling.priors import (
     CompoundPrior,
 )
-from sdicani.sddr.sampling import MCMCConfig, mcmc
-from sdicani.tti.forward import TravelTimeCalculator
+from sampling.sampling import MCMCConfig, mcmc
+
+from tti.forward import TravelTimeCalculator
 
 logging.basicConfig(
     level=logging.INFO,
