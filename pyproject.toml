@@ -89,6 +89,10 @@ dev = [
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
 ]
+experiments = [
+    "cartopy>=0.25.0",
+    "matplotlib>=3.10.7",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["src/tti/tests"]
