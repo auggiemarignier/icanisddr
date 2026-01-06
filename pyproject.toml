@@ -10,11 +10,9 @@ dependencies = [
     "numpy>=2.3.4",
     "scipy>=1.16.2",
     "bulkic",
+    "sddr",
+    "sampling"
 ]
-
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
 
 [tool.uv]
 # harmonic requires distrax which requires numpy<2
@@ -27,12 +25,14 @@ override-dependencies = ["numpy>=2"]
 members = [
     "experiments/*",
     "profiling",
+    "src/tti",
 ]
 
 [tool.uv.sources]
 bulkic = { workspace = true }
 profiling = { workspace = true }
-
+sddr = { git = "https://github.com/auggiemarignier/bmcmethods.git", subdirectory = "packages/sddr"}
+sampling = { git = "https://github.com/auggiemarignier/bmcmethods.git", subdirectory = "packages/sampling"}
 
 [tool.ruff.lint]
 select = [
@@ -91,7 +91,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["src/tti/tests"]
 addopts = ["-v", "--cov=src", "--cov-report=term-missing", "--cov-report=xml"]
 
 [tool.coverage.run]
