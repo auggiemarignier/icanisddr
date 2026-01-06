@@ -1,6 +1,7 @@
 """Synthetic bulk IC experiment entry point."""
 
 import logging
+from collections.abc import Callable
 
 import harmonic as hm
 import numpy as np
@@ -27,11 +28,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """Main function for synthetic bulk IC experiment."""
-    logger.info("Starting synthetic bulk IC experiment")
+def setup() -> tuple[
+    Callable[[np.ndarray], float], CompoundPrior, Callable[[np.ndarray], float]
+]:
+    """Setup function for synthetic bulk IC experiment.
 
-    rng = np.random.default_rng(42)
+    Returns
+    -------
+    posterior : Callable[[np.ndarray], float]
+        Posterior distribution function.
+    prior : CompoundPrior
+        Prior distribution.
+    likelihood : Callable[[np.ndarray], float]
+        Likelihood function.
+    """
+    logger.info("Setting up synthetic bulk IC experiment")
 
     # Creating the synthetic data
     logger.info("Creating synthetic data...")
@@ -69,7 +80,23 @@ def main():
     logger.info("Creating posterior distribution")
     posterior = posterior_factory(likelihood, prior)
 
-    # Run MCMC sampling
+    return posterior, prior, likelihood
+
+
+def mcmc(
+    posterior: Callable[[np.ndarray], float], rng: np.random.Generator
+) -> tuple[np.ndarray, np.ndarray]:
+    """Run MCMC sampling for the synthetic bulk IC experiment.
+
+    Returns
+    -------
+    samples : ndarray, shape (num_samples, ndim)
+        MCMC samples of the model parameters.
+    lnprob : ndarray, shape (num_samples,)
+        Log-probabilities of the MCMC samples.
+    """
+    logger.info("Starting MCMC sampling for synthetic bulk IC experiment")
+
     ndim = 7  # Number of model parameters: [A, C, F, L, N, eta1, eta2]
     nwalkers = 50
     nsteps = 1000
@@ -83,24 +110,83 @@ def main():
     lnprob = np.ascontiguousarray(sampler.get_log_prob(flat=True)[200:])
     logger.info("MCMC sampling complete")
 
+    return samples, lnprob
+
+
+def fit_marginalised_posterior(
+    samples: np.ndarray, marginal_indices: list[int]
+) -> hm.model.FlowModel:
+    """Fit a flow model to the marginalised posterior samples.
+
+    Parameters
+    ----------
+    samples : ndarray, shape (num_samples, ndim)
+        MCMC samples of the model parameters.
+    marginal_indices : list of int
+        Indices of the parameters to keep after marginalisation.
+
+    Returns
+    -------
+    model : FlowModel
+        Fitted flow model to the marginalised posterior.
+    """
+    logger.info("Training flow model on marginalised samples")
+    marginalised_samples = marginalise_samples(samples, marginal_indices)
+    model = RealNVPModel(len(marginal_indices))
+    model.fit(marginalised_samples, epochs=5, verbose=True)
+    logger.info("Flow model training complete")
+    return model
+
+
+def sddr(
+    marginalised_posterior: hm.model.FlowModel,
+    marginalised_prior: CompoundPrior,
+    nu: np.ndarray,
+) -> float:
+    """Calculate the Savage-Dickey density ratio (SDDR) for given marginalised posterior and prior.
+
+    Parameters
+    ----------
+    marginalised_posterior : FlowModel
+        Fitted flow model to the marginalised posterior.
+    marginalised_prior : CompoundPrior
+        Marginalised prior distribution.
+    nu : ndarray, shape (k,)
+        Point at which to evaluate the SDDR, where k is the number of marginalised parameters.
+
+    Returns
+    -------
+    sddr : float
+        Log SDDR value at the given point.
+    """
+    prior_log_prob = marginalised_prior(nu)
+    posterior_log_prob = marginalised_posterior.predict(nu)
+    return float(posterior_log_prob - prior_log_prob)
+
+
+def main():
+    """Main function for synthetic bulk IC experiment."""
+    logger.info("Starting synthetic bulk IC experiment")
+
+    rng = np.random.default_rng(42)
+    posterior, prior, likelihood = setup()
+
+    samples, lnprob = mcmc(posterior, rng)
+
     # Hypothesis 1: Vertical symmetry axis (eta1 = 0, eta2 = 0)
     # => margninalise out the love parameters, keeping the last two
     logger.info("Training flow model on marginalised samples")
-    marginalised_samples = marginalise_samples(samples, [5, 6])
-    model = RealNVPModel(2)
-    chains = hm.Chains(ndim=2)
-    chains.add_chains_2d(marginalised_samples, lnprob, sampler.nwalkers)
-    chains_train, chains_test = hm.utils.split_data(chains, training_proportion=0.8)
-    model.fit(chains_train.samples, epochs=5, verbose=True)
+    marg_posterior = fit_marginalised_posterior(samples, [5, 6])
+    logger.info("Marginalising the prior")
+    marg_prior = marginalise_prior(prior, [5, 6])
 
-    # Calculate SDDRs
     logger.info("Calculating Savage-Dickey density ratio")
-    prior_h1 = marginalise_prior(prior, [5, 6])(np.zeros(2))
-    posterior_h1 = model.predict(np.zeros(2))
-    sddr_h1 = posterior_h1 - prior_h1  # log SDDR for hypothesis 1
+    nu = np.zeros(2)  # evaluation point
+    sddr_h1 = sddr(marg_posterior, marg_prior, nu)
     logger.info(
         f"SDDR for hypothesis 1 (vertical symmetry axis): {np.exp(sddr_h1):.2f}"
     )
+
     logger.info("Experiment complete")
 
 
