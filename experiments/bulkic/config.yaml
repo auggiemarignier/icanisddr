@@ -3,12 +3,12 @@ hydra:
   run:
     dir: .
 sampling:
-  nwalkers: 50
+  nwalkers: 20
   nsteps: 10000
   burn_in: 2000
   thin: 5
   progress: true
-  parallel: true
+  parallel: false
 priors:
   components:
     - type: gaussian
@@ -28,3 +28,14 @@ priors:
       lower_bounds: 0.0
       upper_bounds: 90.0
       indices: [6]
+training:
+  batch_size: 24
+  epochs: 10
+  verbose: true
+realnvp:
+  n_scaled_layers: 2
+  n_unscaled_layers: 4
+  learning_rate: 0.001
+  momentum: 0.9
+  standardize: false
+  temperature: 0.95
