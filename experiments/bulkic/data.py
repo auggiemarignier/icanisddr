@@ -87,18 +87,24 @@ def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
     lon_receivers = lon_sources + source_spacing / 2
     lat_receivers = lat_sources + source_spacing / 2
     r_ic = 1221.5  # km
-    ic_in = np.array([(lon, lat, r_ic) for lat in lat_sources for lon in lon_sources])
-    ic_out = np.array(
+    sources = np.array([(lon, lat, r_ic) for lat in lat_sources for lon in lon_sources])
+    receivers = np.array(
         [(lon, lat, r_ic) for lat in lat_receivers for lon in lon_receivers]
     )
+    n_sources = sources.shape[0]
+    n_receivers = receivers.shape[0]
+
+    ic_in = np.repeat(sources, n_receivers, axis=0)
+    ic_out = np.tile(receivers, (n_sources, 1))
     return ic_in, ic_out
 
 
 if __name__ == "__main__":
-    from experiments.bulkic.plotting import plot_ic_paths
+    from bulkic.plotting import plot_ic_inout, plot_ic_paths
 
-    ic_in, ic_out = create_paths(source_spacing=10.0)
+    ic_in, ic_out = create_paths(source_spacing=20)
     print("Number of paths:", ic_in.shape[0])
     synthetic_data = create_synthetic_bulk_ic_data(ic_in, ic_out)
     print("Synthetic data shape:", synthetic_data.shape)
     plot_ic_paths(ic_in, ic_out)
+    plot_ic_inout(ic_in, ic_out)
