@@ -1,7 +1,3 @@
-hydra:
-  output_subdir: null
-  run:
-    dir: .
 sampling:
   nwalkers: 20
   nsteps: 10000

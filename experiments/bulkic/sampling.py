@@ -3,12 +3,12 @@
 import logging
 import pickle
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
-import hydra
 import numpy as np
+from bulkic.config import load_config
 from bulkic.data import create_paths, create_synthetic_bulk_ic_data
-from omegaconf import OmegaConf
 
 from sdicani.sddr.likelihood import GaussianLikelihood
 from sdicani.sddr.posterior import Posterior
@@ -64,21 +64,26 @@ def setup(
     return posterior, prior, likelihood
 
 
-@hydra.main(version_base=None, config_path=".", config_name="config")
-def main(cfg: OmegaConf) -> None:
+CFG_FILE = Path(__file__).parent / "config.yaml"
+SAMPLES_PATH = Path(__file__).parent / "samples.pkl"
+
+
+def main() -> None:
     """Main function for synthetic bulk IC experiment."""
     logger.info("Starting synthetic bulk IC experiment")
-    cfg: dict[str, Any] = OmegaConf.to_object(cfg)
+    cfg = load_config(CFG_FILE)
 
     rng = np.random.default_rng(42)
-    posterior, prior, likelihood = setup(cfg["priors"])
+    posterior, prior, likelihood = setup(cfg.priors.model_dump())
 
     logger.info("Running MCMC sampling")
-    samples, lnprob = mcmc(prior.n, posterior, rng, MCMCConfig(**cfg["sampling"]))
+    samples, lnprob = mcmc(
+        prior.n, posterior, rng, MCMCConfig(**cfg.sampling.model_dump())
+    )
 
     logger.info("MCMC sampling completed")
     logger.info("Saving samples to disk")
-    with open(cfg["sampling"]["samples_path"], "wb") as f:
+    with open(SAMPLES_PATH, "wb") as f:
         pickle.dump(samples, f)
 
 

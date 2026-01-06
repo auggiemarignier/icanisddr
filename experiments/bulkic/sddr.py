@@ -2,11 +2,11 @@
 
 import logging
 import pickle
+from pathlib import Path
 from typing import Any
 
-import hydra
 import numpy as np
-from omegaconf import OmegaConf
+from bulkic.config import load_config
 
 from sdicani.sddr.priors import (
     CompoundPrior,
@@ -50,25 +50,27 @@ def configure_posterior_fit(
     )
 
 
-@hydra.main(version_base=None, config_path=".", config_name="config")
-def main(cfg: OmegaConf) -> None:
+CFG_FILE = Path(__file__).parent / "config.yaml"
+SAMPLES_PATH = Path(__file__).parent / "samples.pkl"
+
+
+def main() -> None:
     """Main function for synthetic bulk IC experiment."""
     logger.info("Starting synthetic bulk IC experiment")
-    cfg: dict[str, Any] = OmegaConf.to_object(cfg)
+    cfg = load_config(CFG_FILE)
 
     logger.info("Loading posterior samples from disk")
-    samples = pickle.load(open(cfg["sampling"]["samples_path"], "rb"))
+    samples = pickle.load(open(SAMPLES_PATH, "rb"))
 
     logger.info("Setting up prior")
-    prior_cfg = cfg["priors"]
-    prior = CompoundPrior.from_dict(prior_cfg)
+    prior = CompoundPrior.from_dict(cfg.priors.model_dump())
 
     # Hypothesis 1: Vertical symmetry axis (eta1 = 0, eta2 = 0)
     # => margninalise out the love parameters, keeping the last two
     indices = [5, 6]  # Indices of eta1 and eta2
 
     logger.info("Configuring posterior fitting parameters")
-    train_cfg, realnvp_cfg = configure_posterior_fit(cfg)
+    train_cfg, realnvp_cfg = configure_posterior_fit(cfg.model_dump())
     logger.info("Training flow model on marginalised samples")
     marg_posterior = fit_marginalised_posterior(
         samples, indices, realnvp_cfg, train_cfg
