@@ -666,7 +666,7 @@ wheels = [
 
 [[package]]
 name = "harmonic"
-version = "1.3.0"
+version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloudpickle" },
@@ -684,10 +684,19 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "setuptools" },
+    { name = "setuptools-scm" },
     { name = "tqdm" },
     { name = "wheel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/68/ae/fb75e7ed6d9d298d81725880e55d575d32afa0f2b934238142e2b7c93c30/harmonic-1.3.0.tar.gz", hash = "sha256:64534a5ba3403394e38640aa8208bee6fa17527bcb54a15f286d761b398848af", size = 241490, upload-time = "2025-06-06T10:04:57.319Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/20/75/07f7014650a13b7947b11d4307a5c397ddb0b7da0ca9684ef1d5ddd44dcc/harmonic-1.3.1.tar.gz", hash = "sha256:fdaaa37c7a1e1048beda6416eab6d5925e276c0bf74f742be5a7b2f9eaa4d560", size = 2080891, upload-time = "2025-11-26T13:59:18.469Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2c/11/b8c9698ab92e0da5ad9bad64c7c2d3c2121a3529ff5087660726744eb8ca/harmonic-1.3.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:baf629913d89e130b81afd18cfee798a6f9c5092532026fe175295a5a3c4c5e1", size = 417913, upload-time = "2025-11-26T13:59:08.613Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/cc/2a7211bc73c1f4223216b5782f46cf854b5b86277cee2bd96d3155dc0a7e/harmonic-1.3.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:80086a7c24434e27c4358e3b9866609eb91bae1861f77ab9b858b6d33aeaea66", size = 1304743, upload-time = "2025-11-26T13:59:09.939Z" },
+    { url = "https://files.pythonhosted.org/packages/96/4b/a407e6a8bde4cfdc7f22678ad64603f1e6051f27fb663a5b17a19569e7bf/harmonic-1.3.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:e86d004ee2a5d05374ad628d34d52ee9489b6d9dbf284d37d8e4f9a67888b162", size = 1307036, upload-time = "2025-11-26T13:59:11.608Z" },
+    { url = "https://files.pythonhosted.org/packages/59/e7/2986891c8cfcd465a5a72537042f377ec82c1e4dfb2a834fac8ac5b7e95a/harmonic-1.3.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:d56a8bedd9d2650058af19cb5c2897cb32ad0016306d6da99c0dc86040f39c1f", size = 405287, upload-time = "2025-11-26T13:59:13.333Z" },
+    { url = "https://files.pythonhosted.org/packages/23/76/295fc09816abea608d34f8a0d99435cdea48902c36d61db478bcf9692fa5/harmonic-1.3.1-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:5e6b83655f9f4ba5b664835a65de3aee9b619ac5796dfcf59b21a7396a7454d1", size = 1281095, upload-time = "2025-11-26T13:59:15.046Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/23/ef50c3a348fbf03127e726ad01cf334e67f67f06aadb5ae93ba7a6b25dc8/harmonic-1.3.1-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:51eee58674b4083fef5f27eda276db1a0ceacfdfcde911a5d8adc09357db8d40", size = 1278448, upload-time = "2025-11-26T13:59:16.547Z" },
+]
 
 [[package]]
 name = "httpcore"
@@ -2037,6 +2046,15 @@ wheels = [
 ]
 
 [[package]]
+name = "sampling"
+version = "0.1.0"
+source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling#cae2c317a30631fbcf54c637a2fa6c7bc34fc081" }
+dependencies = [
+    { name = "emcee" },
+    { name = "numpy" },
+]
+
+[[package]]
 name = "scikit-learn"
 version = "1.7.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2107,6 +2125,15 @@ wheels = [
 ]
 
 [[package]]
+name = "sddr"
+version = "0.1.0"
+source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr#cae2c317a30631fbcf54c637a2fa6c7bc34fc081" }
+dependencies = [
+    { name = "harmonic" },
+    { name = "numpy" },
+]
+
+[[package]]
 name = "sdicani"
 version = "0.1.0"
 source = { editable = "." }
@@ -2115,7 +2142,9 @@ dependencies = [
     { name = "emcee" },
     { name = "harmonic" },
     { name = "numpy" },
+    { name = "sampling" },
     { name = "scipy" },
+    { name = "sddr" },
 ]
 
 [package.dev-dependencies]
@@ -2130,7 +2159,9 @@ requires-dist = [
     { name = "emcee", specifier = ">=3.1.6" },
     { name = "harmonic", specifier = ">=1.3.0" },
     { name = "numpy", specifier = ">=2.3.4" },
+    { name = "sampling", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling" },
     { name = "scipy", specifier = ">=1.16.2" },
+    { name = "sddr", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr" },
 ]
 
 [package.metadata.requires-dev]
@@ -2155,6 +2186,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/dc/98/5f896af066c128669229ff1aa81553ac14cfb3e5e74b6b44594132b8540e/setuptools-68.0.0.tar.gz", hash = "sha256:baf1fdb41c6da4cd2eae722e135500da913332ab3f2f5c7d33af9b492acb5235", size = 2194111, upload-time = "2023-06-19T15:53:05.082Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/42/be1c7bbdd83e1bfb160c94b9cafd8e25efc7400346cf7ccdbdb452c467fa/setuptools-68.0.0-py3-none-any.whl", hash = "sha256:11e52c67415a381d10d6b462ced9cfb97066179f0e871399e006c4ab101fc85f", size = 804037, upload-time = "2023-06-19T15:53:03.089Z" },
+]
+
+[[package]]
+name = "setuptools-scm"
+version = "9.2.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7b/b1/19587742aad604f1988a8a362e660e8c3ac03adccdb71c96d86526e5eb62/setuptools_scm-9.2.2.tar.gz", hash = "sha256:1c674ab4665686a0887d7e24c03ab25f24201c213e82ea689d2f3e169ef7ef57", size = 203385, upload-time = "2025-10-19T22:08:05.608Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3d/ea/ac2bf868899d0d2e82ef72d350d97a846110c709bacf2d968431576ca915/setuptools_scm-9.2.2-py3-none-any.whl", hash = "sha256:30e8f84d2ab1ba7cb0e653429b179395d0c33775d54807fc5f1dd6671801aef7", size = 62975, upload-time = "2025-10-19T22:08:04.007Z" },
 ]
 
 [[package]]
