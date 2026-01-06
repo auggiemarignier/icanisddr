@@ -2,22 +2,22 @@
 
 import logging
 from collections.abc import Callable
+from typing import Any
 
 import harmonic as hm
+import hydra
 import numpy as np
-from emcee import EnsembleSampler
-from harmonic.model import RealNVPModel
-
 from bulkic.data import create_paths, create_synthetic_bulk_ic_data
+from harmonic.model import RealNVPModel
+from omegaconf import OmegaConf
+
 from sdicani.sddr.likelihood import gaussian_likelihood_factory
 from sdicani.sddr.posterior import marginalise_samples, posterior_factory
-from sdicani.sddr.prior import (
+from sdicani.sddr.priors import (
     CompoundPrior,
-    GaussianPrior,
-    PriorComponent,
-    UniformPrior,
     marginalise_prior,
 )
+from sdicani.sddr.sampling import MCMCConfig, mcmc
 from sdicani.tti.forward import TravelTimeCalculator
 
 logging.basicConfig(
@@ -28,9 +28,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def setup() -> tuple[
-    Callable[[np.ndarray], float], CompoundPrior, Callable[[np.ndarray], float]
-]:
+def setup(
+    prior_cfg: dict[str, Any],
+) -> tuple[Callable[[np.ndarray], float], CompoundPrior, Callable[[np.ndarray], float]]:
     """Setup function for synthetic bulk IC experiment.
 
     Returns
@@ -58,59 +58,17 @@ def setup() -> tuple[
     # Create a likelihood function
     logger.info("Setting up likelihood function")
     inv_covar = np.eye(synthetic_data.shape[0]) * (1 / 0.1)  # Example covariance
-    likelihood = gaussian_likelihood_factory(
-        ttc, synthetic_data, inv_covar, skip_validation=True, covar_is_inverse=True
-    )
+    likelihood = gaussian_likelihood_factory(ttc, synthetic_data, inv_covar)
 
     # Create a prior
     logger.info("Setting up prior distributions")
-    eta1_prior = UniformPrior(np.array([-180.0]), np.array([180.0]))
-    eta2_prior = UniformPrior(np.array([0.0]), np.array([90.0]))
-    love_priors = GaussianPrior(
-        mean=np.zeros(5), covar=np.eye(5) * 0.2
-    )  # THIS INCLUDES L AND N!
-    prior_components = [
-        PriorComponent(love_priors, slice(0, 5)),
-        PriorComponent(eta1_prior, slice(5, 6)),
-        PriorComponent(eta2_prior, slice(6, 7)),
-    ]
-    prior = CompoundPrior(prior_components)
+    prior = CompoundPrior.from_dict(prior_cfg)
 
     # Create a posterior
     logger.info("Creating posterior distribution")
     posterior = posterior_factory(likelihood, prior)
 
     return posterior, prior, likelihood
-
-
-def mcmc(
-    posterior: Callable[[np.ndarray], float], rng: np.random.Generator
-) -> tuple[np.ndarray, np.ndarray]:
-    """Run MCMC sampling for the synthetic bulk IC experiment.
-
-    Returns
-    -------
-    samples : ndarray, shape (num_samples, ndim)
-        MCMC samples of the model parameters.
-    lnprob : ndarray, shape (num_samples,)
-        Log-probabilities of the MCMC samples.
-    """
-    logger.info("Starting MCMC sampling for synthetic bulk IC experiment")
-
-    ndim = 7  # Number of model parameters: [A, C, F, L, N, eta1, eta2]
-    nwalkers = 50
-    nsteps = 1000
-    logger.info(f"Running MCMC with {nwalkers} walkers for {nsteps} steps")
-    initial_pos = rng.normal(
-        0, 1, size=(nwalkers, ndim)
-    )  # these should be drawn from the prior
-    sampler = EnsembleSampler(nwalkers, ndim, posterior)
-    sampler.run_mcmc(initial_pos, nsteps, progress=True)
-    samples = np.ascontiguousarray(sampler.get_chain(flat=True)[200:, :])
-    lnprob = np.ascontiguousarray(sampler.get_log_prob(flat=True)[200:])
-    logger.info("MCMC sampling complete")
-
-    return samples, lnprob
 
 
 def fit_marginalised_posterior(
@@ -164,14 +122,16 @@ def sddr(
     return float(posterior_log_prob - prior_log_prob)
 
 
-def main():
+@hydra.main(version_base=None, config_path=".", config_name="config")
+def main(cfg: OmegaConf) -> None:
     """Main function for synthetic bulk IC experiment."""
     logger.info("Starting synthetic bulk IC experiment")
+    cfg: dict[str, Any] = OmegaConf.to_object(cfg)
 
     rng = np.random.default_rng(42)
-    posterior, prior, likelihood = setup()
+    posterior, prior, likelihood = setup(cfg["priors"])
 
-    samples, lnprob = mcmc(posterior, rng)
+    samples, lnprob = mcmc(prior.n, posterior, rng, MCMCConfig(**cfg["sampling"]))
 
     # Hypothesis 1: Vertical symmetry axis (eta1 = 0, eta2 = 0)
     # => margninalise out the love parameters, keeping the last two

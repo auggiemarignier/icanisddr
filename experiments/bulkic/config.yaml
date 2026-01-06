@@ -1,0 +1,30 @@
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+sampling:
+  nwalkers: 50
+  nsteps: 10000
+  burn_in: 2000
+  thin: 5
+  progress: true
+  parallel: true
+priors:
+  components:
+    - type: gaussian
+      mean: [0.0, 0.0, 0.0, 0.0, 0.0]
+      inv_covar:
+        - [10.0, 0.0, 0.0, 0.0, 0.0]
+        - [0.0, 10.0, 0.0, 0.0, 0.0]
+        - [0.0, 0.0, 10.0, 0.0, 0.0]
+        - [0.0, 0.0, 0.0, 10.0, 0.0]
+        - [0.0, 0.0, 0.0, 0.0, 10.0]
+      indices: [0, 1, 2, 3, 4]
+    - type: uniform
+      lower_bounds: -180.0
+      upper_bounds: 180.0
+      indices: [5]
+    - type: uniform
+      lower_bounds: 0.0
+      upper_bounds: 90.0
+      indices: [6]
