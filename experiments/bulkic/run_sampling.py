@@ -1,19 +1,24 @@
 """Synthetic bulk IC experiment entry point."""
 
 import logging
+import os
 import pickle
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
 import numpy as np
 from bulkic.config import load_config
 from bulkic.data import create_paths, create_synthetic_bulk_ic_data
 from sampling.likelihood import GaussianLikelihood
 from sampling.posterior import Posterior
-from sampling.priors import (
-    CompoundPrior,
-)
+from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
 
 from tti.forward import TravelTimeCalculator
