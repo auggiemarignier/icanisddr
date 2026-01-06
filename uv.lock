@@ -2206,7 +2206,7 @@ wheels = [
 [[package]]
 name = "sampling"
 version = "0.1.0"
-source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling#cae2c317a30631fbcf54c637a2fa6c7bc34fc081" }
+source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling&branch=main#c0e6c33e51c216371c031dd65ac6825663a85b6e" }
 dependencies = [
     { name = "emcee" },
     { name = "numpy" },
@@ -2288,7 +2288,7 @@ wheels = [
 [[package]]
 name = "sddr"
 version = "0.1.0"
-source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr#cae2c317a30631fbcf54c637a2fa6c7bc34fc081" }
+source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr&branch=main#c0e6c33e51c216371c031dd65ac6825663a85b6e" }
 dependencies = [
     { name = "harmonic" },
     { name = "numpy" },
@@ -2320,9 +2320,9 @@ requires-dist = [
     { name = "emcee", specifier = ">=3.1.6" },
     { name = "harmonic", specifier = ">=1.3.0" },
     { name = "numpy", specifier = ">=2.3.4" },
-    { name = "sampling", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling" },
+    { name = "sampling", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling&branch=main" },
     { name = "scipy", specifier = ">=1.16.2" },
-    { name = "sddr", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr" },
+    { name = "sddr", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr&branch=main" },
 ]
 
 [package.metadata.requires-dev]
