@@ -5,9 +5,9 @@ from typing import Literal
 import numpy as np
 import pytest
 
-from sdicani.tti.creager import calculate_traveltime as calc_dt_creager
-from sdicani.tti.creager import love_to_creager
-from sdicani.tti.elastic import (
+from tti.creager import calculate_traveltime as calc_dt_creager
+from tti.creager import love_to_creager
+from tti.elastic import (
     _check_elastic_tensor_symmetry,
     elastic_tensor_to_voigt,
     isotropic_tensor_4th,
@@ -15,7 +15,7 @@ from sdicani.tti.elastic import (
     transverse_isotropic_tensor_4th,
     transverse_isotropic_tensor_voigt,
 )
-from sdicani.tti.forward import (
+from tti.forward import (
     TravelTimeCalculator,
     _spherical_to_cartesian,
     _unpack_model_vector,
@@ -24,7 +24,7 @@ from sdicani.tti.forward import (
     calculate_relative_traveltime,
     construct_general_tti_tensor,
 )
-from sdicani.tti.rotation import rotation_matrix_zy, transformation_4th_order
+from tti.rotation import rotation_matrix_zy, transformation_4th_order
 
 
 @pytest.fixture

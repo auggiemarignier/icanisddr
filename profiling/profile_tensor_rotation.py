@@ -5,13 +5,13 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sdicani.tti.elastic import (
+from tti.elastic import (
     elastic_tensor_to_voigt,
     transformation_to_voigt,
     transverse_isotropic_tensor,
     voigt_to_elastic_tensor,
 )
-from sdicani.tti.rotation import rotation_matrix_zy, transformation_4th_order
+from tti.rotation import rotation_matrix_zy, transformation_4th_order
 
 
 def profile_operation(func, *args, n_runs=100, warmup=10):

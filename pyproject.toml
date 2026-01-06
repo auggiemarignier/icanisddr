@@ -14,10 +14,6 @@ dependencies = [
     "sampling"
 ]
 
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [tool.uv]
 # harmonic requires distrax which requires numpy<2
 # but pytransc, pyfm2d require numpy>=2
@@ -29,6 +25,7 @@ override-dependencies = ["numpy>=2"]
 members = [
     "experiments/*",
     "profiling",
+    "src/tti",
 ]
 
 [tool.uv.sources]
@@ -94,7 +91,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["src/tti/tests"]
 addopts = ["-v", "--cov=src", "--cov-report=term-missing", "--cov-report=xml"]
 
 [tool.coverage.run]
