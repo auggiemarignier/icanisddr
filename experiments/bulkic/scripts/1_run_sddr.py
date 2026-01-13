@@ -96,7 +96,7 @@ def run_sddr_experiment(
     )
 
 
-OUTPUTS_PATH = Path(__file__).parent / "outputs"
+OUTPUTS_PATH = Path(__file__).parent.parent / "outputs"
 
 
 def get_results_dir(n: int = 0) -> Path:

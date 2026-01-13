@@ -64,7 +64,32 @@ def setup(
     return prior, likelihood
 
 
-CFG_FILE = Path(__file__).parent / "config.yaml"
+def dump_results(samples: np.ndarray, lnprob: np.ndarray) -> None:
+    """Dump the results to disk.
+
+    Parameters
+    ----------
+    samples : np.ndarray
+        MCMC samples.
+    lnprob : np.ndarray
+        Log-probabilities of the samples.
+    """
+    output_dir = (
+        Path(__file__).parent.parent
+        / "outputs"
+        / datetime.now().strftime("%Y%m%d-%H%M%S")
+    )
+    output_dir.mkdir(parents=True, exist_ok=False)
+
+    with open(output_dir / "samples.pkl", "wb") as f:
+        pickle.dump(samples, f)
+    with open(output_dir / "lnprob.pkl", "wb") as f:
+        pickle.dump(lnprob, f)
+
+    logger.info(f"Results saved to {output_dir}")
+
+
+CFG_FILE = Path(__file__).parent.parent / "config.yaml"
 
 
 def main() -> None:
@@ -83,14 +108,7 @@ def main() -> None:
     logger.info("MCMC sampling completed")
     logger.info("Saving samples to disk")
 
-    output_dir = (
-        Path(__file__).parent / "outputs" / datetime.now().strftime("%Y%m%d-%H%M%S")
-    )
-    with open(output_dir / "samples.pkl", "wb") as f:
-        pickle.dump(samples, f)
-    with open(output_dir / "lnprob.pkl", "wb") as f:
-        pickle.dump(lnprob, f)
-    logger.info("Samples saved successfully")
+    dump_results(samples, lnprob)
 
 
 if __name__ == "__main__":
