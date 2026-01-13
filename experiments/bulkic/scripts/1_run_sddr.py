@@ -10,6 +10,8 @@ import numpy as np
 from bulkic.config import Config, load_config
 from harmonic.model import RealNVPModel
 from harmonic.sddr import sddr as hmsddr
+from pydantic import BaseModel
+from pydantic_yaml import to_yaml_str
 from sampling.priors import CompoundPrior, PriorFunction
 from sddr.marginalisation import marginalise_prior, marginalise_samples
 from sddr.sddr import (
@@ -25,6 +27,19 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+class SDDRResult(BaseModel):
+    """Class to store SDDR result."""
+
+    hypothesis_name: str
+    log_bf: float
+
+
+class ResultsSummary(BaseModel):
+    """Class to store summary of results."""
+
+    sddr_results: list[SDDRResult]
 
 
 def configure_posterior_fit(
@@ -56,7 +71,7 @@ def run_sddr_experiment(
     prior: PriorFunction,
     nu: np.ndarray,
     cfg: Config,
-) -> None:
+) -> float:
     """Run the synthetic bulk IC SDDR experiment."""
 
     logger.info("Configuring posterior fitting parameters")
@@ -69,16 +84,9 @@ def run_sddr_experiment(
     logger.info("Marginalising the prior")
     marg_prior = marginalise_prior(prior, indices)
 
-    logger.info("Calculating Savage-Dickey density ratio at point nu=0")
+    logger.info("Calculating Savage-Dickey density ratio at point nu")
     sddr_h1 = sddr(marg_posterior, marg_prior, nu)
-    logger.info(f"logSDDR for hypothesis 1 (vertical symmetry axis): {sddr_h1:.4f}")
-
-    if sddr_h1 > 0:
-        logger.info("Evidence in favour of nested model")
-    else:
-        logger.info("Evidence against nested model")
-
-    logger.info("Experiment complete")
+    logger.info(f"logSDDR: {sddr_h1:.4f}")
 
     logger.info("Calculating harmonic SDDR for comparison")
     flow_model = RealNVPModel(ndim_in=marg_prior.n, standardize=True, temperature=1.0)
@@ -91,9 +99,9 @@ def run_sddr_experiment(
         bootstrap=True,
         epochs=10,
     )
-    logger.info(
-        f"Harmonic logSDDR for hypothesis 1 (vertical symmetry axis): {flow_log_bf:.4f} ± {flow_log_bf_std:.4f}"
-    )
+    logger.info(f"Harmonic logSDDR: {flow_log_bf:.4f} ± {flow_log_bf_std:.4f}")
+
+    return sddr_h1
 
 
 OUTPUTS_PATH = Path(__file__).parent.parent / "outputs"
@@ -135,17 +143,26 @@ def main() -> None:
     logger.info("Setting up prior")
     prior = CompoundPrior.from_dict(cfg.priors.model_dump())
 
+    bfs: list[SDDRResult] = []
     for hypothesis in cfg.hypotheses:
+        logger.info("")
         logger.info("========================================")
+        logger.info("")
         logger.info(f"Running SDDR for hypothesis: {hypothesis.name}")
         nu = np.array(hypothesis.nu)
-        run_sddr_experiment(
+        bf = run_sddr_experiment(
             samples=samples,
             indices=hypothesis.indices,
             nu=nu,
             prior=prior,
             cfg=cfg,
         )
+        bfs.append(SDDRResult(hypothesis_name=hypothesis.name, log_bf=bf))
+
+    logger.info("Dumping results to disk")
+    summary = ResultsSummary(sddr_results=bfs)
+    with open(results_dir / "sddr_results.yaml", "w") as f:
+        f.write(to_yaml_str(summary))
 
 
 if __name__ == "__main__":
