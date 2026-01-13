@@ -4,26 +4,24 @@ sampling:
   burn_in: 2000
   thin: 5
   progress: true
-  parallel: false
+  parallel: true
 priors:
   components:
     - type: gaussian
-      mean: [0.0, 0.0, 0.0, 0.0, 0.0]
+      mean: [0.0, 0.0, 0.0]
       inv_covar:
-        - [10.0, 0.0, 0.0, 0.0, 0.0]
-        - [0.0, 10.0, 0.0, 0.0, 0.0]
-        - [0.0, 0.0, 10.0, 0.0, 0.0]
-        - [0.0, 0.0, 0.0, 10.0, 0.0]
-        - [0.0, 0.0, 0.0, 0.0, 10.0]
-      indices: [0, 1, 2, 3, 4]
+        - [10.0, 0.0, 0.0]
+        - [0.0, 10.0, 0.0]
+        - [0.0, 0.0, 10.0]
+      indices: [0, 1, 2]
     - type: uniform
       lower_bounds: -180.0
       upper_bounds: 180.0
-      indices: [5]
+      indices: [3]
     - type: uniform
       lower_bounds: 0.0
       upper_bounds: 90.0
-      indices: [6]
+      indices: [4]
 training:
   batch_size: 24
   epochs: 10
@@ -33,5 +31,5 @@ realnvp:
   n_unscaled_layers: 4
   learning_rate: 0.001
   momentum: 0.9
-  standardize: false
-  temperature: 0.95
+  standardize: true
+  temperature: 1.0

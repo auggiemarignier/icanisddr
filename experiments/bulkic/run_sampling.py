@@ -17,7 +17,6 @@ import numpy as np
 from bulkic.config import load_config
 from bulkic.data import create_paths, create_synthetic_bulk_ic_data
 from sampling.likelihood import GaussianLikelihood
-from sampling.posterior import Posterior
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
 
@@ -33,13 +32,11 @@ logger = logging.getLogger(__name__)
 
 def setup(
     prior_cfg: dict[str, Any],
-) -> tuple[Callable[[np.ndarray], float], CompoundPrior, Callable[[np.ndarray], float]]:
+) -> tuple[CompoundPrior, Callable[[np.ndarray], float]]:
     """Setup function for synthetic bulk IC experiment.
 
     Returns
     -------
-    posterior : Callable[[np.ndarray], float]
-        Posterior distribution function.
     prior : CompoundPrior
         Prior distribution.
     likelihood : Callable[[np.ndarray], float]
@@ -54,23 +51,21 @@ def setup(
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
     logger.info("Creating travel time calculator")
-    ttc = TravelTimeCalculator(ic_in, ic_out)
+    ttc = TravelTimeCalculator(ic_in, ic_out, nested=True, shear=False)
 
     logger.info("Setting up likelihood function")
-    inv_covar = np.eye(synthetic_data.shape[0]) * (1 / 0.1)  # Example covariance
+    inv_covar = np.array([1 / synthetic_data.std() ** 2])  # Example covariance
     likelihood = GaussianLikelihood(ttc, synthetic_data, inv_covar)
 
     logger.info("Setting up prior distributions")
     prior = CompoundPrior.from_dict(prior_cfg)
 
-    logger.info("Creating posterior distribution")
-    posterior = Posterior(likelihood, prior)
-
-    return posterior, prior, likelihood
+    return prior, likelihood
 
 
 CFG_FILE = Path(__file__).parent / "config.yaml"
 SAMPLES_PATH = Path(__file__).parent / "samples.pkl"
+LN_PROB_PATH = Path(__file__).parent / "lnprob.pkl"
 
 
 def main() -> None:
@@ -79,17 +74,20 @@ def main() -> None:
     cfg = load_config(CFG_FILE)
 
     rng = np.random.default_rng(42)
-    posterior, prior, likelihood = setup(cfg.priors.model_dump())
+    prior, likelihood = setup(cfg.priors.model_dump())
 
     logger.info("Running MCMC sampling")
     samples, lnprob = mcmc(
-        prior.n, posterior, rng, MCMCConfig(**cfg.sampling.model_dump())
+        prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
 
     logger.info("MCMC sampling completed")
     logger.info("Saving samples to disk")
     with open(SAMPLES_PATH, "wb") as f:
         pickle.dump(samples, f)
+    with open(LN_PROB_PATH, "wb") as f:
+        pickle.dump(lnprob, f)
+    logger.info("Samples saved successfully")
 
 
 if __name__ == "__main__":

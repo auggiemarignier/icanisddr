@@ -80,6 +80,11 @@ max-complexity = 25
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
+[tool.ruff.lint.per-file-ignores]
+"**/*.ipynb" = [
+    "D",    # docstrings
+]
+
 [dependency-groups]
 dev = ["pytest>=8.4.2", "pytest-cov>=7.0.0"]
 

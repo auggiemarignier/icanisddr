@@ -7,8 +7,10 @@ from typing import Any
 
 import numpy as np
 from bulkic.config import load_config
+from harmonic.model import RealNVPModel
+from harmonic.sddr import sddr as hmsddr
 from sampling.priors import CompoundPrior
-from sddr.marginalisation import marginalise_prior
+from sddr.marginalisation import marginalise_prior, marginalise_samples
 from sddr.sddr import (
     RealNVPConfig,
     TrainConfig,
@@ -64,7 +66,7 @@ def main() -> None:
 
     # Hypothesis 1: Vertical symmetry axis (eta1 = 0, eta2 = 0)
     # => margninalise out the love parameters, keeping the last two
-    indices = [5, 6]  # Indices of eta1 and eta2
+    indices = [3, 4]  # Indices of eta1 and eta2
 
     logger.info("Configuring posterior fitting parameters")
     train_cfg, realnvp_cfg = configure_posterior_fit(cfg.model_dump())
@@ -74,16 +76,33 @@ def main() -> None:
     )
 
     logger.info("Marginalising the prior")
-    marg_prior = marginalise_prior(prior, [5, 6])
+    marg_prior = marginalise_prior(prior, indices)
 
     nu = np.zeros(2)  # evaluation point
     logger.info("Calculating Savage-Dickey density ratio at point nu=0")
     sddr_h1 = sddr(marg_posterior, marg_prior, nu)
-    logger.info(
-        f"SDDR for hypothesis 1 (vertical symmetry axis): {np.exp(sddr_h1):.2f}"
-    )
+    logger.info(f"logSDDR for hypothesis 1 (vertical symmetry axis): {sddr_h1:.4f}")
+
+    if sddr_h1 > 0:
+        logger.info("Evidence in favour of nested model")
+    else:
+        logger.info("Evidence against nested model")
 
     logger.info("Experiment complete")
+
+    flow_model = RealNVPModel(ndim_in=marg_prior.n, standardize=True, temperature=1.0)
+    harm_sddr = hmsddr(flow_model, marginalise_samples(samples, indices))
+    flow_log_bf, flow_log_bf_std = harm_sddr.log_bayes_factor(
+        log_prior=marg_prior(nu),
+        value=nu,
+        nbootstraps=10,
+        bootstrap_proportion=0.5,
+        bootstrap=True,
+        epochs=10,
+    )
+    logger.info(
+        f"Harmonic logSDDR for hypothesis 1 (vertical symmetry axis): {flow_log_bf:.4f} ± {flow_log_bf_std:.4f}"
+    )
 
 
 if __name__ == "__main__":
