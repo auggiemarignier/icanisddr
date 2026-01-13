@@ -2,6 +2,7 @@
 
 import logging
 import pickle
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -95,14 +96,38 @@ def run_sddr_experiment(
     )
 
 
-CFG_FILE = Path(__file__).parent / "config.yaml"
-SAMPLES_PATH = Path(__file__).parent / "samples.pkl"
+OUTPUTS_PATH = Path(__file__).parent / "outputs"
+
+
+def get_results_dir(n: int = 0) -> Path:
+    """Get the most recent results directory.
+
+    Parameters
+    ----------
+    n : int, optional
+        Index of the results directory to retrieve.
+        0 for the most recent, 1 for the second most recent, etc.
+        Default is 0.
+
+    Returns
+    -------
+    Path
+        Path to the results directory.
+    """
+    output_dirs = sorted(
+        OUTPUTS_PATH.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True
+    )
+    return output_dirs[n]
 
 
 def main() -> None:
     """Main function for synthetic bulk IC experiment."""
     logger.info("Starting synthetic bulk IC experiment")
-    cfg = load_config(CFG_FILE)
+
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+    results_dir = get_results_dir(n)
+    SAMPLES_PATH = results_dir / "samples.pkl"
+    cfg = load_config(results_dir / "config.yaml")
 
     logger.info("Loading posterior samples from disk")
     samples = pickle.load(open(SAMPLES_PATH, "rb"))

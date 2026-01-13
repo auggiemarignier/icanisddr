@@ -4,6 +4,7 @@ import logging
 import os
 import pickle
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -64,8 +65,6 @@ def setup(
 
 
 CFG_FILE = Path(__file__).parent / "config.yaml"
-SAMPLES_PATH = Path(__file__).parent / "samples.pkl"
-LN_PROB_PATH = Path(__file__).parent / "lnprob.pkl"
 
 
 def main() -> None:
@@ -83,9 +82,13 @@ def main() -> None:
 
     logger.info("MCMC sampling completed")
     logger.info("Saving samples to disk")
-    with open(SAMPLES_PATH, "wb") as f:
+
+    output_dir = (
+        Path(__file__).parent / "outputs" / datetime.now().strftime("%Y%m%d-%H%M%S")
+    )
+    with open(output_dir / "samples.pkl", "wb") as f:
         pickle.dump(samples, f)
-    with open(LN_PROB_PATH, "wb") as f:
+    with open(output_dir / "lnprob.pkl", "wb") as f:
         pickle.dump(lnprob, f)
     logger.info("Samples saved successfully")
 
