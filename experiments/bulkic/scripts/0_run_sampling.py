@@ -15,8 +15,9 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
 import numpy as np
-from bulkic.config import load_config
+from bulkic.config import Config, load_config
 from bulkic.data import create_paths, create_synthetic_bulk_ic_data
+from pydantic_yaml import to_yaml_str
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
@@ -64,7 +65,7 @@ def setup(
     return prior, likelihood
 
 
-def dump_results(samples: np.ndarray, lnprob: np.ndarray) -> None:
+def dump_results(samples: np.ndarray, lnprob: np.ndarray, cfg: Config) -> None:
     """Dump the results to disk.
 
     Parameters
@@ -85,6 +86,8 @@ def dump_results(samples: np.ndarray, lnprob: np.ndarray) -> None:
         pickle.dump(samples, f)
     with open(output_dir / "lnprob.pkl", "wb") as f:
         pickle.dump(lnprob, f)
+    with open(output_dir / "config.yaml", "w") as f:
+        f.write(to_yaml_str(cfg))
 
     logger.info(f"Results saved to {output_dir}")
 
@@ -108,7 +111,7 @@ def main() -> None:
     logger.info("MCMC sampling completed")
     logger.info("Saving samples to disk")
 
-    dump_results(samples, lnprob)
+    dump_results(samples, lnprob, cfg)
 
 
 if __name__ == "__main__":
