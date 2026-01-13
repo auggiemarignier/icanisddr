@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 def setup(
+    truth: np.ndarray,
     prior_cfg: dict[str, Any],
 ) -> tuple[CompoundPrior, Callable[[np.ndarray], float]]:
     """Setup function for synthetic bulk IC experiment.
@@ -49,7 +50,7 @@ def setup(
     logger.info("Creating synthetic data...")
     ic_in, ic_out = create_paths(source_spacing=20.0)
     logger.info(f"Number of paths: {ic_in.shape[0]}")
-    synthetic_data = create_synthetic_bulk_ic_data(ic_in, ic_out)
+    synthetic_data = create_synthetic_bulk_ic_data(ic_in, ic_out, truth)
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
     logger.info("Creating travel time calculator")
@@ -101,7 +102,7 @@ def main() -> None:
     cfg = load_config(CFG_FILE)
 
     rng = np.random.default_rng(42)
-    prior, likelihood = setup(cfg.priors.model_dump())
+    prior, likelihood = setup(cfg.truth.as_array(), cfg.priors.model_dump())
 
     logger.info("Running MCMC sampling")
     samples, lnprob = mcmc(

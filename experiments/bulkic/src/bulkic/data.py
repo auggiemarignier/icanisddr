@@ -1,39 +1,17 @@
 """Create synthetic bulk IC data."""
 
-from dataclasses import dataclass
-
 import numpy as np
 
 from tti.forward import TravelTimeCalculator
 
+from .config import IC_RADIUS, TrueBulkICConfig
 
-@dataclass(frozen=True)
-class TrueBulkICParams:
-    """True bulk IC model parameters.
-
-    These parameters define a single elastic tensor for the entire inner core.
-    This is cylindrically anisotropic with symmetry axis along the Earth's rotation axis.
-    The Love parameters are relative perturbations, not absolute values.
-    The values for A, C, F are from Brett et al. (2024), while L and N are set to 0 (i.e. the absolute values are equal to the reference model).
-    """
-
-    A: float = 0.0143
-    C: float = 0.0909
-    F: float = -0.0858
-    L: float = 0.0
-    N: float = 0.0
-    eta1: float = 0.0
-    eta2: float = 0.0
-
-    def as_array(self) -> np.ndarray:
-        """Return the parameters as a numpy array."""
-        return np.array([self.A, self.C, self.F, self.L, self.N, self.eta1, self.eta2])
+DEFAULT_TRUTH = TrueBulkICConfig().as_array()
 
 
-TRUE_IC = TrueBulkICParams()
-
-
-def create_synthetic_bulk_ic_data(ic_in: np.ndarray, ic_out: np.ndarray) -> np.ndarray:
+def create_synthetic_bulk_ic_data(
+    ic_in: np.ndarray, ic_out: np.ndarray, truth: np.ndarray = DEFAULT_TRUTH
+) -> np.ndarray:
     """Create synthetic travel time data for bulk IC model.
 
     Parameters
@@ -42,6 +20,8 @@ def create_synthetic_bulk_ic_data(ic_in: np.ndarray, ic_out: np.ndarray) -> np.n
         Entry points of paths into the inner core (longitude (deg), latitude (deg), radius (km)).
     ic_out : ndarray, shape (num_paths, 3)
         Exit points of paths from the inner core (longitude (deg), latitude (deg), radius (km)).
+    truth : np.ndarray, shape (7,), optional
+        True bulk IC model parameters.
 
     Returns
     -------
@@ -49,7 +29,7 @@ def create_synthetic_bulk_ic_data(ic_in: np.ndarray, ic_out: np.ndarray) -> np.n
         Synthetic relative travel time perturbations for each path.
     """
     calculator = TravelTimeCalculator(ic_in, ic_out, nested=True, shear=True)
-    synthetic_data = calculator(TRUE_IC.as_array())
+    synthetic_data = calculator(truth)
     return synthetic_data
 
 
@@ -86,10 +66,11 @@ def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
     lon_sources, lat_sources = _mw_sampling(int(180 / source_spacing))
     lon_receivers = lon_sources + source_spacing / 2
     lat_receivers = lat_sources + source_spacing / 2
-    r_ic = 1221.5  # km
-    sources = np.array([(lon, lat, r_ic) for lat in lat_sources for lon in lon_sources])
+    sources = np.array(
+        [(lon, lat, IC_RADIUS) for lat in lat_sources for lon in lon_sources]
+    )
     receivers = np.array(
-        [(lon, lat, r_ic) for lat in lat_receivers for lon in lon_receivers]
+        [(lon, lat, IC_RADIUS) for lat in lat_receivers for lon in lon_receivers]
     )
     n_sources = sources.shape[0]
     n_receivers = receivers.shape[0]

@@ -40,3 +40,11 @@ hypotheses:
   - name: fully_isotropic
     indices: [1, 2, 3, 4]
     nu: [0.0, 0.0, 0.0, 0.0]
+truth:
+  A: 0.0143
+  C: 0.0909
+  F: -0.0858
+  L: 0.0
+  N: 0.0
+  eta1: 0.0
+  eta2: 0.0
