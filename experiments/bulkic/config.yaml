@@ -33,3 +33,10 @@ realnvp:
   momentum: 0.9
   standardize: true
   temperature: 1.0
+hypotheses:
+  - name: transversely_isotropic
+    indices: [3, 4]
+    nu: [0.0, 0.0]
+  - name: fully_isotropic
+    indices: [1, 2, 3, 4]
+    nu: [0.0, 0.0, 0.0, 0.0]

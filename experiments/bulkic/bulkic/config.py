@@ -60,6 +60,14 @@ class RealNVPConfig(BaseModel):
     temperature: float = 0.95
 
 
+class HypothesisConfig(BaseModel):
+    """Configuration for a single hypothesis test."""
+
+    name: str
+    indices: list[int]
+    nu: list[float]
+
+
 class Config(BaseModel):
     """Overall configuration for synthetic bulk IC experiment."""
 
@@ -67,6 +75,7 @@ class Config(BaseModel):
     priors: PriorsConfig
     training: TrainConfig
     realnvp: RealNVPConfig
+    hypotheses: list[HypothesisConfig]
 
 
 def load_config(path: str | Path) -> Config:

@@ -2,7 +2,6 @@
 
 import logging
 import pickle
-from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -111,21 +110,17 @@ def main() -> None:
     logger.info("Setting up prior")
     prior = CompoundPrior.from_dict(cfg.priors.model_dump())
 
-    run_experiment = partial(run_sddr_experiment, samples=samples, prior=prior, cfg=cfg)
-
-    # Hypothesis 1: Vertical symmetry axis (eta1 = 0, eta2 = 0)
-    # => marginalise out the love parameters, keeping the last two
-    indices = [3, 4]  # Indices of eta1 and eta2
-    nu = np.array([0.0, 0.0])
-    logger.info("Running experiment for hypothesis 1 (vertical symmetry axis)")
-    run_experiment(indices=indices, nu=nu)
-
-    # Hypothesis 2: Fully Isotropic (A=C=F, L=N=0, eta1=0, eta2=0)
-    # => marginalise out A, evaluate everywhere else at 0
-    indices = list(range(1, prior.n))
-    nu = np.array([0.0, 0.0, 0.0, 0.0])  # C-A, F-A+2N, eta1, eta2
-    logger.info("Running experiment for hypothesis 2 (fully isotropic)")
-    run_experiment(indices=indices, nu=nu)
+    for hypothesis in cfg.hypotheses:
+        logger.info("========================================")
+        logger.info(f"Running SDDR for hypothesis: {hypothesis.name}")
+        nu = np.array(hypothesis.nu)
+        run_sddr_experiment(
+            samples=samples,
+            indices=hypothesis.indices,
+            nu=nu,
+            prior=prior,
+            cfg=cfg,
+        )
 
 
 if __name__ == "__main__":
