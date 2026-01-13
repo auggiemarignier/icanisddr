@@ -35,13 +35,13 @@ $$ r^{-1} = \begin{pmatrix}
 
 and
 
-$$ R(r) = \begin{pmatrix} r_{11}\^2 & r_{12}\^2 & r_{13}\^2 &
+$$ R(r) = \begin{pmatrix} r_{11}^2 & r_{12}^2 & r_{13}^2 &
 2r_{12}r_{13} & 2r_{11}r_{13} & 2r_{11}r_{12} \\
 
-r_{21}\^2 & r_{22}\^2 & r_{23}\^2 & 2r_{22}r_{23} & 2r_{21}r_{23}
+r_{21}^2 & r_{22}^2 & r_{23}^2 & 2r_{22}r_{23} & 2r_{21}r_{23}
 & 2r_{21}r_{22} \\
 
-r_{31}\^2 & r_{32}\^2 & r_{33}\^2 & 2r_{32}r_{33} & 2r_{31}r_{33}
+r_{31}^2 & r_{32}^2 & r_{33}^2 & 2r_{32}r_{33} & 2r_{31}r_{33}
 & 2r_{31}r_{32} \\
 
 r_{21}r_{31} & r_{22}r_{32} & r_{23}r_{33} & r_{22}r_{23} +
@@ -95,7 +95,7 @@ $\mathcal{H}_2$ is called the super-model.
 
 The evidence for model $\mathcal{H}_i$ is given by
 
-$$ z_i = p(\mathbf{d}|\mathcal{H}_i) \int p(\mathbf{d} | \mathbf{m}, \mathcal{H}_i)p(\mathbf{m} | \mathcal{H}_i)\;\mathrm{d}\mathbf{m} $$
+$$ z_i = p(\mathbf{d}|\mathcal{H}_i) = \int p(\mathbf{d} | \mathbf{m}, \mathcal{H}_i)p(\mathbf{m} | \mathcal{H}_i)\;\mathrm{d}\mathbf{m} $$
 
 where the parameter vector
 $\mathbf{m} = \left( \mathbf{\theta}, \mathbf{\nu} \right)$. The Bayes
