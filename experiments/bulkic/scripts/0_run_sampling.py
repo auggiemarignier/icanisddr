@@ -35,8 +35,18 @@ logger = logging.getLogger(__name__)
 def setup(
     truth: np.ndarray,
     prior_cfg: dict[str, Any],
+    noise_level: float,
 ) -> tuple[CompoundPrior, Callable[[np.ndarray], float]]:
     """Setup function for synthetic bulk IC experiment.
+
+    Parameters
+    ----------
+    truth : np.ndarray
+        True bulk IC parameters.
+    prior_cfg : dict[str, Any]
+        Configuration dictionary for the prior.
+    noise_level : float, optional
+        Noise level for synthetic data as a fraction of the stddev of the clean data.
 
     Returns
     -------
@@ -50,14 +60,14 @@ def setup(
     logger.info("Creating synthetic data...")
     ic_in, ic_out = create_paths(source_spacing=20.0)
     logger.info(f"Number of paths: {ic_in.shape[0]}")
-    synthetic_data = create_synthetic_bulk_ic_data(ic_in, ic_out, truth)
+    synthetic_data = create_synthetic_bulk_ic_data(ic_in, ic_out, truth, noise_level)
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
     logger.info("Creating travel time calculator")
     ttc = TravelTimeCalculator(ic_in, ic_out, nested=True, shear=False)
 
     logger.info("Setting up likelihood function")
-    inv_covar = np.array([1 / synthetic_data.std() ** 2])  # Example covariance
+    inv_covar = np.array([1 / synthetic_data.std() ** 2])
     likelihood = GaussianLikelihood(ttc, synthetic_data, inv_covar)
 
     logger.info("Setting up prior distributions")
@@ -102,7 +112,9 @@ def main() -> None:
     cfg = load_config(CFG_FILE)
 
     rng = np.random.default_rng(42)
-    prior, likelihood = setup(cfg.truth.as_array(), cfg.priors.model_dump())
+    prior, likelihood = setup(
+        cfg.truth.as_array(), cfg.priors.model_dump(), cfg.data.noise_level
+    )
 
     logger.info("Running MCMC sampling")
     samples, lnprob = mcmc(

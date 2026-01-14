@@ -7,10 +7,14 @@ from tti.forward import TravelTimeCalculator
 from .config import IC_RADIUS, TrueBulkICConfig
 
 DEFAULT_TRUTH = TrueBulkICConfig().as_array()
+RNG = np.random.default_rng(1234)
 
 
 def create_synthetic_bulk_ic_data(
-    ic_in: np.ndarray, ic_out: np.ndarray, truth: np.ndarray = DEFAULT_TRUTH
+    ic_in: np.ndarray,
+    ic_out: np.ndarray,
+    truth: np.ndarray = DEFAULT_TRUTH,
+    noise_level: float = 0.05,
 ) -> np.ndarray:
     """Create synthetic travel time data for bulk IC model.
 
@@ -22,6 +26,8 @@ def create_synthetic_bulk_ic_data(
         Exit points of paths from the inner core (longitude (deg), latitude (deg), radius (km)).
     truth : np.ndarray, shape (7,), optional
         True bulk IC model parameters.
+    noise_level : float, optional
+        Noise level for synthetic data as a fraction of the stddev of the clean data. Default is 0.05.
 
     Returns
     -------
@@ -30,7 +36,10 @@ def create_synthetic_bulk_ic_data(
     """
     calculator = TravelTimeCalculator(ic_in, ic_out, nested=True, shear=True)
     synthetic_data = calculator(truth)
-    return synthetic_data
+    noise = RNG.normal(
+        loc=0.0, scale=synthetic_data.std() * noise_level, size=synthetic_data.shape
+    )
+    return synthetic_data + noise
 
 
 def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:

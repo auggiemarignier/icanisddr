@@ -94,6 +94,15 @@ class HypothesisConfig(BaseModel):
     nu: list[float]
 
 
+class DataConfig(BaseModel):
+    """Configuration for synthetic data generation."""
+
+    noise_level: float = Field(
+        0.05,
+        description="Noise level as a fraction of the stddev of the clean data",
+    )
+
+
 class Config(BaseModel):
     """Overall configuration for synthetic bulk IC experiment."""
 
@@ -103,6 +112,7 @@ class Config(BaseModel):
     realnvp: RealNVPConfig
     hypotheses: list[HypothesisConfig]
     truth: TrueBulkICConfig = Field(default_factory=TrueBulkICConfig)
+    data: DataConfig = Field(default_factory=DataConfig)
 
 
 def load_config(path: str | Path) -> Config:
