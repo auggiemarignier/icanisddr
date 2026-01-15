@@ -1,14 +1,14 @@
 sampling:
-  nwalkers: 20
-  nsteps: 10000
-  burn_in: 2000
+  nwalkers: 200
+  nsteps: 2500
+  burn_in: 500
   thin: 5
   progress: true
   parallel: true
 priors:
   components:
     - type: gaussian
-      mean: [0.0, 0.0, 0.0]
+      mean: [0.00143, 0.0766, -0.1001]
       inv_covar:
         - [10.0, 0.0, 0.0]
         - [0.0, 10.0, 0.0]
