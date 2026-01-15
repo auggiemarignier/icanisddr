@@ -34,7 +34,7 @@ def create_synthetic_bulk_ic_data(
     ndarray, shape (num_paths,)
         Synthetic relative travel time perturbations for each path.
     """
-    calculator = TravelTimeCalculator(ic_in, ic_out, nested=True, shear=True)
+    calculator = TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True)
     synthetic_data = calculator(truth)
     noise = RNG.normal(
         loc=0.0, scale=synthetic_data.std() * noise_level, size=synthetic_data.shape
