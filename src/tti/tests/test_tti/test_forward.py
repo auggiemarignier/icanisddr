@@ -20,7 +20,9 @@ from tti.forward import (
     TravelTimeCalculator,
     _spherical_to_cartesian,
     _unpack_model_vector,
+    _unpack_model_vector_no_shear,
     _unpack_nested_model_vector,
+    _unpack_nested_model_vector_no_shear,
     calculate_path_direction_vector,
     calculate_relative_traveltime,
     construct_general_tti_tensor,
@@ -594,5 +596,47 @@ class TestUnpackings:
         np.testing.assert_allclose(F, lv.F)
         np.testing.assert_allclose(L, lv.L)
         np.testing.assert_allclose(N, lv.N)
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))
+
+    def test__unpack_nested_model_vector_no_shear(self, lv: LoveValues) -> None:
+        """Test unpacking of nested model vector with no shear into Love parameters.
+
+        Tests that the unpacking function correctly extracts Love parameters
+        when the model vector doesn't include shear anisotropy.
+        The angles eta1 and eta2 should be converted from degrees to radians.
+        """
+
+        dC = lv.C - lv.A
+        dF = lv.F - lv.A  # no shear anisotropy term
+        m_nested = np.column_stack([lv.A, dC, dF, lv.eta1, lv.eta2])
+
+        A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector_no_shear(m_nested)
+
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        np.testing.assert_allclose(L, np.zeros_like(lv.L))
+        np.testing.assert_allclose(N, np.zeros_like(lv.N))
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))
+
+    def test__unpack_model_vector_no_shear(self, lv: LoveValues) -> None:
+        """Test unpacking of model vector with no shear into Love parameters.
+
+        Tests that the unpacking function correctly extracts Love parameters
+        when the model vector doesn't include shear anisotropy.
+        The angles eta1 and eta2 should be converted from degrees to radians.
+        """
+
+        m = np.column_stack([lv.A, lv.C, lv.F, lv.eta1, lv.eta2])
+
+        A, C, F, L, N, eta1, eta2 = _unpack_model_vector_no_shear(m)
+
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        np.testing.assert_allclose(L, np.zeros_like(lv.L))
+        np.testing.assert_allclose(N, np.zeros_like(lv.N))
         np.testing.assert_allclose(eta1, np.radians(lv.eta1))
         np.testing.assert_allclose(eta2, np.radians(lv.eta2))
