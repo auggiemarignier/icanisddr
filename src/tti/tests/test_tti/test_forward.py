@@ -487,8 +487,24 @@ class TestTravelTimeCalculator:
     @pytest.fixture
     def valid_paths(self) -> tuple[np.ndarray, np.ndarray]:
         """Fixture for valid input paths."""
-        ic_in = np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0]])
-        ic_out = np.array([[180.0, 0.0, 1.0], [-90.0, 0.0, 1.0]])
+        ic_in = np.array(
+            [
+                [0.0, 0.0, 1.0],
+                [90.0, 0.0, 1.0],
+                [45.0, 45.0, 1.0],
+                [180.0, -30.0, 1.0],
+                [-90.0, 60.0, 1.0],
+            ]
+        )
+        ic_out = np.array(
+            [
+                [180.0, 0.0, 1.0],
+                [-90.0, 0.0, 1.0],
+                [-180.0, -45.0, 1.0],
+                [0.0, 30.0, 1.0],
+                [90.0, -60.0, 1.0],
+            ]
+        )
         return ic_in, ic_out
 
     @pytest.fixture
@@ -501,13 +517,22 @@ class TestTravelTimeCalculator:
 
     def test_initialisation_npaths(self, calculator: TravelTimeCalculator) -> None:
         """Test that the class initialises correctly with valid inputs."""
-        assert calculator.npaths == 2
+        assert calculator.npaths == 5
 
     def test_initialisation_direction_vectors(
         self, calculator: TravelTimeCalculator
     ) -> None:
         """Test that the direction vectors are calculated correctly upon initialisation."""
-        expected_directions = np.array([[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0]])
+        # Hard-coded expected unit direction vectors for the fixture paths
+        expected_directions = np.array(
+            [
+                [-1.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0],
+                [-0.626943121322, -0.259688343688, -0.734509555268],
+                [0.866025403784, 0.0, 0.5],
+                [0.0, 0.5, -0.866025403784],
+            ]
+        )
         np.testing.assert_allclose(
             calculator.path_directions, expected_directions, atol=1e-12
         )
@@ -531,7 +556,7 @@ class TestTravelTimeCalculator:
         # Isotropic medium parameters
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
-        m = np.array([a, a, lam, mu, mu, 0.0, 0.0] * 2)
+        m = np.array([a, a, lam, mu, mu, 0.0, 0.0] * calculator.npaths)
 
         dt = calculator(m)
 
