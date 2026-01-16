@@ -159,7 +159,7 @@ class TravelTimeCalculator:
         nested : bool, optional
             Whether model parameters are nested (default is True).
             The nested model parameter order is:
-                [A, C-A, F-A+2N, L, N-L, eta1, eta2]
+                [A, C-A, F-A+2N, L-N, N, eta1, eta2]
             The non-nested model parameter order is:
                 [A, C, F, L, N, eta1, eta2]
         shear : bool, optional
@@ -271,7 +271,7 @@ def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
     Parameters
     ----------
     m : ndarray, shape (M * 7)
-        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2L}, L, \delta_{LN}, eta1, eta2]
+        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2N}, \delta_{LN}, N, eta1, eta2]
         M is the number of model vectors (e.g. number of pixels).
 
     Returns
@@ -295,9 +295,9 @@ def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
     return (
         mT[0],
         mT[1] + mT[0],
-        mT[2] + mT[0] - 2 * mT[3],
-        mT[3],
-        mT[4] + mT[3],
+        mT[2] + mT[0] - 2 * mT[4],
+        mT[3] + mT[4],
+        mT[4],
         np.radians(mT[5]),
         np.radians(mT[6]),
     )
@@ -312,7 +312,7 @@ def _unpack_nested_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
     Parameters
     ----------
     m : ndarray, shape (M * 5)
-        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2L}, eta1, eta2]
+        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2N}, eta1, eta2]
         M is the number of model vectors (e.g. number of pixels).
 
     Returns
