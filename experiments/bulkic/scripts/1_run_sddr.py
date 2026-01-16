@@ -139,7 +139,8 @@ def main() -> None:
     cfg = load_config(results_dir / "config.yaml")
 
     logger.info("Loading posterior samples from disk")
-    samples = pickle.load(open(SAMPLES_PATH, "rb"))
+    with open(SAMPLES_PATH, "rb") as f:
+        samples = pickle.load(f)
 
     logger.info("Setting up prior")
     prior = CompoundPrior.from_dict(cfg.priors.model_dump())
