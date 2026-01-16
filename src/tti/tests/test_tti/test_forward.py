@@ -1,5 +1,6 @@
 """Test the forward modelling functions for TTI media."""
 
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
@@ -518,66 +519,80 @@ class TestTravelTimeCalculator:
         np.testing.assert_allclose(dt, dt[0], atol=1e-12)
 
 
-def test__unpack_nested_model_vector() -> None:
-    """Test unpacking of nested model vector into Love parameters.
+class TestUnpackings:
+    """Test unpacking functions for model vectors."""
 
-    Testing the case where the model is isotropic, so C=A, F=A-2N, N=L, eta1=whatever, eta2=whatever.
-    """
+    @dataclass
+    class LoveValues:
+        """Container for Love parameter arrays."""
 
-    m_nested = np.array(
-        [
-            [10.0, 0.0, 0.0, 0.0, 0.15, 45, 90],
-            [12.0, 0.0, 0.0, 0.0, 0.2, 60, -90],
-        ]
-    )
+        A: np.ndarray
+        C: np.ndarray
+        F: np.ndarray
+        L: np.ndarray
+        N: np.ndarray
+        eta1: np.ndarray  # angle in degrees
+        eta2: np.ndarray  # angle in degrees
 
-    A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector(m_nested)
+    @pytest.fixture
+    def lv(self, rng: np.random.Generator) -> LoveValues:
+        """Fixture for random Love parameter values."""
+        n_models = rng.integers(2, 10)
+        A_values = rng.uniform(5.0, 15.0, size=n_models)
+        C_values = rng.uniform(5.0, 15.0, size=n_models)
+        F_values = rng.uniform(3.0, 10.0, size=n_models)
+        L_values = rng.uniform(0.1, 0.5, size=n_models)
+        N_values = rng.uniform(0.1, 0.5, size=n_models)
+        eta1_values = rng.uniform(-180.0, 180.0, size=n_models)
+        eta2_values = rng.uniform(-180.0, 180.0, size=n_models)
+        return self.LoveValues(
+            A=A_values,
+            C=C_values,
+            F=F_values,
+            L=L_values,
+            N=N_values,
+            eta1=eta1_values,
+            eta2=eta2_values,
+        )
 
-    expected_A = np.array([10.0, 12.0])
-    expected_N = np.array([0.15, 0.2])
-    expected_C = expected_A
-    expected_F = expected_A - 2 * expected_N
-    expected_L = expected_N
-    expected_eta1 = np.array([np.pi / 4, np.pi / 3])
-    expected_eta2 = np.array([np.pi / 2, -np.pi / 2])
+    def test__unpack_nested_model_vector(self, lv: LoveValues) -> None:
+        """Test unpacking of nested model vector into Love parameters.
 
-    np.testing.assert_allclose(A, expected_A)
-    np.testing.assert_allclose(C, expected_C)
-    np.testing.assert_allclose(F, expected_F)
-    np.testing.assert_allclose(L, expected_L)
-    np.testing.assert_allclose(N, expected_N)
-    np.testing.assert_allclose(eta1, expected_eta1)
-    np.testing.assert_allclose(eta2, expected_eta2)
+        Tests that the nested unpacking correctly reconstructs Love parameters
+        from their nested differences representation and angles in radians.
+        """
 
+        dC = lv.C - lv.A
+        dF = lv.F - (lv.A - 2 * lv.N)
+        dL = lv.L - lv.N
+        m_nested = np.column_stack([lv.A, dC, dF, dL, lv.N, lv.eta1, lv.eta2])
 
-def test__unpack_model_vector() -> None:
-    """Test unpacking of model vector into Love parameters.
+        A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector(m_nested)
 
-    Testing the case where the model is isotropic, so C=A, F=A-2N, N=L.
-    This function just unpacks the model directly without nested differences.
-    """
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        np.testing.assert_allclose(L, lv.L)
+        np.testing.assert_allclose(N, lv.N)
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))
 
-    m = np.array(
-        [
-            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],  # dummy row to check indexing
-            [8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0],  # dummy row to check indexing
-        ]
-    )
+    def test__unpack_model_vector(self, lv: LoveValues) -> None:
+        """Test unpacking of model vector into Love parameters.
 
-    A, C, F, L, N, eta1, eta2 = _unpack_model_vector(m)
+        Tests that the unpacking function correctly extracts each parameter
+        from the model vector.
+        The angles eta1 and eta2 should be converted from degrees to radians.
+        """
 
-    expected_A = np.array([1.0, 8.0])
-    expected_C = np.array([2.0, 9.0])
-    expected_F = np.array([3.0, 10.0])
-    expected_L = np.array([4.0, 11.0])
-    expected_N = np.array([5.0, 12.0])
-    expected_eta1 = np.radians(np.array([6.0, 13.0]))
-    expected_eta2 = np.radians(np.array([7.0, 14.0]))
+        m = np.column_stack([lv.A, lv.C, lv.F, lv.L, lv.N, lv.eta1, lv.eta2])
 
-    np.testing.assert_allclose(A, expected_A)
-    np.testing.assert_allclose(C, expected_C)
-    np.testing.assert_allclose(F, expected_F)
-    np.testing.assert_allclose(L, expected_L)
-    np.testing.assert_allclose(N, expected_N)
-    np.testing.assert_allclose(eta1, expected_eta1)
-    np.testing.assert_allclose(eta2, expected_eta2)
+        A, C, F, L, N, eta1, eta2 = _unpack_model_vector(m)
+
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        np.testing.assert_allclose(L, lv.L)
+        np.testing.assert_allclose(N, lv.N)
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))
