@@ -479,7 +479,7 @@ class TestTravelTimeCalculator:
     ) -> TravelTimeCalculator:
         """Fixture for a TravelTimeCalculator instance with valid paths."""
         ic_in, ic_out = valid_paths
-        return TravelTimeCalculator(ic_in, ic_out)
+        return TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True)
 
     def test_initialisation_npaths(self, calculator: TravelTimeCalculator) -> None:
         """Test that the class initialises correctly with valid inputs."""
@@ -513,7 +513,7 @@ class TestTravelTimeCalculator:
         # Isotropic medium parameters
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
-        m = np.array([a, a, lam, mu, mu, 0.0, 0.0] * 2)
+        m = np.array([a, a, a, mu, mu, 0.0, 0.0] * 2)
 
         dt = calculator(m)
 
