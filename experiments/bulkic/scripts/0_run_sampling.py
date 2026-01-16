@@ -15,13 +15,15 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
 import numpy as np
-from bulkic.config import Config, load_config
-from bulkic.data import create_paths, create_synthetic_bulk_ic_data
-from pydantic_yaml import to_yaml_str
+
+from expconfig import dump_config, load_config
+from expconfig.synthetic import (
+    create_paths,
+    create_synthetic_data,
+)
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
-
 from tti.forward import TravelTimeCalculator
 
 logging.basicConfig(
@@ -30,6 +32,12 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+CFG_FILE = Path(__file__).parent.parent / "config.yaml"
+OUTPUT_DIR = (
+    Path(__file__).parent.parent / "outputs" / datetime.now().strftime("%Y%m%d-%H%M%S")
+)
 
 
 def setup(
@@ -59,14 +67,15 @@ def setup(
 
     logger.info("Creating synthetic data...")
     ic_in, ic_out = create_paths(source_spacing=20.0)
-    logger.info(f"Number of paths: {ic_in.shape[0]}")
-    synthetic_data = create_synthetic_bulk_ic_data(ic_in, ic_out, truth, noise_level)
+    synthetic_data = create_synthetic_data(
+        TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True),
+        truth,
+        noise_level,
+    )
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
-    logger.info("Creating travel time calculator")
-    ttc = TravelTimeCalculator(ic_in, ic_out, nested=True, shear=False)
-
     logger.info("Setting up likelihood function")
+    ttc = TravelTimeCalculator(ic_in, ic_out, nested=True, shear=False)
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
     likelihood = GaussianLikelihood(ttc, synthetic_data, inv_covar)
 
@@ -76,7 +85,7 @@ def setup(
     return prior, likelihood
 
 
-def dump_results(samples: np.ndarray, lnprob: np.ndarray, cfg: Config) -> None:
+def dump_results(samples: np.ndarray, lnprob: np.ndarray, output_dir: Path) -> None:
     """Dump the results to disk.
 
     Parameters
@@ -85,25 +94,15 @@ def dump_results(samples: np.ndarray, lnprob: np.ndarray, cfg: Config) -> None:
         MCMC samples.
     lnprob : np.ndarray
         Log-probabilities of the samples.
+    output_dir : Path
+        Directory to save the results.
     """
-    output_dir = (
-        Path(__file__).parent.parent
-        / "outputs"
-        / datetime.now().strftime("%Y%m%d-%H%M%S")
-    )
-    output_dir.mkdir(parents=True, exist_ok=False)
-
     with open(output_dir / "samples.pkl", "wb") as f:
         pickle.dump(samples, f)
     with open(output_dir / "lnprob.pkl", "wb") as f:
         pickle.dump(lnprob, f)
-    with open(output_dir / "config.yaml", "w") as f:
-        f.write(to_yaml_str(cfg))
 
     logger.info(f"Results saved to {output_dir}")
-
-
-CFG_FILE = Path(__file__).parent.parent / "config.yaml"
 
 
 def main() -> None:
@@ -122,9 +121,11 @@ def main() -> None:
     )
 
     logger.info("MCMC sampling completed")
-    logger.info("Saving samples to disk")
 
-    dump_results(samples, lnprob, cfg)
+    logger.info("Saving samples to disk")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
+    dump_results(samples, lnprob, OUTPUT_DIR)
+    dump_config(cfg, OUTPUT_DIR / "config.yaml")
 
 
 if __name__ == "__main__":

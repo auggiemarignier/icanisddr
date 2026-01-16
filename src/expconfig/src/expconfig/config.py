@@ -1,10 +1,11 @@
-"""Configuration for synthetic bulk IC experiment."""
+"""Configuration SDDR IC anisotropy experiment."""
 
 from pathlib import Path
 
 import numpy as np
 import yaml
 from pydantic import BaseModel, Field
+from pydantic_yaml import to_yaml_str
 
 IC_RADIUS = 1221.5  # km
 
@@ -121,3 +122,10 @@ def load_config(path: str | Path) -> Config:
     with open(path) as f:
         raw = yaml.safe_load(f)
     return Config(**raw)
+
+
+def dump_config(cfg: Config, path: str | Path) -> None:
+    """Dump configuration to YAML file."""
+
+    with open(path, "w") as f:
+        f.write(to_yaml_str(cfg))

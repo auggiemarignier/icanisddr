@@ -1,17 +1,17 @@
 [project]
 name = "bulkic"
 version = "0.1.0"
-description = "Add your description here"
+description = "Scripts for bulk IC analysis"
 readme = "README.md"
 requires-python = ">=3.12, <3.14"
 dependencies = [
     "tti",
+    "expconfig",
     "cartopy>=0.25.0",
     "matplotlib>=3.10.7",
-    "pydantic>=2.12.5",
-    "pyyaml>=6.0.3",
-    "pydantic-yaml>=1.6.0",
+    "jupyter>=1.1.1",
 ]
 
 [tool.uv.sources]
 tti = { workspace = true }
+expconfig = { workspace = true }

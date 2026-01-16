@@ -7,12 +7,10 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from bulkic.config import Config, load_config
 from harmonic.model import RealNVPModel
 from harmonic.sddr import sddr as hmsddr
 from pydantic import BaseModel
 from pydantic_yaml import to_yaml_str
-from sampling.priors import CompoundPrior, PriorFunction
 from sddr.marginalisation import marginalise_prior, marginalise_samples
 from sddr.sddr import (
     RealNVPConfig,
@@ -20,6 +18,9 @@ from sddr.sddr import (
     fit_marginalised_posterior,
     sddr,
 )
+
+from expconfig import Config, load_config
+from sampling.priors import CompoundPrior, PriorFunction
 
 logging.basicConfig(
     level=logging.INFO,

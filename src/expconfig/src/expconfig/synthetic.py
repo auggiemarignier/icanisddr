@@ -1,8 +1,8 @@
-"""Create synthetic bulk IC data."""
+"""Utilities for creating synthetic data for experiments."""
+
+from collections.abc import Callable
 
 import numpy as np
-
-from tti.forward import TravelTimeCalculator
 
 from .config import IC_RADIUS, TrueBulkICConfig
 
@@ -10,9 +10,21 @@ DEFAULT_TRUTH = TrueBulkICConfig().as_array()
 RNG = np.random.default_rng(1234)
 
 
-def create_synthetic_bulk_ic_data(
-    ic_in: np.ndarray,
-    ic_out: np.ndarray,
+def mw_sampling(L: int) -> tuple[np.ndarray, np.ndarray]:
+    """Equally spaced points on a sphere using McEwen & Wiaux (2011) sampling."""
+
+    t = np.arange(0, L).astype(np.float64)
+    thetas = (2 * t + 1) * np.pi / (2 * L - 1)
+    p = np.arange(0, 2 * L - 1).astype(np.float64)
+    phis = 2 * p * np.pi / (2 * L - 1)
+
+    lats = 90.0 - np.degrees(thetas)
+    lons = np.degrees(phis) - 180.0
+    return lons, lats
+
+
+def create_synthetic_data(
+    calculator_fn: Callable[[np.ndarray], np.ndarray],
     truth: np.ndarray = DEFAULT_TRUTH,
     noise_level: float = 0.05,
 ) -> np.ndarray:
@@ -20,10 +32,8 @@ def create_synthetic_bulk_ic_data(
 
     Parameters
     ----------
-    ic_in : ndarray, shape (num_paths, 3)
-        Entry points of paths into the inner core (longitude (deg), latitude (deg), radius (km)).
-    ic_out : ndarray, shape (num_paths, 3)
-        Exit points of paths from the inner core (longitude (deg), latitude (deg), radius (km)).
+    calculator_fn : Callable[[np.ndarray], ndarray]
+        Function that computes travel time perturbations given IC model parameters.
     truth : np.ndarray, shape (7,), optional
         True bulk IC model parameters.
     noise_level : float, optional
@@ -34,8 +44,7 @@ def create_synthetic_bulk_ic_data(
     ndarray, shape (num_paths,)
         Synthetic relative travel time perturbations for each path.
     """
-    calculator = TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True)
-    synthetic_data = calculator(truth)
+    synthetic_data = calculator_fn(truth)
     noise = RNG.normal(
         loc=0.0,
         scale=np.abs(synthetic_data).max() * noise_level,
@@ -62,19 +71,7 @@ def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
         Exit points of paths from the inner core (longitude (deg), latitude (deg), radius (km)).
     """
 
-    def _mw_sampling(L: int) -> tuple[np.ndarray, np.ndarray]:
-        """Equally spaced points on a sphere using McEwen & Wiaux (2011) sampling."""
-
-        t = np.arange(0, L).astype(np.float64)
-        thetas = (2 * t + 1) * np.pi / (2 * L - 1)
-        p = np.arange(0, 2 * L - 1).astype(np.float64)
-        phis = 2 * p * np.pi / (2 * L - 1)
-
-        lats = 90.0 - np.degrees(thetas)
-        lons = np.degrees(phis) - 180.0
-        return lons, lats
-
-    lon_sources, lat_sources = _mw_sampling(int(180 / source_spacing))
+    lon_sources, lat_sources = mw_sampling(int(180 / source_spacing))
     lon_receivers = lon_sources + source_spacing / 2
     lat_receivers = lat_sources + source_spacing / 2
     sources = np.array(
@@ -89,14 +86,3 @@ def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
     ic_in = np.repeat(sources, n_receivers, axis=0)
     ic_out = np.tile(receivers, (n_sources, 1))
     return ic_in, ic_out
-
-
-if __name__ == "__main__":
-    from bulkic.plotting import plot_ic_inout, plot_ic_paths
-
-    ic_in, ic_out = create_paths(source_spacing=20)
-    print("Number of paths:", ic_in.shape[0])
-    synthetic_data = create_synthetic_bulk_ic_data(ic_in, ic_out)
-    print("Synthetic data shape:", synthetic_data.shape)
-    plot_ic_paths(ic_in, ic_out)
-    plot_ic_inout(ic_in, ic_out)

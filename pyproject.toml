@@ -9,9 +9,10 @@ dependencies = [
     "harmonic>=1.3.0",
     "numpy>=2.3.4",
     "scipy>=1.16.2",
-    "bulkic",
     "sddr",
     "sampling",
+    "tti",
+    "expconfig",
 ]
 
 [tool.uv]
@@ -22,11 +23,11 @@ dependencies = [
 override-dependencies = ["numpy>=2"]
 
 [tool.uv.workspace]
-members = ["experiments/*", "profiling", "src/tti"]
+members = ["experiments/*", "profiling", "src/tti", "src/expconfig"]
 
 [tool.uv.sources]
-bulkic = { workspace = true }
-profiling = { workspace = true }
+tti = { workspace = true }
+expconfig = { workspace = true }
 sddr = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sddr" }
 sampling = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sampling" }
 
@@ -68,8 +69,19 @@ ignore = [
     "E501", # line too long
     "E731", # do not assign a lambda expression, use a def
 ]
+
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
+
+[tool.ruff.lint.isort]
+known-first-party = ["expconfig", "tti", "sampling"]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true
@@ -82,7 +94,7 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "**/*.ipynb" = [
-    "D",    # docstrings
+    "D", # docstrings
 ]
 
 [dependency-groups]
