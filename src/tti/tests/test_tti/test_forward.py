@@ -526,20 +526,20 @@ def test__unpack_nested_model_vector() -> None:
 
     m_nested = np.array(
         [
-            [10.0, 0.0, 0.0, 0.15, 0.0, np.pi / 4, 0.0],
-            [12.0, 0.0, 0.0, 0.2, 0.0, np.pi / 3, 0.0],
+            [10.0, 0.0, 0.0, 0.0, 0.15, 45, 90],
+            [12.0, 0.0, 0.0, 0.0, 0.2, 60, -90],
         ]
     )
 
     A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector(m_nested)
 
     expected_A = np.array([10.0, 12.0])
-    expected_L = np.array([0.15, 0.2])
+    expected_N = np.array([0.15, 0.2])
     expected_C = expected_A
-    expected_F = expected_A - 2 * expected_L
-    expected_N = expected_L
+    expected_F = expected_A - 2 * expected_N
+    expected_L = expected_N
     expected_eta1 = np.array([np.pi / 4, np.pi / 3])
-    expected_eta2 = np.array([0.0, 0.0])
+    expected_eta2 = np.array([np.pi / 2, -np.pi / 2])
 
     np.testing.assert_allclose(A, expected_A)
     np.testing.assert_allclose(C, expected_C)
@@ -571,8 +571,8 @@ def test__unpack_model_vector() -> None:
     expected_F = np.array([3.0, 10.0])
     expected_L = np.array([4.0, 11.0])
     expected_N = np.array([5.0, 12.0])
-    expected_eta1 = np.array([6.0, 13.0])
-    expected_eta2 = np.array([7.0, 14.0])
+    expected_eta1 = np.radians(np.array([6.0, 13.0]))
+    expected_eta2 = np.radians(np.array([7.0, 14.0]))
 
     np.testing.assert_allclose(A, expected_A)
     np.testing.assert_allclose(C, expected_C)
