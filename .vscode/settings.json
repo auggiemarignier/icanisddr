@@ -16,5 +16,7 @@
         "traveltime",
         "traveltimes",
         "VMAP"
-    ]
+    ],
+  "ruff.configuration": "./pyproject.toml",
+  "ruff.importStrategy": "fromEnvironment"
 }

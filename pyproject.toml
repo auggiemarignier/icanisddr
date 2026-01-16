@@ -9,9 +9,10 @@ dependencies = [
     "harmonic>=1.3.0",
     "numpy>=2.3.4",
     "scipy>=1.16.2",
-    "bulkic",
     "sddr",
-    "sampling"
+    "sampling",
+    "tti",
+    "expconfig",
 ]
 
 [tool.uv]
@@ -22,17 +23,13 @@ dependencies = [
 override-dependencies = ["numpy>=2"]
 
 [tool.uv.workspace]
-members = [
-    "experiments/*",
-    "profiling",
-    "src/tti",
-]
+members = ["experiments/*", "profiling", "src/tti", "src/expconfig"]
 
 [tool.uv.sources]
-bulkic = { workspace = true }
-profiling = { workspace = true }
-sddr = { git = "https://github.com/auggiemarignier/bmcmethods.git", subdirectory = "packages/sddr"}
-sampling = { git = "https://github.com/auggiemarignier/bmcmethods.git", subdirectory = "packages/sampling"}
+tti = { workspace = true }
+expconfig = { workspace = true }
+sddr = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sddr" }
+sampling = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sampling" }
 
 [tool.ruff.lint]
 select = [
@@ -61,19 +58,30 @@ select = [
     "PT001",   # @pytest.fixture() decorators with or without parentheses, depending on the lint.flake8-pytest-style.fixture-parentheses setting
 ]
 ignore = [
-    "D202",  # No blank lines allowed after function docstring
-    "D203",  # 1 blank line required before class docstring
-    "D213",  # Multi-line docstring summary should start at the second line
-    "D401",  # First line should be in imperative mood
-    "D404",  # First word of the docstring should not be This
-    "D406",  # Section name should end with a newline
-    "D407",  # Section name underlining
-    "D411",  # Missing blank line before section
-    "E501",  # line too long
-    "E731",  # do not assign a lambda expression, use a def
+    "D202", # No blank lines allowed after function docstring
+    "D203", # 1 blank line required before class docstring
+    "D213", # Multi-line docstring summary should start at the second line
+    "D401", # First line should be in imperative mood
+    "D404", # First word of the docstring should not be This
+    "D406", # Section name should end with a newline
+    "D407", # Section name underlining
+    "D411", # Missing blank line before section
+    "E501", # line too long
+    "E731", # do not assign a lambda expression, use a def
 ]
+
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
+
+[tool.ruff.lint.isort]
+known-first-party = ["expconfig", "tti", "sampling"]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true
@@ -84,11 +92,13 @@ max-complexity = 25
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
-[dependency-groups]
-dev = [
-    "pytest>=8.4.2",
-    "pytest-cov>=7.0.0",
+[tool.ruff.lint.per-file-ignores]
+"**/*.ipynb" = [
+    "D", # docstrings
 ]
+
+[dependency-groups]
+dev = ["pytest>=8.4.2", "pytest-cov>=7.0.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["src/tti/tests"]
@@ -96,13 +106,8 @@ addopts = ["-v", "--cov=src", "--cov-report=term-missing", "--cov-report=xml"]
 
 [tool.coverage.run]
 branch = true
-source = ["src"]   # only measure files under src/
-omit = [
-  "tests/*",
-  "*/tests/*",
-  "**/test_*.py",
-  "**/*_test.py",
-]
+source = ["src"]
+omit = ["tests/*", "*/tests/*", "**/test_*.py", "**/*_test.py"]
 
 [tool.coverage.report]
 show_missing = true

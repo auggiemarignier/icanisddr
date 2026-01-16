@@ -521,7 +521,7 @@ class TestTravelTimeCalculator:
 def test__unpack_nested_model_vector() -> None:
     """Test unpacking of nested model vector into Love parameters.
 
-    Testing the case where the model is isotropic, so C=A, F=A-2N, N=L, eta2=eta1 (technically this last one is not required but included for completeness).
+    Testing the case where the model is isotropic, so C=A, F=A-2N, N=L, eta1=whatever, eta2=whatever.
     """
 
     m_nested = np.array(
@@ -539,7 +539,7 @@ def test__unpack_nested_model_vector() -> None:
     expected_F = expected_A - 2 * expected_L
     expected_N = expected_L
     expected_eta1 = np.array([np.pi / 4, np.pi / 3])
-    expected_eta2 = expected_eta1
+    expected_eta2 = np.array([0.0, 0.0])
 
     np.testing.assert_allclose(A, expected_A)
     np.testing.assert_allclose(C, expected_C)

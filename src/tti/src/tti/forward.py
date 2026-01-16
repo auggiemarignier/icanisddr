@@ -1,5 +1,7 @@
 """Forward modelling of traveltimes in TTI media."""
 
+from collections.abc import Callable
+
 import numpy as np
 
 from .elastic import (
@@ -140,7 +142,11 @@ class TravelTimeCalculator:
     """Class to calculate travel times in TTI media for a set of paths."""
 
     def __init__(
-        self, ic_in: np.ndarray, ic_out: np.ndarray, nested: bool = True
+        self,
+        ic_in: np.ndarray,
+        ic_out: np.ndarray,
+        nested: bool = True,
+        shear: bool = False,
     ) -> None:
         """Initialise calculator.
 
@@ -153,9 +159,11 @@ class TravelTimeCalculator:
         nested : bool, optional
             Whether model parameters are nested (default is True).
             The nested model parameter order is:
-                [A, C-A, F-A+2N, L, N-L, eta1, eta2]
+                [A, C-A, F-A+2N, L-N, N, eta1, eta2]
             The non-nested model parameter order is:
                 [A, C, F, L, N, eta1, eta2]
+        shear : bool, optional
+            Whether the shear parameters L and N are included in the model (default is False).
         """
 
         self._validate_paths(ic_in, ic_out)
@@ -164,9 +172,7 @@ class TravelTimeCalculator:
         self.ic_out = ic_out
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
 
-        self._unpacking_function = (
-            _unpack_nested_model_vector if nested else _unpack_model_vector
-        )
+        self._unpacking_function = _unpackings[(nested, shear)]
 
     def __call__(self, m: np.ndarray) -> np.ndarray:
         """
@@ -183,7 +189,7 @@ class TravelTimeCalculator:
         ndarray, shape (num_paths,)
             Relative traveltime perturbations for each path.
         """
-        A, C, F, L, N, eta1, eta2 = self._unpacking_function(m.reshape(-1, 7))
+        A, C, F, L, N, eta1, eta2 = self._unpacking_function(m)
         D = construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
         return self.calculate_traveltimes(D)
 
@@ -245,11 +251,18 @@ class TravelTimeCalculator:
             )
 
 
-def _unpack_nested_model_vector(
-    m: np.ndarray,
-) -> tuple[
-    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
-]:
+type seven_arrays = tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]
+
+
+def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
     r"""Unpack nested model vector into individual Love parameters.
 
     Note:
@@ -257,8 +270,8 @@ def _unpack_nested_model_vector(
 
     Parameters
     ----------
-    m : ndarray, shape (M, 7)
-        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2L}, L, \delta_{LN}, eta1, \delta_{eta1,eta2}]
+    m : ndarray, shape (M * 7)
+        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2N}, \delta_{LN}, N, eta1, eta2]
         M is the number of model vectors (e.g. number of pixels).
 
     Returns
@@ -278,23 +291,63 @@ def _unpack_nested_model_vector(
     eta2 : ndarray, shape (M,)
         Azimuthal angle in radians.
     """
-    mT = m.T
+    mT = m.reshape(7, -1)
     return (
         mT[0],
         mT[1] + mT[0],
-        mT[2] + mT[0] - 2 * mT[3],
-        mT[3],
-        mT[4] + mT[3],
-        mT[5],
-        mT[6] + mT[5],
+        mT[2] + mT[0] - 2 * mT[4],
+        mT[3] + mT[4],
+        mT[4],
+        np.radians(mT[5]),
+        np.radians(mT[6]),
     )
 
 
-def _unpack_model_vector(
-    m: np.ndarray,
-) -> tuple[
-    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
-]:
+def _unpack_nested_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
+    r"""Unpack nested model vector into individual Love parameters, with L and N fixed at 0.
+
+    Note:
+        There is NO checking of the input shape here for performance reasons.
+
+    Parameters
+    ----------
+    m : ndarray, shape (M * 5)
+        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2N}, eta1, eta2]
+        M is the number of model vectors (e.g. number of pixels).
+
+    Returns
+    -------
+    A : ndarray, shape (M,)
+        Elastic constant C11 = C22
+    C : ndarray, shape (M,)
+        Elastic constant C33
+    F : ndarray, shape (M,)
+        Elastic constant C13 = C23
+    L : ndarray, shape (M,)
+        Elastic constant C44 = C55
+        Fixed at 0.
+    N : ndarray, shape (M,)
+        Elastic constant C66
+        Fixed at 0.
+    eta1 : ndarray, shape (M,)
+        Tilt angle in radians.
+    eta2 : ndarray, shape (M,)
+        Azimuthal angle in radians.
+    """
+    mT = m.reshape(5, -1)
+    zeros = np.zeros_like(mT[0])
+    return (
+        mT[0],
+        mT[1] + mT[0],
+        mT[2] + mT[0],  # since L=0, F = A - 2*0 = A
+        zeros,
+        zeros,
+        np.radians(mT[3]),
+        np.radians(mT[4]),
+    )
+
+
+def _unpack_model_vector(m: np.ndarray) -> seven_arrays:
     r"""Unpack model vector into individual Love parameters.
 
     Note:
@@ -302,8 +355,8 @@ def _unpack_model_vector(
 
     Parameters
     ----------
-    m : ndarray, shape (M, 7)
-        Nested model parameters: [A, C, F, L, N, eta1, eta2]
+    m : ndarray, shape (M * 7)
+        Model parameters: [A, C, F, L, N, eta1, eta2]
         M is the number of model vectors (e.g. number of pixels).
 
     Returns
@@ -323,5 +376,49 @@ def _unpack_model_vector(
     eta2 : ndarray, shape (M,)
         Azimuthal angle in radians.
     """
-    mT = m.T
-    return mT[0], mT[1], mT[2], mT[3], mT[4], mT[5], mT[6]
+    mT = m.reshape(7, -1)
+    return mT[0], mT[1], mT[2], mT[3], mT[4], np.radians(mT[5]), np.radians(mT[6])
+
+
+def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
+    r"""Unpack model vector into individual Love parameters, with L and N fixed at 0.
+
+    Note:
+        There is NO checking of the input shape here for performance reasons.
+
+    Parameters
+    ----------
+    m : ndarray, shape (M * 5)
+        Model parameters: [A, C, F, eta1, eta2]
+        M is the number of model vectors (e.g. number of pixels).
+
+    Returns
+    -------
+    A : ndarray, shape (M,)
+        Elastic constant C11 = C22
+    C : ndarray, shape (M,)
+        Elastic constant C33
+    F : ndarray, shape (M,)
+        Elastic constant C13 = C23
+    L : ndarray, shape (M,)
+        Elastic constant C44 = C55
+        Fixed at 0.
+    N : ndarray, shape (M,)
+        Elastic constant C66
+        Fixed at 0.
+    eta1 : ndarray, shape (M,)
+        Tilt angle in radians.
+    eta2 : ndarray, shape (M,)
+        Azimuthal angle in radians.
+    """
+    mT = m.reshape(5, -1)
+    zeros = np.zeros_like(mT[0])
+    return mT[0], mT[1], mT[2], zeros, zeros, np.radians(mT[3]), np.radians(mT[4])
+
+
+_unpackings: dict[tuple[bool, bool], Callable[[np.ndarray], seven_arrays]] = {
+    (True, True): _unpack_nested_model_vector,
+    (True, False): _unpack_nested_model_vector_no_shear,
+    (False, True): _unpack_model_vector,
+    (False, False): _unpack_model_vector_no_shear,
+}

@@ -1,0 +1,52 @@
+sampling:
+  nwalkers: 200
+  nsteps: 2500
+  burn_in: 500
+  thin: 5
+  progress: true
+  parallel: true
+priors:
+  components:
+    - type: gaussian
+      mean: [0.00143, 0.0766, -0.1001]
+      inv_covar:
+        - [10.0, 0.0, 0.0]
+        - [0.0, 10.0, 0.0]
+        - [0.0, 0.0, 10.0]
+      indices: [0, 1, 2]
+    - type: uniform
+      lower_bounds: -180.0
+      upper_bounds: 180.0
+      indices: [3]
+    - type: uniform
+      lower_bounds: 0.0
+      upper_bounds: 90.0
+      indices: [4]
+training:
+  batch_size: 24
+  epochs: 10
+  verbose: true
+realnvp:
+  n_scaled_layers: 2
+  n_unscaled_layers: 4
+  learning_rate: 0.001
+  momentum: 0.9
+  standardize: true
+  temperature: 1.0
+hypotheses:
+  - name: transversely_isotropic
+    indices: [3, 4]
+    nu: [0.0, 0.0]
+  - name: fully_isotropic
+    indices: [1, 2, 3, 4]
+    nu: [0.0, 0.0, 0.0, 0.0]
+truth:
+  A: 0.0143
+  C: 0.0909
+  F: -0.0858
+  L: 0.0
+  N: 0.0
+  eta1: 0.0
+  eta2: 0.0
+data:
+  noise_level: 0.05

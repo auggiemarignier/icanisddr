@@ -1,9 +1,13 @@
 [project]
 name = "profiling"
 version = "0.1.0"
-description = "Add your description here"
+description = "Performance profiling scripts"
 readme = "README.md"
 requires-python = ">=3.12, <3.14"
 dependencies = [
+    "tti",
     "matplotlib>=3.10.7",
 ]
+
+[tool.uv.sources]
+tti = { workspace = true }
