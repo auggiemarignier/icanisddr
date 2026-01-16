@@ -27,7 +27,7 @@ def create_synthetic_bulk_ic_data(
     truth : np.ndarray, shape (7,), optional
         True bulk IC model parameters.
     noise_level : float, optional
-        Noise level for synthetic data as a fraction of the stddev of the clean data. Default is 0.05.
+        Noise level for synthetic data. Default is 0.05.
 
     Returns
     -------
@@ -37,7 +37,9 @@ def create_synthetic_bulk_ic_data(
     calculator = TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True)
     synthetic_data = calculator(truth)
     noise = RNG.normal(
-        loc=0.0, scale=synthetic_data.std() * noise_level, size=synthetic_data.shape
+        loc=0.0,
+        scale=np.abs(synthetic_data).max() * noise_level,
+        size=synthetic_data.shape,
     )
     return synthetic_data + noise
 

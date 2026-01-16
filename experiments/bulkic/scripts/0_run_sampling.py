@@ -46,7 +46,7 @@ def setup(
     prior_cfg : dict[str, Any]
         Configuration dictionary for the prior.
     noise_level : float, optional
-        Noise level for synthetic data as a fraction of the stddev of the clean data.
+        Noise level for synthetic data.
 
     Returns
     -------

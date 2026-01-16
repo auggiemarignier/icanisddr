@@ -99,7 +99,7 @@ class DataConfig(BaseModel):
 
     noise_level: float = Field(
         0.05,
-        description="Noise level as a fraction of the stddev of the clean data",
+        description="Noise level.",
     )
 
 
