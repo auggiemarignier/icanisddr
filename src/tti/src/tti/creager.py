@@ -28,35 +28,35 @@ import numpy as np
 
 def love_to_creager(
     direction: Literal["polar", "equatorial"],
-    A: float,
-    C: float,
-    F: float,
-    L: float,
-    N: float = 0.0,
-) -> tuple[float, float, float]:
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: None | np.ndarray = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Convert from Love parameters to Creager 1992 parameters a, b, c.
 
     Parameters
     ----------
     direction : Literal['polar', 'equatorial']
-    A : float
+    A : np.ndarray
         Love parameter A (C_11)
-    C : float
+    C : np.ndarray
         Love parameter C (C_33)
-    F : float
+    F : np.ndarray
         Love parameter F (C_13)
-    L : float
+    L : np.ndarray
         Love parameter L (C_44)
-    N : float
+    N : np.ndarray, optional
         Love parameter N (C_66) (unused but included for completeness)
 
     Returns
     -------
-    a : float
+    a : np.ndarray
         Creager parameter a
-    b : float
+    b : np.ndarray
         Creager parameter b
-    c : float
+    c : np.ndarray
         Creager parameter c
     """
     b = (C - A) / (2 * A)
@@ -73,23 +73,25 @@ def love_to_creager(
     return a, b, c
 
 
-def calculate_traveltime(theta: float, a: float, b: float, c: float) -> float:
+def calculate_traveltime(
+    theta: np.ndarray, a: np.ndarray, b: np.ndarray, c: np.ndarray
+) -> np.ndarray:
     """Calculate the traveltime perturbation according to Creager 1992.
 
     Parameters
     ----------
-    theta : float
+    theta : np.ndarray
         Angle between the ray and the symmetry axis (in radians)
-    a : float
+    a : np.ndarray
         Creager parameter a
-    b : float
+    b : np.ndarray
         Creager parameter b
-    c : float
+    c : np.ndarray
         Creager parameter c
 
     Returns
     -------
-    dt : float
+    dt : np.ndarray
         Traveltime perturbation
     """
     cos_theta = np.cos(theta)

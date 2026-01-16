@@ -1,5 +1,6 @@
 """Test the forward modelling functions for TTI media."""
 
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
@@ -19,7 +20,9 @@ from tti.forward import (
     TravelTimeCalculator,
     _spherical_to_cartesian,
     _unpack_model_vector,
+    _unpack_model_vector_no_shear,
     _unpack_nested_model_vector,
+    _unpack_nested_model_vector_no_shear,
     calculate_path_direction_vector,
     calculate_relative_traveltime,
     construct_general_tti_tensor,
@@ -177,7 +180,7 @@ def test_traveltime_isotropic_independent_of_direction(
 
 
 def test_traveltime_linear_in_perturbation(
-    A: float, C: float, F: float, L: float, N: float
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
 ) -> None:
     """Doubling the perturbation tensor doubles the traveltime anomaly."""
 
@@ -210,7 +213,7 @@ def test_traveltime_known_diagonal_tensor() -> None:
 
 
 def test_traveltime_antiparallel_rays_equal(
-    A: float, C: float, F: float, L: float, N: float
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
 ) -> None:
     """Ray and its opposite give the same traveltime (even power)."""
 
@@ -238,7 +241,7 @@ def test_traveltime_shape_validation() -> None:
 
 
 def test_traveltime_transverse_isotropic_polar(
-    A: float, C: float, F: float, L: float, N: float
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
 ) -> None:
     """Test traveltime calculation for a polar path in a TI medium.
 
@@ -247,7 +250,9 @@ def test_traveltime_transverse_isotropic_polar(
     Expected result is the C_33 component of the elastic tensor.
     """
 
-    D = construct_general_tti_tensor(A, C, F, L, N, 0.0, 0.0)
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
     n = np.array([0.0, 0.0, 1.0])  # along symmetry axis
 
     dt = calculate_relative_traveltime(n, D)
@@ -261,7 +266,12 @@ def test_traveltime_transverse_isotropic_polar(
     "n", [np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])]
 )  # perpendicular directions
 def test_traveltime_transverse_isotropic_equatorial(
-    n: np.ndarray, A: float, C: float, F: float, L: float, N: float
+    n: np.ndarray,
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
 ) -> None:
     """Test traveltime calculation for an equatorial path in a TI medium.
 
@@ -270,7 +280,9 @@ def test_traveltime_transverse_isotropic_equatorial(
     Expected result is the C_11 component of the elastic tensor.
     """
 
-    D = construct_general_tti_tensor(A, C, F, L, N, 0.0, 0.0)
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
 
     dt = calculate_relative_traveltime(n, D)
 
@@ -282,8 +294,8 @@ def test_traveltime_transverse_isotropic_equatorial(
 @pytest.mark.parametrize("direction", ["polar", "equatorial"])
 def test_traveltime_equivalence_with_creager_isotropic(
     direction: Literal["polar", "equatorial"],
-    F: float,
-    L: float,
+    F: np.ndarray,
+    L: np.ndarray,
     rng: np.random.Generator,
 ) -> None:
     """Test that the traveltime calculation matches Creager 1992 in the isotropic case.
@@ -300,15 +312,17 @@ def test_traveltime_equivalence_with_creager_isotropic(
     lambda_ = F
     lambda_plus_two_mu = 2 * L + F
     mu = L
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
     D = construct_general_tti_tensor(
-        lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu, 0.0, 0.0
+        lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu, eta1, eta2
     )
     a, b, c = love_to_creager(
         direction, lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu
     )
 
-    theta = rng.uniform(0, 2 * np.pi)
-    n = np.array([np.sin(theta), 0.0, np.cos(theta)])
+    theta = rng.uniform(0, 2 * np.pi, size=1)
+    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
 
     dt_tti = calculate_relative_traveltime(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
@@ -316,18 +330,24 @@ def test_traveltime_equivalence_with_creager_isotropic(
 
 
 def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
-    A: float, C: float, F: float, L: float, N: float
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
 ) -> None:
     """Test that the traveltime calculation matches Creager 1992 in the TI case when parallel to symmetry axis.
 
     Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
     """
 
-    D = construct_general_tti_tensor(A, C, F, L, N, 0.0, 0.0)
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
     a, b, c = love_to_creager("polar", A, C, F, L, N)
 
-    theta = 0
-    n = np.array([np.sin(theta), 0.0, np.cos(theta)])
+    theta = np.array([0.0])
+    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
 
     dt_tti = calculate_relative_traveltime(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
@@ -336,18 +356,19 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
 
 
 def test_traveltime_equivalence_with_creager_transverse_isotropic_perpendicular(
-    A: float, C: float, F: float, L: float, N: float
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
 ) -> None:
     """Test that the traveltime calculation matches Creager 1992 in the TI case when perpendicular to symmetry axis.
 
     Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
     """
-
-    D = construct_general_tti_tensor(A, C, F, L, N, 0.0, 0.0)
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = construct_general_tti_tensor(A, C, F, L, N, eta1, eta2)
     a, b, c = love_to_creager("equatorial", A, C, F, L, N)
 
-    theta = np.pi / 2
-    n = np.array([np.sin(theta), 0.0, np.cos(theta)])
+    theta = np.array([np.pi / 2])
+    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
 
     dt_tti = calculate_relative_traveltime(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
@@ -466,8 +487,24 @@ class TestTravelTimeCalculator:
     @pytest.fixture
     def valid_paths(self) -> tuple[np.ndarray, np.ndarray]:
         """Fixture for valid input paths."""
-        ic_in = np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0]])
-        ic_out = np.array([[180.0, 0.0, 1.0], [-90.0, 0.0, 1.0]])
+        ic_in = np.array(
+            [
+                [0.0, 0.0, 1.0],
+                [90.0, 0.0, 1.0],
+                [45.0, 45.0, 1.0],
+                [180.0, -30.0, 1.0],
+                [-90.0, 60.0, 1.0],
+            ]
+        )
+        ic_out = np.array(
+            [
+                [180.0, 0.0, 1.0],
+                [-90.0, 0.0, 1.0],
+                [-180.0, -45.0, 1.0],
+                [0.0, 30.0, 1.0],
+                [90.0, -60.0, 1.0],
+            ]
+        )
         return ic_in, ic_out
 
     @pytest.fixture
@@ -476,17 +513,26 @@ class TestTravelTimeCalculator:
     ) -> TravelTimeCalculator:
         """Fixture for a TravelTimeCalculator instance with valid paths."""
         ic_in, ic_out = valid_paths
-        return TravelTimeCalculator(ic_in, ic_out)
+        return TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True)
 
     def test_initialisation_npaths(self, calculator: TravelTimeCalculator) -> None:
         """Test that the class initialises correctly with valid inputs."""
-        assert calculator.npaths == 2
+        assert calculator.npaths == 5
 
     def test_initialisation_direction_vectors(
         self, calculator: TravelTimeCalculator
     ) -> None:
         """Test that the direction vectors are calculated correctly upon initialisation."""
-        expected_directions = np.array([[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0]])
+        # Hard-coded expected unit direction vectors for the fixture paths
+        expected_directions = np.array(
+            [
+                [-1.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0],
+                [-0.626943121322, -0.259688343688, -0.734509555268],
+                [0.866025403784, 0.0, 0.5],
+                [0.0, 0.5, -0.866025403784],
+            ]
+        )
         np.testing.assert_allclose(
             calculator.path_directions, expected_directions, atol=1e-12
         )
@@ -510,7 +556,7 @@ class TestTravelTimeCalculator:
         # Isotropic medium parameters
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
-        m = np.array([a, a, lam, mu, mu, 0.0, 0.0] * 2)
+        m = np.array([a, a, lam, mu, mu, 0.0, 0.0] * calculator.npaths)
 
         dt = calculator(m)
 
@@ -518,66 +564,122 @@ class TestTravelTimeCalculator:
         np.testing.assert_allclose(dt, dt[0], atol=1e-12)
 
 
-def test__unpack_nested_model_vector() -> None:
-    """Test unpacking of nested model vector into Love parameters.
+class TestUnpackings:
+    """Test unpacking functions for model vectors."""
 
-    Testing the case where the model is isotropic, so C=A, F=A-2N, N=L, eta1=whatever, eta2=whatever.
-    """
+    @dataclass
+    class LoveValues:
+        """Container for Love parameter arrays."""
 
-    m_nested = np.array(
-        [
-            [10.0, 0.0, 0.0, 0.15, 0.0, np.pi / 4, 0.0],
-            [12.0, 0.0, 0.0, 0.2, 0.0, np.pi / 3, 0.0],
-        ]
-    )
+        A: np.ndarray
+        C: np.ndarray
+        F: np.ndarray
+        L: np.ndarray
+        N: np.ndarray
+        eta1: np.ndarray  # angle in degrees
+        eta2: np.ndarray  # angle in degrees
 
-    A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector(m_nested)
+    @pytest.fixture
+    def lv(self, rng: np.random.Generator) -> LoveValues:
+        """Fixture for random Love parameter values."""
+        n_models = rng.integers(2, 10)
+        A_values = rng.uniform(5.0, 15.0, size=n_models)
+        C_values = rng.uniform(5.0, 15.0, size=n_models)
+        F_values = rng.uniform(3.0, 10.0, size=n_models)
+        L_values = rng.uniform(0.1, 0.5, size=n_models)
+        N_values = rng.uniform(0.1, 0.5, size=n_models)
+        eta1_values = rng.uniform(-180.0, 180.0, size=n_models)
+        eta2_values = rng.uniform(-180.0, 180.0, size=n_models)
+        return self.LoveValues(
+            A=A_values,
+            C=C_values,
+            F=F_values,
+            L=L_values,
+            N=N_values,
+            eta1=eta1_values,
+            eta2=eta2_values,
+        )
 
-    expected_A = np.array([10.0, 12.0])
-    expected_L = np.array([0.15, 0.2])
-    expected_C = expected_A
-    expected_F = expected_A - 2 * expected_L
-    expected_N = expected_L
-    expected_eta1 = np.array([np.pi / 4, np.pi / 3])
-    expected_eta2 = np.array([0.0, 0.0])
+    def test__unpack_nested_model_vector(self, lv: LoveValues) -> None:
+        """Test unpacking of nested model vector into Love parameters.
 
-    np.testing.assert_allclose(A, expected_A)
-    np.testing.assert_allclose(C, expected_C)
-    np.testing.assert_allclose(F, expected_F)
-    np.testing.assert_allclose(L, expected_L)
-    np.testing.assert_allclose(N, expected_N)
-    np.testing.assert_allclose(eta1, expected_eta1)
-    np.testing.assert_allclose(eta2, expected_eta2)
+        Tests that the nested unpacking correctly reconstructs Love parameters
+        from their nested differences representation and angles in radians.
+        """
 
+        dC = lv.C - lv.A
+        dF = lv.F - (lv.A - 2 * lv.N)
+        dL = lv.L - lv.N
+        m_nested = np.column_stack([lv.A, dC, dF, dL, lv.N, lv.eta1, lv.eta2])
 
-def test__unpack_model_vector() -> None:
-    """Test unpacking of model vector into Love parameters.
+        A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector(m_nested)
 
-    Testing the case where the model is isotropic, so C=A, F=A-2N, N=L.
-    This function just unpacks the model directly without nested differences.
-    """
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        np.testing.assert_allclose(L, lv.L)
+        np.testing.assert_allclose(N, lv.N)
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))
 
-    m = np.array(
-        [
-            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],  # dummy row to check indexing
-            [8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0],  # dummy row to check indexing
-        ]
-    )
+    def test__unpack_model_vector(self, lv: LoveValues) -> None:
+        """Test unpacking of model vector into Love parameters.
 
-    A, C, F, L, N, eta1, eta2 = _unpack_model_vector(m)
+        Tests that the unpacking function correctly extracts each parameter
+        from the model vector.
+        The angles eta1 and eta2 should be converted from degrees to radians.
+        """
 
-    expected_A = np.array([1.0, 8.0])
-    expected_C = np.array([2.0, 9.0])
-    expected_F = np.array([3.0, 10.0])
-    expected_L = np.array([4.0, 11.0])
-    expected_N = np.array([5.0, 12.0])
-    expected_eta1 = np.array([6.0, 13.0])
-    expected_eta2 = np.array([7.0, 14.0])
+        m = np.column_stack([lv.A, lv.C, lv.F, lv.L, lv.N, lv.eta1, lv.eta2])
 
-    np.testing.assert_allclose(A, expected_A)
-    np.testing.assert_allclose(C, expected_C)
-    np.testing.assert_allclose(F, expected_F)
-    np.testing.assert_allclose(L, expected_L)
-    np.testing.assert_allclose(N, expected_N)
-    np.testing.assert_allclose(eta1, expected_eta1)
-    np.testing.assert_allclose(eta2, expected_eta2)
+        A, C, F, L, N, eta1, eta2 = _unpack_model_vector(m)
+
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        np.testing.assert_allclose(L, lv.L)
+        np.testing.assert_allclose(N, lv.N)
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))
+
+    def test__unpack_nested_model_vector_no_shear(self, lv: LoveValues) -> None:
+        """Test unpacking of nested model vector with no shear into Love parameters.
+
+        Tests that the unpacking function correctly extracts Love parameters
+        when the model vector doesn't include shear anisotropy.
+        The angles eta1 and eta2 should be converted from degrees to radians.
+        """
+
+        dC = lv.C - lv.A
+        dF = lv.F - lv.A  # no shear anisotropy term
+        m_nested = np.column_stack([lv.A, dC, dF, lv.eta1, lv.eta2])
+
+        A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector_no_shear(m_nested)
+
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        np.testing.assert_allclose(L, np.zeros_like(lv.L))
+        np.testing.assert_allclose(N, np.zeros_like(lv.N))
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))
+
+    def test__unpack_model_vector_no_shear(self, lv: LoveValues) -> None:
+        """Test unpacking of model vector with no shear into Love parameters.
+
+        Tests that the unpacking function correctly extracts Love parameters
+        when the model vector doesn't include shear anisotropy.
+        The angles eta1 and eta2 should be converted from degrees to radians.
+        """
+
+        m = np.column_stack([lv.A, lv.C, lv.F, lv.eta1, lv.eta2])
+
+        A, C, F, L, N, eta1, eta2 = _unpack_model_vector_no_shear(m)
+
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        np.testing.assert_allclose(L, np.zeros_like(lv.L))
+        np.testing.assert_allclose(N, np.zeros_like(lv.N))
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))

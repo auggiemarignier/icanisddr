@@ -291,7 +291,7 @@ def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
     eta2 : ndarray, shape (M,)
         Azimuthal angle in radians.
     """
-    mT = m.reshape(7, -1)
+    mT = m.reshape(-1, 7).T
     return (
         mT[0],
         mT[1] + mT[0],
@@ -334,7 +334,7 @@ def _unpack_nested_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
     eta2 : ndarray, shape (M,)
         Azimuthal angle in radians.
     """
-    mT = m.reshape(5, -1)
+    mT = m.reshape(-1, 5).T
     zeros = np.zeros_like(mT[0])
     return (
         mT[0],
@@ -376,7 +376,7 @@ def _unpack_model_vector(m: np.ndarray) -> seven_arrays:
     eta2 : ndarray, shape (M,)
         Azimuthal angle in radians.
     """
-    mT = m.reshape(7, -1)
+    mT = m.reshape(-1, 7).T
     return mT[0], mT[1], mT[2], mT[3], mT[4], np.radians(mT[5]), np.radians(mT[6])
 
 
@@ -411,7 +411,7 @@ def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
     eta2 : ndarray, shape (M,)
         Azimuthal angle in radians.
     """
-    mT = m.reshape(5, -1)
+    mT = m.reshape(-1, 5).T
     zeros = np.zeros_like(mT[0])
     return mT[0], mT[1], mT[2], zeros, zeros, np.radians(mT[3]), np.radians(mT[4])
 
