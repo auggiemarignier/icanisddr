@@ -24,8 +24,9 @@ RUN groupadd --system --gid 999 nonroot \
 
 WORKDIR /app
 
-COPY --from=builder --chown=nonroot:nonroot /app/.venv /app/.venv
+COPY --from=builder --chown=nonroot:nonroot /app/.venv ./.venv
 COPY --chown=nonroot:nonroot src ./src
+COPY --chown=nonroot:nonroot experiments ./experiments
 
 ENV PATH="/app/.venv/bin:$PATH"
 USER nonroot

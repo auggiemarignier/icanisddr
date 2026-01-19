@@ -5,3 +5,9 @@ __pycache__
 .coverage
 *.egg-info
 .git
+
+experiments/**
+!experiments/*/config.yaml
+!experiments/*/pyproject.toml
+!experiments/*/scripts
+!experiments/*/scripts/**
