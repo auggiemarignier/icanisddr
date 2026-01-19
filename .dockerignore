@@ -5,6 +5,18 @@ __pycache__
 .coverage
 *.egg-info
 .git
+.DS_Store
+.vscode/
+.idea/
+.env
+.env.*
+.envrc
+.venv/
+venv/
+*.log
+coverage.xml
+notes.md
+profiling/
 
 experiments/**
 !experiments/*/config.yaml
