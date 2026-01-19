@@ -5,22 +5,11 @@ description = "SAvage-Dickey Density Ratio for Anisotropic Seismic Tomography of
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "emcee>=3.1.6",
-    "harmonic>=1.3.0",
-    "numpy>=2.3.4",
-    "scipy>=1.16.2",
     "sddr",
     "sampling",
     "tti",
     "expconfig",
 ]
-
-[tool.uv]
-# harmonic requires distrax which requires numpy<2
-# but pytransc, pyfm2d require numpy>=2
-# distrax hasn't released anything in over a year
-# so seems unlikely to update
-override-dependencies = ["numpy>=2"]
 
 [tool.uv.workspace]
 members = ["experiments/*", "profiling", "src/tti", "src/expconfig"]
