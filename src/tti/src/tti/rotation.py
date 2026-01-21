@@ -13,24 +13,24 @@ def rotation_matrix_z(angle: float | np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    angle : float | ndarray (n,)
+    angle : float | ndarray (...,)
         Rotation angle in radians.
 
     Returns
     -------
-    R : ndarray, shape (n, 3, 3)
+    R : ndarray, shape (..., 3, 3)
         Rotation matrix.
     """
-    angle = np.atleast_1d(np.asarray(angle))
+    angle = np.asarray(angle)
     c = np.cos(angle)
     s = np.sin(angle)
 
-    R = np.zeros((angle.size, 3, 3), dtype=float)
-    R[:, 0, 0] = c
-    R[:, 0, 1] = -s
-    R[:, 1, 0] = s
-    R[:, 1, 1] = c
-    R[:, 2, 2] = 1.0
+    R = np.zeros(angle.shape + (3, 3), dtype=float)
+    R[..., 0, 0] = c
+    R[..., 0, 1] = -s
+    R[..., 1, 0] = s
+    R[..., 1, 1] = c
+    R[..., 2, 2] = 1.0
     return R
 
 
@@ -40,25 +40,24 @@ def rotation_matrix_y(angle: float | np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    angle : float | ndarray (n,)
+    angle : float | ndarray (...,)
         Rotation angle in radians.
 
     Returns
     -------
-    R : ndarray, shape (n, 3, 3)
+    R : ndarray, shape (..., 3, 3)
         Rotation matrix.
     """
-    angle = np.atleast_1d(np.asarray(angle))
+    angle = np.asarray(angle)
     c = np.cos(angle)
     s = np.sin(angle)
 
-    R = np.zeros((angle.size, 3, 3), dtype=float)
-    R[:, 0, 0] = c
-    R[:, 0, 2] = s
-    R[:, 1, 1] = 1.0
-    R[:, 2, 0] = -s
-    R[:, 2, 2] = c
-
+    R = np.zeros(angle.shape + (3, 3), dtype=float)
+    R[..., 0, 0] = c
+    R[..., 0, 2] = s
+    R[..., 1, 1] = 1.0
+    R[..., 2, 0] = -s
+    R[..., 2, 2] = c
     return R
 
 
@@ -68,24 +67,24 @@ def rotation_matrix_x(angle: float | np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    angle : float | ndarray (n,)
+    angle : float | ndarray (...,)
         Rotation angle in radians.
 
     Returns
     -------
-    R : ndarray, shape (n, 3, 3)
+    R : ndarray, shape (..., 3, 3)
         Rotation matrix.
     """
     angle = np.asarray(angle)
     c = np.cos(angle)
     s = np.sin(angle)
 
-    R = np.zeros((angle.size, 3, 3), dtype=float)
-    R[:, 0, 0] = 1.0
-    R[:, 1, 1] = c
-    R[:, 1, 2] = -s
-    R[:, 2, 1] = s
-    R[:, 2, 2] = c
+    R = np.zeros(angle.shape + (3, 3), dtype=float)
+    R[..., 0, 0] = 1.0
+    R[..., 1, 1] = c
+    R[..., 1, 2] = -s
+    R[..., 2, 1] = s
+    R[..., 2, 2] = c
     return R
 
 
