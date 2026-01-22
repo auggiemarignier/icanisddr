@@ -10,7 +10,6 @@ from tti.rotation import (
     rotation_matrix_y,
     rotation_matrix_z,
     rotation_matrix_zy,
-    transformation_4th_order,
 )
 
 
@@ -221,71 +220,6 @@ def test_rotation_matrix_zy(shape: tuple[int, ...], rng: np.random.Generator) ->
     expected[..., 2, 2] = c2
 
     np.testing.assert_array_almost_equal(Rzy, expected)
-
-
-@pytest.mark.parametrize(
-    "shape",
-    [
-        (),
-        (2,),
-        (2, 3),
-    ],
-    ids=["scalar", "1d", "2d"],
-)
-def test_transformation_4th_order(
-    shape: tuple[int, ...], rng: np.random.Generator
-) -> None:
-    """Test the construction of a 4th order transformation tensor from a 3D rotation matrix."""
-
-    angles = rng.uniform(0, 2 * np.pi, size=shape)
-    R = rotation_matrix_z(angles)
-
-    R4 = transformation_4th_order(R)
-
-    expected_shape = shape + (3, 3, 3, 3)
-    assert R4.shape == expected_shape
-
-    c = np.cos(angles)
-    s = np.sin(angles)
-
-    # Build expected using broadcasting so it works for scalar and batched shapes
-    expected = np.zeros(expected_shape, dtype=float)
-
-    expected[..., 0, 0, 0, 0] = c * c
-    expected[..., 0, 0, 0, 1] = -c * s
-    expected[..., 0, 0, 1, 0] = -c * s
-    expected[..., 0, 0, 1, 1] = s * s
-
-    expected[..., 0, 1, 0, 0] = c * s
-    expected[..., 0, 1, 0, 1] = c * c
-    expected[..., 0, 1, 1, 0] = -s * s
-    expected[..., 0, 1, 1, 1] = -c * s
-
-    expected[..., 0, 2, 0, 2] = c
-    expected[..., 0, 2, 1, 2] = -s
-
-    expected[..., 1, 0, 0, 0] = s * c
-    expected[..., 1, 0, 0, 1] = -s * s
-    expected[..., 1, 0, 1, 0] = c * c
-    expected[..., 1, 0, 1, 1] = -c * s
-
-    expected[..., 1, 1, 0, 0] = s * s
-    expected[..., 1, 1, 0, 1] = s * c
-    expected[..., 1, 1, 1, 0] = s * c
-    expected[..., 1, 1, 1, 1] = c * c
-
-    expected[..., 1, 2, 0, 2] = s
-    expected[..., 1, 2, 1, 2] = c
-
-    expected[..., 2, 0, 2, 0] = c
-    expected[..., 2, 0, 2, 1] = -s
-
-    expected[..., 2, 1, 2, 0] = s
-    expected[..., 2, 1, 2, 1] = c
-
-    expected[..., 2, 2, 2, 2] = 1.0
-
-    np.testing.assert_array_almost_equal(R4, expected)
 
 
 @pytest.mark.parametrize("R", [rotation_matrix_z, rotation_matrix_y, rotation_matrix_x])

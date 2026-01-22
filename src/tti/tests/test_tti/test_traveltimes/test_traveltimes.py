@@ -1,0 +1,393 @@
+"""Test the TravelTimeCalculator class."""
+
+from typing import Literal
+
+import numpy as np
+import pytest
+
+from tti.elastic import (
+    isotropic_tensor,
+    tilted_transverse_isotropic_tensor,
+    transverse_isotropic_tensor,
+)
+from tti.elastic.creager import calculate_traveltime as calc_dt_creager
+from tti.elastic.creager import love_to_creager
+from tti.traveltimes import TravelTimeCalculator
+from tti.traveltimes.traveltimes import calculate_relative_traveltime
+
+
+@pytest.fixture
+def A() -> np.ndarray:
+    """Fixture for elastic constant A."""
+    return np.array([10.0])
+
+
+@pytest.fixture
+def C() -> np.ndarray:
+    """Fixture for elastic constant C."""
+    return np.array([15.0])
+
+
+@pytest.fixture
+def F() -> np.ndarray:
+    """Fixture for elastic constant F."""
+    return np.array([8.0])
+
+
+@pytest.fixture
+def L() -> np.ndarray:
+    """Fixture for elastic constant L."""
+    return np.array([0.15])
+
+
+@pytest.fixture
+def N() -> np.ndarray:
+    """Fixture for elastic constant N."""
+    return np.array([0.1])
+
+
+@pytest.fixture
+def eta1() -> np.ndarray:
+    """Fixture for rotation angle eta1."""
+    return np.array([np.pi / 4])
+
+
+@pytest.fixture
+def eta2() -> np.ndarray:
+    """Fixture for rotation angle eta2."""
+    return np.array([np.pi / 6])
+
+
+def test_traveltime_zero_for_zero_perturbation() -> None:
+    """Zero perturbation tensor gives zero traveltime anomaly."""
+
+    D = np.zeros((3, 3, 3, 3))
+    n = np.array([0.0, 0.0, 1.0])
+
+    dt = calculate_relative_traveltime(n, D)
+
+    assert dt == 0.0
+
+
+def test_traveltime_batch() -> None:
+    """Test traveltime calculation for a batch of ray directions."""
+
+    D = np.zeros((3, 3, 3, 3))
+    D[0, 0, 0, 0] = 1.0
+    D[1, 1, 1, 1] = 2.0
+    D[2, 2, 2, 2] = 3.0
+
+    # Batch of 3 normalised ray directions
+    n_batch = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+
+    dt_batch = calculate_relative_traveltime(n_batch, D)
+
+    expected = np.array([1.0, 2.0, 3.0])
+
+    assert dt_batch.shape == (3,)
+    np.testing.assert_allclose(dt_batch, expected)
+
+
+def test_traveltime_isotropic_independent_of_direction(
+    rng: np.random.Generator,
+) -> None:
+    """Isotropic perturbation gives same result for all ray directions."""
+
+    lam = np.array([12.0])
+    mu = np.array([5.0])
+    D = isotropic_tensor(lam, mu)
+
+    # Try several random directions
+    directions = rng.normal(size=(10, 3))
+    directions = directions / np.linalg.norm(directions, axis=1, keepdims=True)
+
+    results = calculate_relative_traveltime(directions, D)
+
+    # All should be equal for isotropic medium
+    np.testing.assert_allclose(results, results[0])
+
+
+def test_traveltime_linear_in_perturbation(
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
+) -> None:
+    """Doubling the perturbation tensor doubles the traveltime anomaly."""
+
+    D = transverse_isotropic_tensor(A, C, F, L, N)
+    n = np.array([1.0, 0.0, 0.0])
+
+    dt1 = calculate_relative_traveltime(n, D)
+    dt2 = calculate_relative_traveltime(n, 2 * D)
+
+    np.testing.assert_allclose(dt2, 2 * dt1)
+
+
+def test_traveltime_known_diagonal_tensor() -> None:
+    """Test against hand-calculated result for simple diagonal tensor."""
+
+    # D_iijj = δ_ij for i,j in {0,1,2}
+    D = np.zeros((3, 3, 3, 3))
+    D[0, 0, 0, 0] = 1.0
+    D[1, 1, 1, 1] = 2.0
+    D[2, 2, 2, 2] = 3.0
+
+    # Only non-zero components are when i=j=k=l D_0000, D_1111, D_2222
+    # For n = (nx, ny, nz), result should be nx^4 + 2*ny^4 + 3*nz^4
+    n = np.array([0.6, 0.0, 0.8])  # normalised
+    expected = 1.0 * (0.6**4) + 3.0 * (0.8**4)
+
+    dt = calculate_relative_traveltime(n, D)
+
+    np.testing.assert_allclose(dt, expected)
+
+
+def test_traveltime_antiparallel_rays_equal(
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
+) -> None:
+    """Ray and its opposite give the same traveltime (even power)."""
+
+    D = transverse_isotropic_tensor(A, C, F, L, N)
+
+    n = np.array([0.6, 0.8, 0.0])
+    dt_forward = calculate_relative_traveltime(n, D)
+    dt_backward = calculate_relative_traveltime(-n, D)
+
+    np.testing.assert_allclose(dt_forward, dt_backward)
+
+
+def test_traveltime_shape_validation() -> None:
+    """Function raises appropriate error for wrong input shapes."""
+
+    D = np.zeros((3, 3, 3, 3))
+
+    with pytest.raises((ValueError, IndexError)):
+        calculate_relative_traveltime(np.array([1.0, 0.0]), D)  # n wrong shape
+
+    with pytest.raises((ValueError, IndexError)):
+        calculate_relative_traveltime(
+            np.array([1.0, 0.0, 0.0]), np.zeros((3, 3))
+        )  # D wrong shape
+
+
+def test_traveltime_transverse_isotropic_polar(
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
+) -> None:
+    """Test traveltime calculation for a polar path in a TI medium.
+
+    TI medium => eta1 = eta2 = 0
+
+    Expected result is the C_33 component of the elastic tensor.
+    """
+
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
+    n = np.array([0.0, 0.0, 1.0])  # along symmetry axis
+
+    dt = calculate_relative_traveltime(n, D)
+
+    expected = C
+
+    np.testing.assert_allclose(dt, expected)
+
+
+@pytest.mark.parametrize(
+    "n", [np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])]
+)  # perpendicular directions
+def test_traveltime_transverse_isotropic_equatorial(
+    n: np.ndarray,
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+) -> None:
+    """Test traveltime calculation for an equatorial path in a TI medium.
+
+    TI medium => eta1 = eta2 = 0
+
+    Expected result is the C_11 component of the elastic tensor.
+    """
+
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
+
+    dt = calculate_relative_traveltime(n, D)
+
+    expected = A
+
+    np.testing.assert_allclose(dt, expected)
+
+
+@pytest.mark.parametrize("direction", ["polar", "equatorial"])
+def test_traveltime_equivalence_with_creager_isotropic(
+    direction: Literal["polar", "equatorial"],
+    F: np.ndarray,
+    L: np.ndarray,
+    rng: np.random.Generator,
+) -> None:
+    """Test that the traveltime calculation matches Creager 1992 in the isotropic case.
+
+    Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
+
+    In the isotropic case,
+        b = c = 0
+        a = A = C = 2L + F = lambda + 2mu
+        F = lambda
+        L = N = mu
+    The traveltime should be independent of direction and equal to a i.e the P-wave velocity.
+    """
+    lambda_ = F
+    lambda_plus_two_mu = 2 * L + F
+    mu = L
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = tilted_transverse_isotropic_tensor(
+        lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu, eta1, eta2
+    )
+    a, b, c = love_to_creager(
+        direction, lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu
+    )
+
+    theta = rng.uniform(0, 2 * np.pi, size=1)
+    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
+
+    dt_tti = calculate_relative_traveltime(n, D)
+    dt_creager = calc_dt_creager(theta, a, b, c)
+    np.testing.assert_allclose(dt_tti, dt_creager)
+
+
+def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+) -> None:
+    """Test that the traveltime calculation matches Creager 1992 in the TI case when parallel to symmetry axis.
+
+    Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
+    """
+
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
+    a, b, c = love_to_creager("polar", A, C, F, L, N)
+
+    theta = np.array([0.0])
+    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
+
+    dt_tti = calculate_relative_traveltime(n, D)
+    dt_creager = calc_dt_creager(theta, a, b, c)
+
+    np.testing.assert_allclose(dt_tti, dt_creager)
+
+
+def test_traveltime_equivalence_with_creager_transverse_isotropic_perpendicular(
+    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
+) -> None:
+    """Test that the traveltime calculation matches Creager 1992 in the TI case when perpendicular to symmetry axis.
+
+    Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
+    """
+    eta1 = np.array([0.0])
+    eta2 = np.array([0.0])
+    D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
+    a, b, c = love_to_creager("equatorial", A, C, F, L, N)
+
+    theta = np.array([np.pi / 2])
+    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
+
+    dt_tti = calculate_relative_traveltime(n, D)
+    dt_creager = calc_dt_creager(theta, a, b, c)
+
+    np.testing.assert_allclose(dt_tti, dt_creager)
+
+
+class TestTravelTimeCalculator:
+    """Test the TravelTimeCalculator class."""
+
+    @pytest.fixture
+    def valid_paths(self) -> tuple[np.ndarray, np.ndarray]:
+        """Fixture for valid input paths."""
+        ic_in = np.array(
+            [
+                [0.0, 0.0, 1.0],
+                [90.0, 0.0, 1.0],
+                [45.0, 45.0, 1.0],
+                [180.0, -30.0, 1.0],
+                [-90.0, 60.0, 1.0],
+            ]
+        )
+        ic_out = np.array(
+            [
+                [180.0, 0.0, 1.0],
+                [-90.0, 0.0, 1.0],
+                [-180.0, -45.0, 1.0],
+                [0.0, 30.0, 1.0],
+                [90.0, -60.0, 1.0],
+            ]
+        )
+        return ic_in, ic_out
+
+    @pytest.fixture
+    def calculator(
+        self, valid_paths: tuple[np.ndarray, np.ndarray]
+    ) -> TravelTimeCalculator:
+        """Fixture for a TravelTimeCalculator instance with valid paths."""
+        ic_in, ic_out = valid_paths
+        return TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True)
+
+    def test_initialisation_npaths(self, calculator: TravelTimeCalculator) -> None:
+        """Test that the class initialises correctly with valid inputs."""
+        assert calculator.npaths == 5
+
+    def test_initialisation_direction_vectors(
+        self, calculator: TravelTimeCalculator
+    ) -> None:
+        """Test that the direction vectors are calculated correctly upon initialisation."""
+        # Hard-coded expected unit direction vectors for the fixture paths
+        expected_directions = np.array(
+            [
+                [-1.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0],
+                [-0.626943121322, -0.259688343688, -0.734509555268],
+                [0.866025403784, 0.0, 0.5],
+                [0.0, 0.5, -0.866025403784],
+            ]
+        )
+        np.testing.assert_allclose(
+            calculator.path_directions, expected_directions, atol=1e-12
+        )
+
+    def test_initialisation_invalid_in_out_same(self) -> None:
+        """Test that initialisation fails if an in coordinate is the same as the corresponding out coordinate."""
+        ic_in = np.array([[1.0, 2.0, 3.0], [0.0, 0.0, 1.0]])
+        ic_out = np.array([[0.0, 0.0, 1.0], [0.0, 0.0, 1.0]])
+        with pytest.raises(ValueError):
+            TravelTimeCalculator(ic_in, ic_out)
+
+    def test_initialisation_inconsistent_npaths(self) -> None:
+        """Test that initialisation fails if the number of in and out coordinates differ."""
+        ic_in = np.array([[0.0, 0.0, 1.0]])
+        ic_out = np.array([[180.0, 0.0, 1.0], [-90.0, 0.0, 1.0]])
+        with pytest.raises(ValueError):
+            TravelTimeCalculator(ic_in, ic_out)
+
+    def test_call_isotropic_medium(self, calculator: TravelTimeCalculator) -> None:
+        """Test traveltime calculation for isotropic medium."""
+        # Isotropic medium parameters
+        lam, mu = 12.0, 5.0
+        a = lam + 2 * mu
+        m = np.array([a, a, lam, mu, mu, 0.0, 0.0] * calculator.npaths)
+
+        dt = calculator(m)
+
+        # For isotropic medium, traveltime should be the same for all paths
+        np.testing.assert_allclose(dt, dt[0], atol=1e-12)

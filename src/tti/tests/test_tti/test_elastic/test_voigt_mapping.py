@@ -2,25 +2,25 @@
 # a fair bit of tensor notation is involved here so stop
 # ruff from complaining about variable names like l
 
-"""Test the elastic module."""
+"""Tests for Voigt notation mapping of elastic tensors and transformations."""
 
 import numpy as np
 import pytest
 
-from tti.elastic import (
+from tti.elastic.fourth import _check_elastic_tensor_symmetry, transformation_4th_order
+from tti.elastic.fourth import isotropic_tensor as it4
+from tti.elastic.fourth import tilted_transverse_isotropic_tensor as tti4
+from tti.elastic.fourth import transverse_isotropic_tensor as tit4
+from tti.elastic.voigt import isotropic_tensor as itv
+from tti.elastic.voigt import tilted_transverse_isotropic_tensor as ttiv
+from tti.elastic.voigt import transverse_isotropic_tensor as titv
+from tti.elastic.voigt_mapping import (
     VOIGT_MAP,
-    _check_elastic_tensor_symmetry,
-    _check_major_symmetry,
-    _check_minor_symmetry,
     elastic_tensor_to_voigt,
-    isotropic_tensor_4th,
-    isotropic_tensor_voigt,
     transformation_to_voigt,
-    transverse_isotropic_tensor_4th,
-    transverse_isotropic_tensor_voigt,
     voigt_to_elastic_tensor,
 )
-from tti.rotation import rotation_matrix_z, transformation_4th_order
+from tti.rotation import rotation_matrix_z
 
 VOIGT_MAP_INV = {
     (0, 0): 0,
@@ -104,88 +104,6 @@ def _elastic_tensor_to_voigt_reference(C: np.ndarray) -> np.ndarray:
     return C_voigt.reshape((*leading_shape, 6, 6))
 
 
-@pytest.mark.parametrize(
-    "C_shape,symmetry_breaker_indices",
-    [
-        ((3, 3, 3, 3), (1, 0, 0, 2)),
-        ((2, 3, 3, 3, 3), (0, 1, 0, 0, 2)),  # breaking symmetry of the first cell
-        (
-            (2, 4, 3, 3, 3, 3),
-            (0, 0, 1, 0, 0, 2),
-        ),  # breaking symmetry of the first cell in the first batch
-    ],
-    ids=["single", "cell", "batch_cell"],
-)
-def test_check_minor_symmetry(
-    C_shape: tuple[int, ...], symmetry_breaker_indices: tuple[int, ...]
-) -> None:
-    """Test the minor symmetry checker."""
-
-    C = np.zeros(C_shape)
-    C[..., 0, 1, 2, 0] = 1.0
-    C[..., 1, 0, 2, 0] = 1.0  # C_ijkl = C_jikl
-    C[..., 0, 1, 0, 2] = 1.0  # C_ijkl = C_ijlk
-    C[..., 1, 0, 0, 2] = 1.0  # C_jikl = C_jilk
-
-    assert _check_minor_symmetry(C).all()
-
-    C[symmetry_breaker_indices] = 2.0  # Break the symmetry
-    minor_symmetry = _check_minor_symmetry(C)
-    assert not minor_symmetry.all()
-    assert minor_symmetry.shape == C_shape[:-4]
-    assert np.sum(~minor_symmetry) == 1  # Only one tensor should fail the check
-
-    if minor_symmetry.ndim == 0:
-        assert not minor_symmetry.all()
-    elif minor_symmetry.ndim == 1:
-        assert not minor_symmetry[0]
-        assert minor_symmetry[1:].all()
-    elif minor_symmetry.ndim == 2:
-        assert not minor_symmetry[0, 0]
-        assert minor_symmetry[0, 1:].all()
-        assert minor_symmetry[1, :].all()
-
-
-@pytest.mark.parametrize(
-    "C_shape,symmetry_breaker_indices",
-    [
-        ((3, 3, 3, 3), (2, 0, 1, 0)),
-        ((2, 3, 3, 3, 3), (0, 2, 0, 1, 0)),  # breaking symmetry of the first cell
-        (
-            (2, 4, 3, 3, 3, 3),
-            (0, 0, 2, 0, 1, 0),
-        ),  # breaking symmetry of the first cell in the first batch
-    ],
-    ids=["single", "cell", "batch_cell"],
-)
-def test_check_major_symmetry(
-    C_shape: tuple[int, ...], symmetry_breaker_indices: tuple[int, ...]
-) -> None:
-    """Test the major symmetry checker."""
-
-    C = np.zeros(C_shape)
-    C[..., 0, 1, 2, 0] = 1.0
-    C[..., 2, 0, 0, 1] = 1.0  # C_ijkl = C_klij
-
-    assert _check_major_symmetry(C).all()
-
-    C[symmetry_breaker_indices] = 2.0  # Break the symmetry
-    major_symmetry = _check_major_symmetry(C)
-    assert not major_symmetry.all()
-    assert major_symmetry.shape == C_shape[:-4]
-    assert np.sum(~major_symmetry) == 1  # Only one tensor should fail the check
-
-    if major_symmetry.ndim == 0:
-        assert not major_symmetry.all()
-    elif major_symmetry.ndim == 1:
-        assert not major_symmetry[0]
-        assert major_symmetry[1:].all()
-    elif major_symmetry.ndim == 2:
-        assert not major_symmetry[0, 0]
-        assert major_symmetry[0, 1:].all()
-        assert major_symmetry[1, :].all()
-
-
 def test_voigt_map() -> None:
     """Test the Voigt mapping dictionaries."""
 
@@ -255,57 +173,6 @@ def test_elastic_to_voigt_and_back(shape: tuple[int, ...]) -> None:
 
 @pytest.mark.parametrize(
     "shape",
-    [(6, 6), (2, 6, 6), (2, 4, 6, 6)],
-    ids=["single", "cells", "batch_cells"],
-)
-def test_isotropic_symmetry(shape: tuple[int, ...], rng: np.random.Generator) -> None:
-    """Test that an isotropic elastic tensor has the required symmetries."""
-    leading_shape = shape[:-2]
-    lambda_ = rng.uniform(1, 10, size=leading_shape)
-    mu = rng.uniform(1, 10, size=leading_shape)
-
-    C_voigt = isotropic_tensor_voigt(lambda_, mu)
-
-    assert C_voigt.shape == shape
-
-    # Check symmetry of the 6x6 matrices for each batch/cell
-    if C_voigt.ndim == 2:
-        np.testing.assert_array_equal(C_voigt, C_voigt.T)
-    else:
-        for idx in np.ndindex(C_voigt.shape[:-2]):
-            np.testing.assert_array_equal(C_voigt[idx], C_voigt[idx].T)
-
-
-@pytest.mark.parametrize(
-    "shape,",
-    [(6, 6), (2, 6, 6), (2, 4, 6, 6)],
-    ids=["single", "cells", "batch_cells"],
-)
-def test_transverse_isotropic_symmetry(
-    shape: tuple[int, ...], rng: np.random.Generator
-) -> None:
-    """Test that a transverse isotropic elastic tensor has the required symmetries."""
-    leading_shape = shape[:-2]
-    A = rng.uniform(1, 10, size=leading_shape)
-    C = rng.uniform(1, 10, size=leading_shape)
-    F = rng.uniform(1, 10, size=leading_shape)
-    L = rng.uniform(1, 10, size=leading_shape)
-    N = rng.uniform(1, 10, size=leading_shape)
-
-    C_voigt = transverse_isotropic_tensor_voigt(A, C, F, L, N)
-
-    assert C_voigt.shape == shape
-
-    # Check symmetry of the 6x6 matrices for each batch/cell
-    if C_voigt.ndim == 2:
-        np.testing.assert_array_equal(C_voigt, C_voigt.T)
-    else:
-        for idx in np.ndindex(C_voigt.shape[:-2]):
-            np.testing.assert_array_equal(C_voigt[idx], C_voigt[idx].T)
-
-
-@pytest.mark.parametrize(
-    "shape",
     [
         (3, 3, 3, 3),
         (2, 3, 3, 3, 3),
@@ -321,10 +188,10 @@ def test_isotropic_4th_matches_voigt(
     lam = rng.uniform(1, 10, size=leading_shape)
     mu = rng.uniform(1, 10, size=leading_shape)
 
-    C4 = isotropic_tensor_4th(lam, mu)
+    C4 = it4(lam, mu)
     assert C4.shape == shape
     C_voigt_from_4th = elastic_tensor_to_voigt(C4)
-    C_voigt_direct = isotropic_tensor_voigt(lam, mu)
+    C_voigt_direct = itv(lam, mu)
 
     assert C_voigt_from_4th.shape == leading_shape + (6, 6)
     np.testing.assert_array_almost_equal(C_voigt_from_4th, C_voigt_direct)
@@ -339,10 +206,10 @@ def test_isotropic_4th_matches_voigt(
     ],
     ids=["single", "cells", "batch_cells"],
 )
-def test_tti_4th_matches_voigt(
+def test_transverse_isotropic_4th_matches_voigt(
     shape: tuple[int, ...], rng: np.random.Generator
 ) -> None:
-    """TTI 4th-order constructor should match Voigt constructor after mapping."""
+    """TI 4th-order constructor should match Voigt constructor after mapping."""
     leading_shape = shape[:-4]
     A = rng.uniform(1, 10, size=leading_shape)
     C = rng.uniform(1, 10, size=leading_shape)
@@ -350,13 +217,32 @@ def test_tti_4th_matches_voigt(
     L = rng.uniform(1, 10, size=leading_shape)
     N = rng.uniform(1, 10, size=leading_shape)
 
-    C4 = transverse_isotropic_tensor_4th(A, C, F, L, N)
+    C4 = tit4(A, C, F, L, N)
     assert C4.shape == shape
     C_voigt_from_4th = elastic_tensor_to_voigt(C4)
-    C_voigt_direct = transverse_isotropic_tensor_voigt(A, C, F, L, N)
+    C_voigt_direct = titv(A, C, F, L, N)
 
     assert C_voigt_from_4th.shape == leading_shape + (6, 6)
     np.testing.assert_array_almost_equal(C_voigt_from_4th, C_voigt_direct)
+
+
+def test_tti_4th_matches_voigt(rng: np.random.Generator) -> None:
+    """TTI 4th-order constructor should match Voigt constructor after mapping."""
+
+    A = rng.uniform(1, 10, size=3)
+    C = rng.uniform(1, 10, size=3)
+    F = rng.uniform(1, 10, size=3)
+    L = rng.uniform(1, 10, size=3)
+    N = rng.uniform(1, 10, size=3)
+    eta1 = rng.uniform(0, 2 * np.pi, size=3)
+    eta2 = rng.uniform(0, 2 * np.pi, size=3)
+
+    C4 = tti4(A, C, F, L, N, eta1, eta2)
+    C_voigt_from_4th = elastic_tensor_to_voigt(C4)
+
+    C_voigt = ttiv(A, C, F, L, N, eta1, eta2)
+
+    np.testing.assert_array_almost_equal(C_voigt_from_4th, C_voigt)
 
 
 @pytest.mark.parametrize(

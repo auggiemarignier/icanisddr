@@ -115,23 +115,3 @@ def rotation_matrix_zy(
     R = R_z @ R_y
 
     return R
-
-
-def transformation_4th_order(R: np.ndarray) -> np.ndarray:
-    """
-    Construct a 4th order tensor from a 3D transformation matrix.
-
-    Given a transformation matrix R, a second order tensor A transforms as A' = R A R^T.
-    In Einstein notation, this is A'_{ij} = R_{ik} R_{jl} A_{kl}.
-
-    Parameters
-    ----------
-    R : ndarray, shape (..., 3, 3)
-        Transformation matrix.
-
-    Returns
-    -------
-    R4 : ndarray, shape (..., 3, 3, 3, 3)
-        4th order transformation tensor.
-    """
-    return np.einsum("...ik,...jl->...ijkl", R, R)
