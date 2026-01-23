@@ -16,17 +16,24 @@ def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> np.ndarray:
 
     Parameters
     ----------
-    n : ndarray, shape (..., 3)
-        Ray direction unit vector.
-    D : ndarray, shape (3, 3, 3, 3)
-        4th-order perturbation tensor.
+    n : ndarray, shape (npaths, 3)
+        Ray direction unit vector(s).
+    D : ndarray, shape (..., 3, 3, 3, 3)
+        4th-order perturbation tensor.  Leading dimensions are arbitrary.
 
     Returns
     -------
-    np.ndarray, shape (...)
-        Relative traveltime perturbation.
+    np.ndarray, shape (..., npaths)
+        Relative traveltime perturbation.  Batched according to the leading dimensions of D.
     """
-    return np.einsum("...ijkl,...i,...j,...k,...l", D, n, n, n, n)
+    # Broadcast n to match leading dimensions of D
+    leading_shape = D.shape[:-4]
+    n = np.atleast_2d(n)
+    n = np.broadcast_to(n, leading_shape + n.shape)
+
+    # ijkl are the components of the 4th-order tensor D
+    # p is the path index
+    return np.einsum("...ijkl,...pi,...pj,...pk,...pl->...p", D, n, n, n, n)
 
 
 class TravelTimeCalculator:
