@@ -7,55 +7,12 @@ import pytest
 
 from tti.elastic import (
     isotropic_tensor,
-    tilted_transverse_isotropic_tensor,
     transverse_isotropic_tensor,
 )
 from tti.elastic.creager import calculate_traveltime as calc_dt_creager
 from tti.elastic.creager import love_to_creager
 from tti.traveltimes import TravelTimeCalculator
 from tti.traveltimes.traveltimes import calculate_relative_traveltime
-
-
-@pytest.fixture
-def A() -> np.ndarray:
-    """Fixture for elastic constant A."""
-    return np.array([10.0])
-
-
-@pytest.fixture
-def C() -> np.ndarray:
-    """Fixture for elastic constant C."""
-    return np.array([15.0])
-
-
-@pytest.fixture
-def F() -> np.ndarray:
-    """Fixture for elastic constant F."""
-    return np.array([8.0])
-
-
-@pytest.fixture
-def L() -> np.ndarray:
-    """Fixture for elastic constant L."""
-    return np.array([0.15])
-
-
-@pytest.fixture
-def N() -> np.ndarray:
-    """Fixture for elastic constant N."""
-    return np.array([0.1])
-
-
-@pytest.fixture
-def eta1() -> np.ndarray:
-    """Fixture for rotation angle eta1."""
-    return np.array([np.pi / 4])
-
-
-@pytest.fixture
-def eta2() -> np.ndarray:
-    """Fixture for rotation angle eta2."""
-    return np.array([np.pi / 6])
 
 
 def test_traveltime_zero_for_zero_perturbation() -> None:
@@ -103,21 +60,18 @@ def test_traveltime_isotropic_independent_of_direction(
     mu = np.array([5.0])
     D = isotropic_tensor(lam, mu)
 
-    # Try several random directions
     directions = rng.normal(size=(10, 3))
     directions = directions / np.linalg.norm(directions, axis=1, keepdims=True)
 
     results = calculate_relative_traveltime(directions, D)
 
-    # All should be equal for isotropic medium
     np.testing.assert_allclose(results, results[0])
 
 
-def test_traveltime_linear_in_perturbation(
-    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
-) -> None:
+def test_traveltime_linear_in_perturbation(rng: np.random.Generator) -> None:
     """Doubling the perturbation tensor doubles the traveltime anomaly."""
 
+    A, C, F, L, N = rng.random(size=(5, 2, 4))
     D = transverse_isotropic_tensor(A, C, F, L, N)
     n = np.array([1.0, 0.0, 0.0])
 
@@ -146,11 +100,10 @@ def test_traveltime_known_diagonal_tensor() -> None:
     np.testing.assert_allclose(dt, expected)
 
 
-def test_traveltime_antiparallel_rays_equal(
-    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
-) -> None:
+def test_traveltime_antiparallel_rays_equal(rng: np.random.Generator) -> None:
     """Ray and its opposite give the same traveltime (even power)."""
 
+    A, C, F, L, N = rng.random(size=(5, 2, 4))
     D = transverse_isotropic_tensor(A, C, F, L, N)
 
     n = np.array([0.6, 0.8, 0.0])
@@ -174,19 +127,14 @@ def test_traveltime_shape_validation() -> None:
         )  # D wrong shape
 
 
-def test_traveltime_transverse_isotropic_polar(
-    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
-) -> None:
+def test_traveltime_transverse_isotropic_polar(rng: np.random.Generator) -> None:
     """Test traveltime calculation for a polar path in a TI medium.
-
-    TI medium => eta1 = eta2 = 0
 
     Expected result is the C_33 component of the elastic tensor.
     """
 
-    eta1 = np.array([0.0])
-    eta2 = np.array([0.0])
-    D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
+    A, C, F, L, N = rng.random(size=(5, 2, 4))
+    D = transverse_isotropic_tensor(A, C, F, L, N)
     n = np.array([0.0, 0.0, 1.0])  # along symmetry axis
 
     dt = calculate_relative_traveltime(n, D)
@@ -200,23 +148,15 @@ def test_traveltime_transverse_isotropic_polar(
     "n", [np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])]
 )  # perpendicular directions
 def test_traveltime_transverse_isotropic_equatorial(
-    n: np.ndarray,
-    A: np.ndarray,
-    C: np.ndarray,
-    F: np.ndarray,
-    L: np.ndarray,
-    N: np.ndarray,
+    n: np.ndarray, rng: np.random.Generator
 ) -> None:
     """Test traveltime calculation for an equatorial path in a TI medium.
-
-    TI medium => eta1 = eta2 = 0
 
     Expected result is the C_11 component of the elastic tensor.
     """
 
-    eta1 = np.array([0.0])
-    eta2 = np.array([0.0])
-    D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
+    A, C, F, L, N = rng.random(size=(5, 2, 4))
+    D = transverse_isotropic_tensor(A, C, F, L, N)
 
     dt = calculate_relative_traveltime(n, D)
 
@@ -227,14 +167,9 @@ def test_traveltime_transverse_isotropic_equatorial(
 
 @pytest.mark.parametrize("direction", ["polar", "equatorial"])
 def test_traveltime_equivalence_with_creager_isotropic(
-    direction: Literal["polar", "equatorial"],
-    F: np.ndarray,
-    L: np.ndarray,
-    rng: np.random.Generator,
+    direction: Literal["polar", "equatorial"], rng: np.random.Generator
 ) -> None:
     """Test that the traveltime calculation matches Creager 1992 in the isotropic case.
-
-    Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
 
     In the isotropic case,
         b = c = 0
@@ -243,17 +178,16 @@ def test_traveltime_equivalence_with_creager_isotropic(
         L = N = mu
     The traveltime should be independent of direction and equal to a i.e the P-wave velocity.
     """
-    lambda_ = F
-    lambda_plus_two_mu = 2 * L + F
-    mu = L
-    eta1 = np.array([0.0])
-    eta2 = np.array([0.0])
-    D = tilted_transverse_isotropic_tensor(
-        lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu, eta1, eta2
-    )
-    a, b, c = love_to_creager(
-        direction, lambda_plus_two_mu, lambda_plus_two_mu, lambda_, mu, mu
-    )
+    lambda_, mu = rng.random(size=(2, 2, 4))
+    lambda_plus_two_mu = lambda_ + 2 * mu
+    A = lambda_plus_two_mu
+    C = lambda_plus_two_mu
+    F = lambda_
+    L = mu
+    N = mu
+
+    D = isotropic_tensor(lambda_, mu)
+    a, b, c = love_to_creager(direction, A, C, F, L, N)
 
     theta = rng.uniform(0, 2 * np.pi, size=1)
     n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
@@ -264,20 +198,12 @@ def test_traveltime_equivalence_with_creager_isotropic(
 
 
 def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
-    A: np.ndarray,
-    C: np.ndarray,
-    F: np.ndarray,
-    L: np.ndarray,
-    N: np.ndarray,
+    rng: np.random.Generator,
 ) -> None:
-    """Test that the traveltime calculation matches Creager 1992 in the TI case when parallel to symmetry axis.
+    """Test that the traveltime calculation matches Creager 1992 in the TI case when parallel to symmetry axis."""
 
-    Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
-    """
-
-    eta1 = np.array([0.0])
-    eta2 = np.array([0.0])
-    D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
+    A, C, F, L, N = rng.random(size=(5, 2, 4))
+    D = transverse_isotropic_tensor(A, C, F, L, N)
     a, b, c = love_to_creager("polar", A, C, F, L, N)
 
     theta = np.array([0.0])
@@ -290,15 +216,14 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
 
 
 def test_traveltime_equivalence_with_creager_transverse_isotropic_perpendicular(
-    A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
+    rng: np.random.Generator,
 ) -> None:
     """Test that the traveltime calculation matches Creager 1992 in the TI case when perpendicular to symmetry axis.
 
     Creager is only valid for the case where the symmetry axis is vertical (eta1 = eta2 = 0).
     """
-    eta1 = np.array([0.0])
-    eta2 = np.array([0.0])
-    D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
+    A, C, F, L, N = rng.random(size=(5, 2, 4))
+    D = transverse_isotropic_tensor(A, C, F, L, N)
     a, b, c = love_to_creager("equatorial", A, C, F, L, N)
 
     theta = np.array([np.pi / 2])
