@@ -33,21 +33,25 @@ def test_traveltime_batch() -> None:
     D[0, 0, 0, 0] = 1.0
     D[1, 1, 1, 1] = 2.0
     D[2, 2, 2, 2] = 3.0
+    D = np.broadcast_to(D, (2, 4, 3, 3, 3, 3))
 
-    # Batch of 3 normalised ray directions
     n_batch = np.array(
         [
             [1.0, 0.0, 0.0],
             [0.0, 1.0, 0.0],
             [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            [1.0, 0.0, 0.0],
         ]
     )
+    n_paths = n_batch.shape[0]
 
     dt_batch = calculate_relative_traveltime(n_batch, D)
 
-    expected = np.array([1.0, 2.0, 3.0])
+    expected_per_path = np.array([1.0, 2.0, 3.0, 2.0, 1.0])
+    expected = np.broadcast_to(expected_per_path, (2, 4, n_paths))
 
-    assert dt_batch.shape == (3,)
+    assert dt_batch.shape == (2, 4, n_paths)
     np.testing.assert_allclose(dt_batch, expected)
 
 
@@ -64,8 +68,9 @@ def test_traveltime_isotropic_independent_of_direction(
     directions = directions / np.linalg.norm(directions, axis=1, keepdims=True)
 
     results = calculate_relative_traveltime(directions, D)
+    expected = (lam + 2 * mu).item()
 
-    np.testing.assert_allclose(results, results[0])
+    np.testing.assert_allclose(results, expected)
 
 
 def test_traveltime_linear_in_perturbation(rng: np.random.Generator) -> None:
@@ -73,7 +78,7 @@ def test_traveltime_linear_in_perturbation(rng: np.random.Generator) -> None:
 
     A, C, F, L, N = rng.random(size=(5, 2, 4))
     D = transverse_isotropic_tensor(A, C, F, L, N)
-    n = np.array([1.0, 0.0, 0.0])
+    n = np.array([[1.0, 0.0, 0.0]])
 
     dt1 = calculate_relative_traveltime(n, D)
     dt2 = calculate_relative_traveltime(n, 2 * D)
@@ -92,7 +97,7 @@ def test_traveltime_known_diagonal_tensor() -> None:
 
     # Only non-zero components are when i=j=k=l D_0000, D_1111, D_2222
     # For n = (nx, ny, nz), result should be nx^4 + 2*ny^4 + 3*nz^4
-    n = np.array([0.6, 0.0, 0.8])  # normalised
+    n = np.array([[0.6, 0.0, 0.8]])  # normalised
     expected = 1.0 * (0.6**4) + 3.0 * (0.8**4)
 
     dt = calculate_relative_traveltime(n, D)
@@ -106,7 +111,7 @@ def test_traveltime_antiparallel_rays_equal(rng: np.random.Generator) -> None:
     A, C, F, L, N = rng.random(size=(5, 2, 4))
     D = transverse_isotropic_tensor(A, C, F, L, N)
 
-    n = np.array([0.6, 0.8, 0.0])
+    n = np.array([[0.6, 0.8, 0.0]])
     dt_forward = calculate_relative_traveltime(n, D)
     dt_backward = calculate_relative_traveltime(-n, D)
 
@@ -135,11 +140,11 @@ def test_traveltime_transverse_isotropic_polar(rng: np.random.Generator) -> None
 
     A, C, F, L, N = rng.random(size=(5, 2, 4))
     D = transverse_isotropic_tensor(A, C, F, L, N)
-    n = np.array([0.0, 0.0, 1.0])  # along symmetry axis
+    n = np.array([[0.0, 0.0, 1.0]])  # along symmetry axis
 
     dt = calculate_relative_traveltime(n, D)
 
-    expected = C
+    expected = C[..., None]
 
     np.testing.assert_allclose(dt, expected)
 
@@ -160,7 +165,7 @@ def test_traveltime_transverse_isotropic_equatorial(
 
     dt = calculate_relative_traveltime(n, D)
 
-    expected = A
+    expected = A[..., None]
 
     np.testing.assert_allclose(dt, expected)
 
@@ -189,8 +194,8 @@ def test_traveltime_equivalence_with_creager_isotropic(
     D = isotropic_tensor(lambda_, mu)
     a, b, c = love_to_creager(direction, A, C, F, L, N)
 
-    theta = rng.uniform(0, 2 * np.pi, size=1)
-    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
+    theta = rng.uniform(0, 2 * np.pi, size=10)
+    n = np.stack([np.sin(theta), np.zeros_like(theta), np.cos(theta)], axis=-1)
 
     dt_tti = calculate_relative_traveltime(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
@@ -206,8 +211,8 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
     D = transverse_isotropic_tensor(A, C, F, L, N)
     a, b, c = love_to_creager("polar", A, C, F, L, N)
 
-    theta = np.array([0.0])
-    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
+    theta = np.zeros(10)
+    n = np.stack([np.sin(theta), np.zeros_like(theta), np.cos(theta)], axis=-1)
 
     dt_tti = calculate_relative_traveltime(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
@@ -227,7 +232,7 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_perpendicular(
     a, b, c = love_to_creager("equatorial", A, C, F, L, N)
 
     theta = np.array([np.pi / 2])
-    n = np.hstack([np.sin(theta), np.array([0.0]), np.cos(theta)])
+    n = np.stack([np.sin(theta), np.zeros_like(theta), np.cos(theta)], axis=-1)
 
     dt_tti = calculate_relative_traveltime(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
@@ -310,9 +315,11 @@ class TestTravelTimeCalculator:
         # Isotropic medium parameters
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
-        m = np.array([a, a, lam, mu, mu, 0.0, 0.0] * calculator.npaths)
+        m = np.array([a, a, lam, mu, mu, 0.0, 0.0])
+
+        expected = lam + 2 * mu
 
         dt = calculator(m)
 
         # For isotropic medium, traveltime should be the same for all paths
-        np.testing.assert_allclose(dt, dt[0], atol=1e-12)
+        np.testing.assert_allclose(dt, expected, atol=1e-12)
