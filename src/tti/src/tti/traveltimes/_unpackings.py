@@ -28,36 +28,38 @@ def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
 
     Parameters
     ----------
-    m : ndarray, shape (M * 7)
+    m : ndarray, shape (B, M * 7)
         Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2N}, \delta_{LN}, N, eta1, eta2]
-        M is the number of model vectors (e.g. number of pixels).
+        M is the number of model segments (e.g. number of pixels).
+        B is the batch size (at least 1).
 
     Returns
     -------
-    A : ndarray, shape (M,)
+    A : ndarray, shape (B, M)
         Elastic constant C11 = C22
-    C : ndarray, shape (M,)
+    C : ndarray, shape (B, M)
         Elastic constant C33
-    F : ndarray, shape (M,)
+    F : ndarray, shape (B, M)
         Elastic constant C13 = C23
-    L : ndarray, shape (M,)
+    L : ndarray, shape (B, M)
         Elastic constant C44 = C55
-    N : ndarray, shape (M,)
+    N : ndarray, shape (B, M)
         Elastic constant C66
-    eta1 : ndarray, shape (M,)
+    eta1 : ndarray, shape (B, M)
         Tilt angle in radians.
-    eta2 : ndarray, shape (M,)
+    eta2 : ndarray, shape (B, M)
         Azimuthal angle in radians.
     """
-    mT = m.reshape(-1, 7).T
+    batch_size = m.shape[0]
+    mT = m.reshape(batch_size, -1, 7)
     return (
-        mT[0],
-        mT[1] + mT[0],
-        mT[2] + mT[0] - 2 * mT[4],
-        mT[3] + mT[4],
-        mT[4],
-        np.radians(mT[5]),
-        np.radians(mT[6]),
+        mT[..., 0],
+        mT[..., 1] + mT[..., 0],
+        mT[..., 2] + mT[..., 0] - 2 * mT[..., 4],
+        mT[..., 3] + mT[..., 4],
+        mT[..., 4],
+        np.radians(mT[..., 5]),
+        np.radians(mT[..., 6]),
     )
 
 
@@ -69,39 +71,41 @@ def _unpack_nested_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
 
     Parameters
     ----------
-    m : ndarray, shape (M * 5)
+    m : ndarray, shape (B, M * 5)
         Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2N}, eta1, eta2]
-        M is the number of model vectors (e.g. number of pixels).
+        M is the number of model segments (e.g. number of pixels).
+        B is the batch size (at least 1).
 
     Returns
     -------
-    A : ndarray, shape (M,)
+    A : ndarray, shape (B, M)
         Elastic constant C11 = C22
-    C : ndarray, shape (M,)
+    C : ndarray, shape (B, M)
         Elastic constant C33
-    F : ndarray, shape (M,)
+    F : ndarray, shape (B, M)
         Elastic constant C13 = C23
-    L : ndarray, shape (M,)
+    L : ndarray, shape (B, M)
         Elastic constant C44 = C55
         Fixed at 0.
-    N : ndarray, shape (M,)
+    N : ndarray, shape (B, M)
         Elastic constant C66
         Fixed at 0.
-    eta1 : ndarray, shape (M,)
+    eta1 : ndarray, shape (B, M)
         Tilt angle in radians.
-    eta2 : ndarray, shape (M,)
+    eta2 : ndarray, shape (B, M)
         Azimuthal angle in radians.
     """
-    mT = m.reshape(-1, 5).T
-    zeros = np.zeros_like(mT[0])
+    batch_size = m.shape[0]
+    mT = m.reshape(batch_size, -1, 5)
+    zeros = np.zeros_like(mT[..., 0])
     return (
-        mT[0],
-        mT[1] + mT[0],
-        mT[2] + mT[0],  # since L=0, F = A - 2*0 = A
+        mT[..., 0],
+        mT[..., 1] + mT[..., 0],
+        mT[..., 2] + mT[..., 0],  # since L=0, F = A - 2*0 = A
         zeros,
         zeros,
-        np.radians(mT[3]),
-        np.radians(mT[4]),
+        np.radians(mT[..., 3]),
+        np.radians(mT[..., 4]),
     )
 
 
@@ -113,29 +117,39 @@ def _unpack_model_vector(m: np.ndarray) -> seven_arrays:
 
     Parameters
     ----------
-    m : ndarray, shape (M * 7)
+    m : ndarray, shape (B, M * 7)
         Model parameters: [A, C, F, L, N, eta1, eta2]
-        M is the number of model vectors (e.g. number of pixels).
+        M is the number of model segments (e.g. number of pixels).
+        B is the batch size (at least 1).
 
     Returns
     -------
-    A : ndarray, shape (M,)
+    A : ndarray, shape (B, M)
         Elastic constant C11 = C22
-    C : ndarray, shape (M,)
+    C : ndarray, shape (B, M)
         Elastic constant C33
-    F : ndarray, shape (M,)
+    F : ndarray, shape (B, M)
         Elastic constant C13 = C23
-    L : ndarray, shape (M,)
+    L : ndarray, shape (B, M)
         Elastic constant C44 = C55
-    N : ndarray, shape (M,)
+    N : ndarray, shape (B, M)
         Elastic constant C66
-    eta1 : ndarray, shape (M,)
+    eta1 : ndarray, shape (B, M)
         Tilt angle in radians.
-    eta2 : ndarray, shape (M,)
+    eta2 : ndarray, shape (B, M)
         Azimuthal angle in radians.
     """
-    mT = m.reshape(-1, 7).T
-    return mT[0], mT[1], mT[2], mT[3], mT[4], np.radians(mT[5]), np.radians(mT[6])
+    batch_size = m.shape[0]
+    mT = m.reshape(batch_size, -1, 7)
+    return (
+        mT[..., 0],
+        mT[..., 1],
+        mT[..., 2],
+        mT[..., 3],
+        mT[..., 4],
+        np.radians(mT[..., 5]),
+        np.radians(mT[..., 6]),
+    )
 
 
 def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
@@ -146,32 +160,42 @@ def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
 
     Parameters
     ----------
-    m : ndarray, shape (M * 5)
+    m : ndarray, shape (B, M * 5)
         Model parameters: [A, C, F, eta1, eta2]
-        M is the number of model vectors (e.g. number of pixels).
+        M is the number of model segments (e.g. number of pixels).
+        B is the batch size (at least 1).
 
     Returns
     -------
-    A : ndarray, shape (M,)
+    A : ndarray, shape (B, M)
         Elastic constant C11 = C22
-    C : ndarray, shape (M,)
+    C : ndarray, shape (B, M)
         Elastic constant C33
-    F : ndarray, shape (M,)
+    F : ndarray, shape (B, M)
         Elastic constant C13 = C23
-    L : ndarray, shape (M,)
+    L : ndarray, shape (B, M)
         Elastic constant C44 = C55
         Fixed at 0.
-    N : ndarray, shape (M,)
+    N : ndarray, shape (B, M)
         Elastic constant C66
         Fixed at 0.
-    eta1 : ndarray, shape (M,)
+    eta1 : ndarray, shape (B, M)
         Tilt angle in radians.
-    eta2 : ndarray, shape (M,)
+    eta2 : ndarray, shape (B, M)
         Azimuthal angle in radians.
     """
-    mT = m.reshape(-1, 5).T
-    zeros = np.zeros_like(mT[0])
-    return mT[0], mT[1], mT[2], zeros, zeros, np.radians(mT[3]), np.radians(mT[4])
+    batch_size = m.shape[0]
+    mT = m.reshape(batch_size, -1, 5)
+    zeros = np.zeros_like(mT[..., 0])
+    return (
+        mT[..., 0],
+        mT[..., 1],
+        mT[..., 2],
+        zeros,
+        zeros,
+        np.radians(mT[..., 3]),
+        np.radians(mT[..., 4]),
+    )
 
 
 _unpackings: dict[tuple[bool, bool], Callable[[np.ndarray], seven_arrays]] = {
