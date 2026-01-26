@@ -9,14 +9,16 @@ dependencies = [
     "sampling",
     "tti",
     "expconfig",
+    "raytracer",
 ]
 
 [tool.uv.workspace]
-members = ["experiments/*", "profiling", "src/tti", "src/expconfig"]
+members = ["experiments/*", "profiling", "src/tti", "src/expconfig", "src/raytracer"]
 
 [tool.uv.sources]
 tti = { workspace = true }
 expconfig = { workspace = true }
+raytracer = { workspace = true }
 sddr = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sddr" }
 sampling = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sampling" }
 
@@ -90,7 +92,7 @@ convention = "numpy"
 dev = ["pytest>=8.4.2", "pytest-cov>=7.0.0"]
 
 [tool.pytest.ini_options]
-testpaths = ["src/tti/tests"]
+testpaths = ["src/**/tests"]
 addopts = ["-v", "--cov=src", "--cov-report=term-missing", "--cov-report=xml"]
 
 [tool.coverage.run]
