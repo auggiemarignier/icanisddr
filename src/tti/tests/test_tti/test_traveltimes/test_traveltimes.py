@@ -310,16 +310,23 @@ class TestTravelTimeCalculator:
         with pytest.raises(ValueError):
             TravelTimeCalculator(ic_in, ic_out)
 
-    def test_call_isotropic_medium(self, calculator: TravelTimeCalculator) -> None:
+    @pytest.mark.parametrize(
+        "nsegments,batch_size",
+        [(1, 1), (4, 1), (4, 2)],
+        ids=["single_segment", "multiple_segments", "multiple_segments_batch"],
+    )
+    def test_call_isotropic_medium_single_segment(
+        self, nsegments: int, batch_size: int, calculator: TravelTimeCalculator
+    ) -> None:
         """Test traveltime calculation for isotropic medium."""
-        # Isotropic medium parameters
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
-        m = np.array([a, a, lam, mu, mu, 0.0, 0.0])
+        m = np.stack(
+            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+        )
 
         expected = lam + 2 * mu
 
         dt = calculator(m)
-
-        # For isotropic medium, traveltime should be the same for all paths
+        assert dt.shape == (batch_size, calculator.npaths)
         np.testing.assert_allclose(dt, expected, atol=1e-12)
