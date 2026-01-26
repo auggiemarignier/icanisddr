@@ -5,6 +5,8 @@ from typing import Literal
 import numpy as np
 from pydantic import BaseModel, Field
 
+IC_RADIUS = 1221.5  # km
+
 
 class RegionConfig(BaseModel):
     """Base configuration for a geometric region."""
@@ -151,17 +153,35 @@ class GeometryConfig(BaseModel):
         return CompositeGeometry(regions=region_objects, labels=labels)
 
     @classmethod
-    def earth_inner_outer_core(
-        cls, ic_radius: float = 1221.5, oc_radius: float = 3480.0
-    ):
-        """Create a standard Earth configuration with inner and outer core.
+    def earth_inner_core(cls, ic_radius: float = IC_RADIUS):
+        """Create a standard Earth configuration with only inner core.
 
         Parameters
         ----------
         ic_radius : float, default=1221.5
             Inner core radius (km).
-        oc_radius : float, default=3480.0
-            Outer core outer radius (km).
+
+        Returns
+        -------
+        GeometryConfig
+            Configuration with only IC region.
+        """
+        return cls(
+            regions=[
+                BallConfig(radius=ic_radius, label="IC"),
+            ]
+        )
+
+    @classmethod
+    def earth_imic(cls, imic_radius: float = 650, ic_radius: float = 1221.5):
+        """Create a standard Earth configuration with inner most inner core.
+
+        Parameters
+        ----------
+        imic_radius : float, default=650
+            Inner most inner core radius (km).
+        ic_radius : float, default=1221.5
+            Inner core radius (km).
 
         Returns
         -------
@@ -170,10 +190,10 @@ class GeometryConfig(BaseModel):
         """
         return cls(
             regions=[
-                BallConfig(radius=ic_radius, label="IC"),
+                BallConfig(radius=imic_radius, label="IC"),
                 SphericalShellConfig(
-                    radius_inner=ic_radius,
-                    radius_outer=oc_radius,
+                    radius_inner=imic_radius,
+                    radius_outer=ic_radius,
                     label="OC",
                 ),
             ]
@@ -183,7 +203,7 @@ class GeometryConfig(BaseModel):
     def hemispheric_ic(
         cls,
         ic_radius: float = 1221.5,
-        normal: list[float] = [0.0, 0.0, 1.0],
+        normal: list[float] = [1.0, 0.0, 0.0],
     ):
         """Create a hemispherically divided inner core.
 
@@ -191,7 +211,7 @@ class GeometryConfig(BaseModel):
         ----------
         ic_radius : float, default=1221.5
             Inner core radius (km).
-        normal : list of float, default=[0.0, 0.0, 1.0]
+        normal : list of float, default=[1.0, 0.0, 0.0]
             Normal vector defining the hemisphere division.
 
         Returns
@@ -204,12 +224,12 @@ class GeometryConfig(BaseModel):
                 HemisphereConfig(
                     radius=ic_radius,
                     normal=normal,
-                    label="IC_north",
+                    label="IC_east",
                 ),
                 HemisphereConfig(
                     radius=ic_radius,
                     normal=[-n for n in normal],
-                    label="IC_south",
+                    label="IC_west",
                 ),
             ]
         )

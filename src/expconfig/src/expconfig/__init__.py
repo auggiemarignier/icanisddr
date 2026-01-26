@@ -1,13 +1,7 @@
 """Configuration for SDDR IC anisotropy experiments."""
 
-from .config import IC_RADIUS, Config, TrueBulkICConfig, dump_config, load_config
-from .geometry import (
-    BallConfig,
-    GeometryConfig,
-    HemisphereConfig,
-    RegionConfig,
-    SphericalShellConfig,
-)
+from .config import Config, TrueBulkICConfig, dump_config, load_config
+from .geometry import IC_RADIUS, GeometryConfig
 
 __all__ = [
     "Config",
@@ -16,8 +10,4 @@ __all__ = [
     "IC_RADIUS",
     "TrueBulkICConfig",
     "GeometryConfig",
-    "RegionConfig",
-    "BallConfig",
-    "SphericalShellConfig",
-    "HemisphereConfig",
 ]

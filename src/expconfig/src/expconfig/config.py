@@ -9,8 +9,6 @@ from pydantic_yaml import to_yaml_str
 
 from .geometry import GeometryConfig
 
-IC_RADIUS = 1221.5  # km
-
 
 class TrueBulkICConfig(BaseModel):
     """True bulk IC model parameters.
@@ -117,7 +115,7 @@ class Config(BaseModel):
     truth: TrueBulkICConfig = Field(default_factory=TrueBulkICConfig)
     data: DataConfig = Field(default_factory=DataConfig)
     geometry: GeometryConfig = Field(
-        default_factory=lambda: GeometryConfig.earth_inner_outer_core(),
+        default_factory=GeometryConfig.earth_inner_core,
         description="Geometric configuration of regions.",
     )
 

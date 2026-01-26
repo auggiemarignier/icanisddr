@@ -79,14 +79,14 @@ print(f"Region labels: {composite_geometry.labels}")
 from expconfig import GeometryConfig
 
 # Standard Earth IC + OC
-earth_config = GeometryConfig.earth_inner_outer_core(
+earth_config = GeometryConfig.earth_imic(
+    imic_radius=650.0,
     ic_radius=1221.5,
-    oc_radius=3480.0,
 )
 
 # Hemispheric division
 hemispheric_config = GeometryConfig.hemispheric_ic(
     ic_radius=1221.5,
-    normal=[0.0, 0.0, 1.0],  # z-axis division
+    normal=[1.0, 0.0, 0.0],  # x-axis division
 )
 ```
