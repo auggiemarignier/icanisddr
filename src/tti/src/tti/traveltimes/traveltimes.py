@@ -43,6 +43,7 @@ class TravelTimeCalculator:
         self,
         ic_in: np.ndarray,
         ic_out: np.ndarray,
+        weights: np.ndarray | None = None,
         nested: bool = True,
         shear: bool = False,
     ) -> None:
@@ -54,6 +55,8 @@ class TravelTimeCalculator:
             Where the path enters the inner core (longitude (deg), latitude (deg), radius (km)).
         ic_out : ndarray, shape (..., 3)
             Where the path exits the inner core (longitude (deg), latitude (deg), radius (km)).
+        weights : ndarray, shape (nsegments, npaths), optional
+            Weights for each segment along each path (default is None, which gives equal weights).
         nested : bool, optional
             Whether model parameters are nested (default is True).
             The nested model parameter order is:
@@ -69,43 +72,41 @@ class TravelTimeCalculator:
         self.ic_in = ic_in
         self.ic_out = ic_out
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
-
+        self.weights = weights
         self._unpacking_function = _unpackings[(nested, shear)]
 
     def __call__(self, m: np.ndarray) -> np.ndarray:
         """
         Calculate relative traveltime perturbations for all paths given TTI model parameters.
 
+        Computes the relative traveltime perturbation in each cell along each path,
+        then performs a weighted sum along the cell axis (axis=1) to get the total relative traveltime perturbation for each path.
+
         Parameters
         ----------
-        m : ndarray, shape (7n,)
-            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times.
+        m : ndarray, shape ([batch], 7n,)
+            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times, potentially in a batch.
             That is, [A₁, C₁, F₁, L₁, N₁, eta1₁, eta2₁, ..., Aₙ, Cₙ, Fₙ, Lₙ, Nₙ, eta1ₙ, eta2ₙ].
 
         Returns
         -------
-        ndarray, shape (num_paths,)
+        ndarray, shape ([batch], npaths,)
             Relative traveltime perturbations for each path.
         """
-        A, C, F, L, N, eta1, eta2 = self._unpacking_function(m)
+        m = np.atleast_2d(m)
+        A, C, F, L, N, eta1, eta2 = self._unpacking_function(
+            m
+        )  # each shape (batch, cells)
         D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
-        return self.calculate_traveltimes(D)
+        dt = calculate_relative_traveltime(
+            self.path_directions, D
+        )  # shape (batch, cells, npaths)
 
-    def calculate_traveltimes(self, D: np.ndarray) -> np.ndarray:
-        """
-        Calculate relative traveltime perturbations for all paths.
+        batch, cells, npaths = dt.shape
+        if self.weights is None:
+            self.weights = np.ones((cells, npaths)) / cells
 
-        Parameters
-        ----------
-        D : ndarray, shape (3, 3, 3, 3)
-            4th-order perturbation tensor.
-
-        Returns
-        -------
-        ndarray, shape (num_paths,)
-            Relative traveltime perturbations for each path.
-        """
-        return calculate_relative_traveltime(self.path_directions, D)
+        return np.sum(self.weights * dt, axis=-2)
 
     @property
     def npaths(self) -> int:
