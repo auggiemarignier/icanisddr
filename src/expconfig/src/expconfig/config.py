@@ -7,6 +7,8 @@ import yaml
 from pydantic import BaseModel, Field
 from pydantic_yaml import to_yaml_str
 
+from .geometry import GeometryConfig
+
 IC_RADIUS = 1221.5  # km
 
 
@@ -114,6 +116,10 @@ class Config(BaseModel):
     hypotheses: list[HypothesisConfig]
     truth: TrueBulkICConfig = Field(default_factory=TrueBulkICConfig)
     data: DataConfig = Field(default_factory=DataConfig)
+    geometry: GeometryConfig = Field(
+        default_factory=lambda: GeometryConfig.earth_inner_outer_core(),
+        description="Geometric configuration of regions.",
+    )
 
 
 def load_config(path: str | Path) -> Config:
