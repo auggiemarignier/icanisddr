@@ -103,8 +103,8 @@ def test_hemispheric_ic():
     assert len(config.regions) == 2
     assert config.regions[0].type == "hemisphere"
     assert config.regions[1].type == "hemisphere"
-    assert config.regions[0].label == "IC_north"
-    assert config.regions[1].label == "IC_south"
+    assert config.regions[0].label == "IC_east"
+    assert config.regions[1].label == "IC_west"
 
 
 def test_geometry_config_yaml_serialization():
