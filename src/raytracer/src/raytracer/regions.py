@@ -109,6 +109,15 @@ class SphericalShell(Region):
         self.little_ball = Ball(radius_inner)
         self.big_ball = Ball(radius_outer)
 
+    @property
+    def radius_inner(self) -> float:
+        """Inner radius of the shell (read-only)."""
+        return self.little_ball.radius
+
+    @property
+    def radius_outer(self) -> float:
+        """Outer radius of the shell (read-only)."""
+        return self.big_ball.radius
     def contains(self, point: np.ndarray) -> np.ndarray:
         """Check if points are within the shell."""
         return self.big_ball.contains(point) & ~self.little_ball.contains(point)
