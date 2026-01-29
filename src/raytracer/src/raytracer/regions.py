@@ -47,73 +47,6 @@ class Region(ABC):
         pass
 
 
-class SphericalShell(Region):
-    """A spherical shell (region between two concentric spheres).
-
-    Parameters
-    ----------
-    radius_inner : float
-        Inner radius of the shell.
-    radius_outer : float
-        Outer radius of the shell.
-    """
-
-    def __init__(self, radius_inner: float, radius_outer: float):
-        if radius_inner >= radius_outer:
-            raise ValueError("radius_inner must be less than radius_outer")
-        self.radius_inner = radius_inner
-        self.radius_outer = radius_outer
-
-    def contains(self, point: np.ndarray) -> np.ndarray:
-        """Check if points are within the shell."""
-        r = np.linalg.norm(point, axis=-1)
-        return (r >= self.radius_inner) & (r <= self.radius_outer)
-
-    def ray_distances(self, origin: np.ndarray, direction: np.ndarray) -> np.ndarray:
-        """Calculate distance through the shell.
-
-        Solves for ray-sphere intersections and computes the distance
-        travelled between outer and inner spheres.
-        """
-        origin = np.asarray(origin)
-        direction = np.asarray(direction)
-
-        # Intersections with outer sphere
-        t_outer = _ray_sphere_intersection(origin, direction, self.radius_outer)
-
-        # Intersections with inner sphere
-        t_inner = _ray_sphere_intersection(origin, direction, self.radius_inner)
-
-        # Determine which intersections are valid
-        # We need entry point on outer sphere and exit point on inner sphere
-
-        # For outer sphere: take the first valid (smallest positive) t
-        t_outer_entry = np.where(
-            (t_outer[:, 0] >= 0) & np.isfinite(t_outer[:, 0]),
-            t_outer[:, 0],
-            t_outer[:, 1],
-        )
-
-        # For inner sphere: take the first valid t >= t_outer_entry
-        t_inner_exit = np.full_like(t_inner[:, 0], np.inf)
-        for i in range(2):
-            valid = (t_inner[:, i] >= t_outer_entry) & np.isfinite(t_inner[:, i])
-            t_inner_exit = np.where(
-                valid & (t_inner[:, i] < t_inner_exit),
-                t_inner[:, i],
-                t_inner_exit,
-            )
-
-        # Distance is t_inner_exit - t_outer_entry
-        distances = np.where(
-            np.isfinite(t_inner_exit) & np.isfinite(t_outer_entry),
-            t_inner_exit - t_outer_entry,
-            0.0,
-        )
-
-        return distances
-
-
 class Ball(Region):
     """A solid sphere (ball).
 
@@ -124,6 +57,8 @@ class Ball(Region):
     """
 
     def __init__(self, radius: float):
+        if radius <= 0:
+            raise ValueError("Radius must be positive")
         self.radius = radius
 
     def contains(self, point: np.ndarray) -> np.ndarray:
@@ -149,10 +84,40 @@ class Ball(Region):
         distances = np.where(
             np.isfinite(t1) & np.isfinite(t2),
             np.abs(t2 - t1),
-            0.0,
+            0.0,  # No intersection yields zero distance
         )
 
         return distances
+
+
+class SphericalShell(Region):
+    """A spherical shell (region between two concentric spheres).
+
+    Parameters
+    ----------
+    radius_inner : float
+        Inner radius of the shell.
+    radius_outer : float
+        Outer radius of the shell.
+    """
+
+    def __init__(self, radius_inner: float, radius_outer: float):
+        if radius_inner >= radius_outer:
+            raise ValueError("radius_inner must be less than radius_outer")
+        if radius_inner < 0 or radius_outer <= 0:
+            raise ValueError("Radii must be positive")
+        self.little_ball = Ball(radius_inner)
+        self.big_ball = Ball(radius_outer)
+
+    def contains(self, point: np.ndarray) -> np.ndarray:
+        """Check if points are within the shell."""
+        return self.big_ball.contains(point) & ~self.little_ball.contains(point)
+
+    def ray_distances(self, origin: np.ndarray, direction: np.ndarray) -> np.ndarray:
+        """Calculate distance through the shell."""
+        return self.big_ball.ray_distances(
+            origin, direction
+        ) - self.little_ball.ray_distances(origin, direction)
 
 
 class Hemisphere(Region):
@@ -174,6 +139,8 @@ class Hemisphere(Region):
         normal: np.ndarray,
         centre: np.ndarray | None = None,
     ):
+        if radius <= 0:
+            raise ValueError("Radius must be positive")
         self.radius = radius
         self.normal = np.asarray(normal) / np.linalg.norm(normal)
         self.centre = np.asarray(centre) if centre is not None else np.zeros(3)
@@ -195,52 +162,54 @@ class Hemisphere(Region):
     def ray_distances(self, origin: np.ndarray, direction: np.ndarray) -> np.ndarray:
         """Calculate distance through the hemisphere.
 
-        This is more complex as it involves:
-        1. Ray-sphere intersections
-        2. Ray-plane intersection
-        3. Determining valid segments
+        A ray intersects the hemisphere boundary at up to three points:
+        - Two on the spherical surface
+        - One on the dividing plane
+
+        Of these, only 2 will be valid intersection points lying on the hemisphere.
+        The distance is the absolute difference between the smallest and largest valid t values.
+        If fewer than two valid points exist, the distance is zero.
         """
-        origin = np.asarray(origin)
-        direction = np.asarray(direction)
+        origin = np.atleast_2d(origin)
+        direction = np.atleast_2d(direction)
 
-        # Translate to hemisphere centre
-        origin_rel = origin - self.centre
+        # Ray-sphere intersections (up to 2 points)
+        t_sphere = _ray_sphere_intersection(origin, direction, self.radius)
+        sphere_points = origin[:, None, :] + t_sphere[..., None] * direction[:, None, :]
+        sphere_valid = self.contains(sphere_points) & np.isfinite(t_sphere)
 
-        # Find ray-sphere intersections
-        t_sphere = _ray_sphere_intersection(origin_rel, direction, self.radius)
-
-        # Find ray-plane intersection (dividing plane at centre)
+        # Ray-plane intersection (up to 1 point)
         denom = np.sum(direction * self.normal, axis=-1)
-
-        # Handle ray parallel to plane
-        t_plane = np.full_like(denom, np.inf)
-        valid_plane = np.abs(denom) > 1e-10
-        t_plane = np.where(
-            valid_plane,
-            -np.sum(origin_rel * self.normal, axis=-1) / denom,
-            np.inf,
+        ray_parallel_to_plane = np.abs(denom) < 1e-8
+        t_plane = np.full(origin.shape[0], np.nan)
+        t_plane[~ray_parallel_to_plane] = (
+            np.sum(
+                (self.centre - origin[~ray_parallel_to_plane]) * self.normal, axis=-1
+            )
+            / denom[~ray_parallel_to_plane]
         )
 
-        # Determine entry and exit points
-        # Entry is the smaller positive t from sphere
-        t_entry = np.minimum(t_sphere[..., 0], t_sphere[..., 1])
-        t_entry = np.where(t_entry >= 0, t_entry, np.inf)
-
-        # Exit is the larger positive t from sphere or plane intersection
-        t_exit = np.maximum(t_sphere[..., 0], t_sphere[..., 1])
-
-        # If ray passes through dividing plane within hemisphere, use that as exit
-        in_hemisphere_at_plane = (t_plane >= t_entry) & (t_plane < t_exit)
-        t_exit = np.where(in_hemisphere_at_plane, t_plane, t_exit)
-
-        # Calculate distance
-        distances = np.where(
-            (np.isfinite(t_entry)) & (np.isfinite(t_exit)) & (t_exit > t_entry),
-            t_exit - t_entry,
-            0.0,
+        plane_points = origin + t_plane[:, None] * direction
+        plane_valid = (
+            (~ray_parallel_to_plane)
+            & np.isfinite(t_plane)
+            & self.contains(plane_points)
         )
 
-        return distances
+        # Collect valid t values per ray
+        t1 = np.where(sphere_valid[:, 0], t_sphere[:, 0], np.nan)
+        t2 = np.where(sphere_valid[:, 1], t_sphere[:, 1], np.nan)
+        tp = np.where(plane_valid, t_plane, np.nan)
+
+        candidates = np.stack([t1, t2, tp], axis=-1)  # (n_rays, 3)
+
+        valid_counts = np.sum(np.isfinite(candidates), axis=-1)
+        t_min = np.nanmin(candidates, axis=-1)
+        t_max = np.nanmax(candidates, axis=-1)
+
+        distances = np.where(valid_counts >= 2, np.abs(t_max - t_min), 0.0)
+
+        return distances.squeeze()
 
 
 class CompositeGeometry:
@@ -335,16 +304,15 @@ def _ray_sphere_intersection(
     b = 2.0 * np.sum(origin * direction, axis=-1)
     c = np.sum(origin * origin, axis=-1) - radius**2
 
-    # Discriminant
     discriminant = b**2 - 4 * a * c
 
-    # Intersection parameters
-    sqrt_disc = np.sqrt(np.maximum(discriminant, 0.0))
+    sqrt_disc = np.sqrt(np.maximum(discriminant, 0.0))  # force at least one solution
     t1 = (-b - sqrt_disc) / (2 * a)
     t2 = (-b + sqrt_disc) / (2 * a)
 
-    # Mark invalid intersections
-    t1 = np.where(discriminant >= 0, t1, np.nan)
-    t2 = np.where(discriminant >= 0, t2, np.nan)
+    t1 = np.where(discriminant >= 0, t1, np.nan)  # nan when no solution
+    t2 = np.where(discriminant >= 0, t2, np.nan)  # nan when no solution
 
+    # The smallest t in absolute value is the intersection closest to the origin
+    # t1 is the most negative.
     return np.stack([t1, t2], axis=-1)
