@@ -212,7 +212,7 @@ class Hemisphere(Region):
         return distances.squeeze()
 
 
-class CompositeGeometry:
+class CompositeGeometry(Region):
     """A composition of multiple regions forming a complete geometry.
 
     Parameters
@@ -222,6 +222,9 @@ class CompositeGeometry:
     labels : list of str, optional
         Labels for each region.
     """
+
+    # TODO: Rename to CompositeRegion
+    # TODO: Something to validate that the regions form a complete sphere with no gaps or overlaps
 
     def __init__(self, regions: list[Region], labels: list[str] | None = None):
         self.regions = regions
@@ -233,6 +236,10 @@ class CompositeGeometry:
 
         if len(self.labels) != len(self.regions):
             raise ValueError("Number of labels must match number of regions")
+
+    def contains(self, point: np.ndarray) -> np.ndarray:
+        """Check if a point is within any of the regions."""
+        return np.any([region.contains(point) for region in self.regions], axis=0)
 
     def ray_distances(self, origin: np.ndarray, direction: np.ndarray) -> np.ndarray:
         """Calculate distances through all regions.
@@ -246,26 +253,20 @@ class CompositeGeometry:
 
         Returns
         -------
-        distances : ndarray, shape (..., n_regions)
-            Distance through each region.
+        distances : ndarray, shape (...,)
+            Distance through the whole region.
         """
-        origin = np.asarray(origin)
-        direction = np.asarray(direction)
+        origin = np.atleast_2d(origin)
+        direction = np.atleast_2d(direction)
 
-        # Ensure consistent broadcasting shape
-        if origin.ndim == 1:
-            n_rays = 1
-            origin = origin[np.newaxis, :]
-            direction = direction[np.newaxis, :]
-        else:
-            n_rays = origin.shape[0]
+        n_rays = origin.shape[0]
 
         distances = np.zeros((n_rays, len(self.regions)))
 
         for i, region in enumerate(self.regions):
             distances[:, i] = region.ray_distances(origin, direction)
 
-        return distances
+        return distances.sum(axis=1)
 
 
 def _ray_sphere_intersection(
