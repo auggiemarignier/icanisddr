@@ -139,7 +139,7 @@ class GeometryConfig(BaseModel):
         CompositeGeometry
             The configured composite geometry with all regions.
         """
-        from raytracer import CompositeGeometry
+        from raytracer import CompositeRegion
 
         # Convert each region config to a region object
         region_objects = [region_config.to_region() for region_config in self.regions]
@@ -150,7 +150,7 @@ class GeometryConfig(BaseModel):
             for i, region_config in enumerate(self.regions)
         ]
 
-        return CompositeGeometry(regions=region_objects, labels=labels)
+        return CompositeRegion(regions=region_objects, labels=labels)
 
     @classmethod
     def earth_inner_core(cls, ic_radius: float = IC_RADIUS):

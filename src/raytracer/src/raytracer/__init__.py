@@ -4,7 +4,7 @@ from raytracer.intersection import calculate_ray_region_distances
 from raytracer.ray import Ray
 from raytracer.regions import (
     Ball,
-    CompositeGeometry,
+    CompositeRegion,
     Hemisphere,
     Region,
     SphericalShell,
@@ -16,6 +16,6 @@ __all__ = [
     "SphericalShell",
     "Hemisphere",
     "Ball",
-    "CompositeGeometry",
+    "CompositeRegion",
     "calculate_ray_region_distances",
 ]

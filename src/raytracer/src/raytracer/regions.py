@@ -212,7 +212,7 @@ class Hemisphere(Region):
         return distances.squeeze()
 
 
-class CompositeGeometry(Region):
+class CompositeRegion(Region):
     """A composition of multiple regions forming a complete geometry.
 
     Parameters

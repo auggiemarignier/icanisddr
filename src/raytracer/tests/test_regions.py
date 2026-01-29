@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from raytracer.regions import _ray_sphere_intersection
 
-from raytracer import Ball, CompositeGeometry, Hemisphere, SphericalShell
+from raytracer import Ball, CompositeRegion, Hemisphere, SphericalShell
 
 
 class TestRaySphereIntersections:
@@ -246,10 +246,10 @@ class TestSphericalShell:
         np.testing.assert_allclose(distances, expected_distances)
 
 
-class TestCompositeGeometry:
-    """Test suite for the CompositeGeometry region."""
+class TestCompositeRegion:
+    """Test suite for the CompositeRegion region."""
 
-    composite = CompositeGeometry(
+    composite = CompositeRegion(
         regions=[
             Ball(radius=1.0),
             SphericalShell(radius_inner=1.0, radius_outer=2.0),
@@ -260,7 +260,7 @@ class TestCompositeGeometry:
     ball = Ball(radius=2.0)
 
     def test_contains(self) -> None:
-        """Test the contains method of the CompositeGeometry region."""
+        """Test the contains method of the CompositeRegion region."""
 
         points_inside = np.array(
             [
@@ -281,7 +281,7 @@ class TestCompositeGeometry:
         assert not np.any(self.composite.contains(points_outside))
 
     def test_distance_through_composite(self) -> None:
-        """Test distance calculation through a CompositeGeometry region."""
+        """Test distance calculation through a CompositeRegion region."""
 
         origins = np.array(
             [

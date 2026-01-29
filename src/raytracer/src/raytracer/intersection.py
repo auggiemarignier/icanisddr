@@ -3,11 +3,11 @@
 import numpy as np
 
 from raytracer.ray import Ray
-from raytracer.regions import CompositeGeometry
+from raytracer.regions import CompositeRegion
 
 
 def calculate_ray_region_distances(
-    geometry: CompositeGeometry,
+    geometry: CompositeRegion,
     ray: Ray,
 ) -> np.ndarray:
     """Calculate the distance travelled by ray(s) through each region.
