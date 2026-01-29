@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from raytracer.regions import _ray_sphere_intersection
 
-from raytracer import Ball, Hemisphere, SphericalShell
+from raytracer import Ball, CompositeGeometry, Hemisphere, SphericalShell
 
 
 class TestRaySphereIntersections:
@@ -243,4 +243,61 @@ class TestSphericalShell:
                 np.sqrt(15.0) - np.sqrt(3.0),  # outer minus inner chord at z=0.5
             ]
         )
+        np.testing.assert_allclose(distances, expected_distances)
+
+
+class TestCompositeGeometry:
+    """Test suite for the CompositeGeometry region."""
+
+    composite = CompositeGeometry(
+        regions=[
+            Ball(radius=1.0),
+            SphericalShell(radius_inner=1.0, radius_outer=2.0),
+        ]
+    )
+    # This composite is effectively the same as a single Ball of radius 2.0
+    # which can be used to verify correctness.
+    ball = Ball(radius=2.0)
+
+    def test_contains(self) -> None:
+        """Test the contains method of the CompositeGeometry region."""
+
+        points_inside = np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.5, 0.0, 0.0],
+                [-1.9, 0.0, 0.0],
+            ]
+        )
+        points_outside = np.array(
+            [
+                [2.5, 0.0, 0.0],
+                [3.0, 3.0, 3.0],
+                [2.1, 0.0, 0.0],
+            ]
+        )
+
+        assert np.all(self.composite.contains(points_inside))
+        assert not np.any(self.composite.contains(points_outside))
+
+    def test_distance_through_composite(self) -> None:
+        """Test distance calculation through a CompositeGeometry region."""
+
+        origins = np.array(
+            [
+                [0.0, 0.0, -5.0],
+                [3.0, 0.0, -5.0],
+                [0.0, 0.0, 0.0],
+            ]
+        )
+        directions = np.array(
+            [
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0, 0.0],
+            ]
+        )
+
+        distances = self.composite.ray_distances(origins, directions)
+        expected_distances = self.ball.ray_distances(origins, directions)
         np.testing.assert_allclose(distances, expected_distances)
