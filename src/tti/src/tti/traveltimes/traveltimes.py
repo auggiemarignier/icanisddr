@@ -51,9 +51,9 @@ class TravelTimeCalculator:
 
         Parameters
         ----------
-        ic_in : ndarray, shape (..., 3)
+        ic_in : ndarray, shape (npaths, 3)
             Where the path enters the inner core (longitude (deg), latitude (deg), radius (km)).
-        ic_out : ndarray, shape (..., 3)
+        ic_out : ndarray, shape (npaths, 3)
             Where the path exits the inner core (longitude (deg), latitude (deg), radius (km)).
         weights : ndarray, shape (nsegments, npaths), optional
             Weights for each segment along each path (default is None, which gives equal weights).

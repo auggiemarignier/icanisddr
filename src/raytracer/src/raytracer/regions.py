@@ -186,7 +186,9 @@ class Hemisphere(Region):
         direction = np.atleast_2d(direction)
 
         # Ray-sphere intersections (up to 2 points)
-        t_sphere = _ray_sphere_intersection(origin, direction, self.radius)
+        t_sphere = _ray_sphere_intersection(
+            origin - self.centre, direction, self.radius
+        )
         sphere_points = origin[:, None, :] + t_sphere[..., None] * direction[:, None, :]
         sphere_valid = self.contains(sphere_points) & np.isfinite(t_sphere)
 
