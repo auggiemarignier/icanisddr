@@ -69,7 +69,7 @@ exit = np.array([[-800.0, 500.0, 300.0]])
 ray = Ray(entry, exit)
 distances = composite_geometry.ray_distances(ray.origin, ray.direction)
 
-print(f"Distances through each region: {distances}")
+print(f"Total distance through all regions: {distances}")
 print(f"Region labels: {composite_geometry.labels}")
 ```
 
