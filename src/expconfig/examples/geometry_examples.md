@@ -57,7 +57,7 @@ with open("geometry.yaml") as f:
 geometry_config = GeometryConfig(**config_dict)
 
 # Convert to raytracer objects
-composite_geometry = geometry_config.to_composite_geometry()
+composite_geometry = geometry_config.to_composite_region()
 
 # Use with rays
 from raytracer import Ray
