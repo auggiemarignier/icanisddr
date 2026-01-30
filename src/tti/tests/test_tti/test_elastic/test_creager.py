@@ -5,7 +5,7 @@ from typing import Literal
 import numpy as np
 import pytest
 
-from tti.creager import calculate_traveltime, love_to_creager
+from tti.elastic.creager import calculate_traveltime, love_to_creager
 
 
 def test_traveltime_parallel(rng: np.random.Generator) -> None:
