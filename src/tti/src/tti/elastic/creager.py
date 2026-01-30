@@ -28,45 +28,48 @@ import numpy as np
 
 def love_to_creager(
     direction: Literal["polar", "equatorial"],
-    A: np.ndarray,
-    C: np.ndarray,
-    F: np.ndarray,
-    L: np.ndarray,
-    N: None | np.ndarray = None,
+    A: np.ndarray | float,
+    C: np.ndarray | float,
+    F: np.ndarray | float,
+    L: np.ndarray | float,
+    N: None | np.ndarray | float = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Convert from Love parameters to Creager 1992 parameters a, b, c.
 
     Parameters
     ----------
     direction : Literal['polar', 'equatorial']
-    A : np.ndarray
-        Love parameter A (C_11)
-    C : np.ndarray
-        Love parameter C (C_33)
-    F : np.ndarray
-        Love parameter F (C_13)
-    L : np.ndarray
-        Love parameter L (C_44)
-    N : np.ndarray, optional
-        Love parameter N (C_66) (unused but included for completeness)
+    A : np.ndarray | float
+        Love parameter A (C_11). Can be scalar or array of any shape.
+    C : np.ndarray | float
+        Love parameter C (C_33). Can be scalar or array of any shape.
+    F : np.ndarray | float
+        Love parameter F (C_13). Can be scalar or array of any shape.
+    L : np.ndarray | float
+        Love parameter L (C_44). Can be scalar or array of any shape.
+    N : np.ndarray | float, optional
+        Love parameter N (C_66) (unused but included for completeness). Can be scalar or array of any shape.
 
     Returns
     -------
     a : np.ndarray
-        Creager parameter a
+        Creager parameter a, shape matches broadcast shape of inputs
     b : np.ndarray
-        Creager parameter b
+        Creager parameter b, shape matches broadcast shape of inputs
     c : np.ndarray
-        Creager parameter c
+        Creager parameter c, shape matches broadcast shape of inputs
     """
-    b = (C - A) / (2 * A)
-    c = (4 * L + 2 * F - A - C) / (8 * A)
+    # Broadcast all inputs to a common shape (preserve shape like elastic module)
+    A_b, C_b, F_b, L_b = np.broadcast_arrays(A, C, F, L)
+
+    b = (C_b - A_b) / (2 * A_b)
+    c = (4 * L_b + 2 * F_b - A_b - C_b) / (8 * A_b)
 
     match direction.lower():
         case "polar":
-            a = C - b - c
+            a = C_b - b - c
         case "equatorial":
-            a = A
+            a = A_b
         case _:
             raise ValueError("direction must be 'polar' or 'equatorial'")
 
@@ -74,26 +77,56 @@ def love_to_creager(
 
 
 def calculate_traveltime(
-    theta: np.ndarray, a: np.ndarray, b: np.ndarray, c: np.ndarray
+    theta: np.ndarray | float,
+    a: np.ndarray | float,
+    b: np.ndarray | float,
+    c: np.ndarray | float,
 ) -> np.ndarray:
     """Calculate the traveltime perturbation according to Creager 1992.
 
+    The broadcasting behavior treats a, b, c as "parameter sets" and theta as
+    "angle values" to evaluate. When both are arrays, theta is broadcast against
+    the last axis of a, b, c. For example, if a, b, c have shape (2, 4) and
+    theta has shape (10,), the result will have shape (2, 4, 10).
+
     Parameters
     ----------
-    theta : np.ndarray
-        Angle between the ray and the symmetry axis (in radians)
-    a : np.ndarray
-        Creager parameter a
-    b : np.ndarray
-        Creager parameter b
-    c : np.ndarray
-        Creager parameter c
+    theta : np.ndarray | float
+        Angle between the ray and the symmetry axis (in radians).
+        Can be scalar or array.
+    a : np.ndarray | float
+        Creager parameter a. Can be scalar or array of any shape.
+    b : np.ndarray | float
+        Creager parameter b. Can be scalar or array of any shape.
+    c : np.ndarray | float
+        Creager parameter c. Can be scalar or array of any shape.
 
     Returns
     -------
     dt : np.ndarray
-        Traveltime perturbation
+        Traveltime perturbation. If a, b, c are arrays with shape (...,) and
+        theta is an array with shape (n,), result has shape (..., n).
     """
+    # Convert to arrays
+    theta = np.asarray(theta)
+    a = np.asarray(a)
+    b = np.asarray(b)
+    c = np.asarray(c)
+
+    # Expand dimensions for broadcasting: theta broadcasts against last axis of a, b, c
+    # Only add dimension if both a/b/c and theta are non-scalar arrays
+    if a.ndim > 0 and theta.ndim > 0:
+        # Add trailing axis to a, b, c for broadcasting with theta
+        a = a[..., np.newaxis]
+        b = b[..., np.newaxis]
+        c = c[..., np.newaxis]
+    elif a.ndim == 0 and theta.ndim > 0:
+        # Scalar parameters broadcast naturally with array theta
+        pass
+    elif a.ndim > 0 and theta.ndim == 0:
+        # Array parameters with scalar theta - no expansion needed
+        pass
+
     cos_theta = np.cos(theta)
     dt = a + b * cos_theta**2 + c * cos_theta**4
     return dt
