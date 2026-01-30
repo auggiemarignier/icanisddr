@@ -142,3 +142,68 @@ def test_love_to_creager_N_irrelevant(
     np.testing.assert_allclose(a1, a2)
     np.testing.assert_allclose(b1, b2)
     np.testing.assert_allclose(c1, c2)
+
+
+@pytest.mark.parametrize("direction", ["polar", "equatorial"])
+def test_love_to_creager_vectorised(direction: Literal["polar", "equatorial"]) -> None:
+    """Test that love_to_creager handles batched array inputs correctly."""
+    # Test with batched array inputs
+    A = np.array([8.0, 9.0, 10.0])
+    C = np.array([12.0, 13.0, 14.0])
+    F = np.array([7.0, 7.5, 8.0])
+    L = np.array([3.0, 3.5, 4.0])
+    N = np.array([4.0, 4.5, 5.0])
+
+    a, b, c = love_to_creager(direction, A, C, F, L, N)
+
+    # Check that output shapes are correct
+    assert a.shape == (3,)
+    assert b.shape == (3,)
+    assert c.shape == (3,)
+
+    # Verify each element matches scalar computation
+    for i in range(3):
+        a_i, b_i, c_i = love_to_creager(direction, A[i], C[i], F[i], L[i], N[i])
+        np.testing.assert_allclose(a[i], a_i)
+        np.testing.assert_allclose(b[i], b_i)
+        np.testing.assert_allclose(c[i], c_i)
+
+
+def test_calculate_traveltime_vectorised() -> None:
+    """Test that calculate_traveltime handles broadcasting correctly."""
+    # Test broadcasting with different shaped inputs
+    theta = np.array([0.0, np.pi / 4, np.pi / 2])  # shape (3,)
+    a = np.array([1.0, 2.0])  # shape (2,)
+    b = np.array([0.1, 0.2])  # shape (2,)
+    c = np.array([0.01, 0.02])  # shape (2,)
+
+    # Reshape for broadcasting: theta (1, 3), a, b, c (2, 1)
+    dt = calculate_traveltime(theta[None, :], a[:, None], b[:, None], c[:, None])
+
+    # Check output shape is (2, 3) - 2 parameter sets x 3 angles
+    assert dt.shape == (2, 3)
+
+    # Verify each element matches scalar computation
+    for i in range(2):
+        for j in range(3):
+            dt_ij = calculate_traveltime(theta[j], a[i], b[i], c[i])
+            np.testing.assert_allclose(dt[i, j], dt_ij)
+
+
+def test_calculate_traveltime_batched() -> None:
+    """Test that calculate_traveltime handles batched inputs correctly."""
+    # Test with batched inputs of same shape
+    theta = np.array([0.0, np.pi / 4, np.pi / 2])
+    a = np.array([1.0, 2.0, 3.0])
+    b = np.array([0.1, 0.2, 0.3])
+    c = np.array([0.01, 0.02, 0.03])
+
+    dt = calculate_traveltime(theta, a, b, c)
+
+    # Check output shape is (3,)
+    assert dt.shape == (3,)
+
+    # Verify each element matches scalar computation
+    for i in range(3):
+        dt_i = calculate_traveltime(theta[i], a[i], b[i], c[i])
+        np.testing.assert_allclose(dt[i], dt_i)

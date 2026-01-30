@@ -28,45 +28,52 @@ import numpy as np
 
 def love_to_creager(
     direction: Literal["polar", "equatorial"],
-    A: np.ndarray,
-    C: np.ndarray,
-    F: np.ndarray,
-    L: np.ndarray,
-    N: None | np.ndarray = None,
+    A: np.ndarray | float,
+    C: np.ndarray | float,
+    F: np.ndarray | float,
+    L: np.ndarray | float,
+    N: None | np.ndarray | float = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Convert from Love parameters to Creager 1992 parameters a, b, c.
 
     Parameters
     ----------
     direction : Literal['polar', 'equatorial']
-    A : np.ndarray
-        Love parameter A (C_11)
-    C : np.ndarray
-        Love parameter C (C_33)
-    F : np.ndarray
-        Love parameter F (C_13)
-    L : np.ndarray
-        Love parameter L (C_44)
-    N : np.ndarray, optional
-        Love parameter N (C_66) (unused but included for completeness)
+    A : np.ndarray | float
+        Love parameter A (C_11). Can be scalar or array of shape (n,).
+    C : np.ndarray | float
+        Love parameter C (C_33). Can be scalar or array of shape (n,).
+    F : np.ndarray | float
+        Love parameter F (C_13). Can be scalar or array of shape (n,).
+    L : np.ndarray | float
+        Love parameter L (C_44). Can be scalar or array of shape (n,).
+    N : np.ndarray | float, optional
+        Love parameter N (C_66) (unused but included for completeness). Can be scalar or array of shape (n,).
 
     Returns
     -------
     a : np.ndarray
-        Creager parameter a
+        Creager parameter a, shape (n,) where n is broadcast size
     b : np.ndarray
-        Creager parameter b
+        Creager parameter b, shape (n,) where n is broadcast size
     c : np.ndarray
-        Creager parameter c
+        Creager parameter c, shape (n,) where n is broadcast size
     """
-    b = (C - A) / (2 * A)
-    c = (4 * L + 2 * F - A - C) / (8 * A)
+    # Broadcast all inputs to a common shape and flatten to 1D
+    A_b, C_b, F_b, L_b = np.broadcast_arrays(A, C, F, L)
+    A_flat = np.asarray(A_b).ravel().astype(float)
+    C_flat = np.asarray(C_b).ravel().astype(float)
+    F_flat = np.asarray(F_b).ravel().astype(float)
+    L_flat = np.asarray(L_b).ravel().astype(float)
+
+    b = (C_flat - A_flat) / (2 * A_flat)
+    c = (4 * L_flat + 2 * F_flat - A_flat - C_flat) / (8 * A_flat)
 
     match direction.lower():
         case "polar":
-            a = C - b - c
+            a = C_flat - b - c
         case "equatorial":
-            a = A
+            a = A_flat
         case _:
             raise ValueError("direction must be 'polar' or 'equatorial'")
 
@@ -74,26 +81,36 @@ def love_to_creager(
 
 
 def calculate_traveltime(
-    theta: np.ndarray, a: np.ndarray, b: np.ndarray, c: np.ndarray
+    theta: np.ndarray | float,
+    a: np.ndarray | float,
+    b: np.ndarray | float,
+    c: np.ndarray | float,
 ) -> np.ndarray:
     """Calculate the traveltime perturbation according to Creager 1992.
 
     Parameters
     ----------
-    theta : np.ndarray
-        Angle between the ray and the symmetry axis (in radians)
-    a : np.ndarray
-        Creager parameter a
-    b : np.ndarray
-        Creager parameter b
-    c : np.ndarray
-        Creager parameter c
+    theta : np.ndarray | float
+        Angle between the ray and the symmetry axis (in radians).
+        Can be scalar or array. Will be broadcast with a, b, c.
+    a : np.ndarray | float
+        Creager parameter a. Can be scalar or array. Will be broadcast with theta, b, c.
+    b : np.ndarray | float
+        Creager parameter b. Can be scalar or array. Will be broadcast with theta, a, c.
+    c : np.ndarray | float
+        Creager parameter c. Can be scalar or array. Will be broadcast with theta, a, b.
 
     Returns
     -------
     dt : np.ndarray
-        Traveltime perturbation
+        Traveltime perturbation. Shape is the result of broadcasting all input shapes.
     """
+    # Convert to arrays and use numpy broadcasting
+    theta = np.asarray(theta)
+    a = np.asarray(a)
+    b = np.asarray(b)
+    c = np.asarray(c)
+
     cos_theta = np.cos(theta)
     dt = a + b * cos_theta**2 + c * cos_theta**4
     return dt
