@@ -40,40 +40,36 @@ def love_to_creager(
     ----------
     direction : Literal['polar', 'equatorial']
     A : np.ndarray | float
-        Love parameter A (C_11). Can be scalar or array of shape (n,).
+        Love parameter A (C_11). Can be scalar or array of any shape.
     C : np.ndarray | float
-        Love parameter C (C_33). Can be scalar or array of shape (n,).
+        Love parameter C (C_33). Can be scalar or array of any shape.
     F : np.ndarray | float
-        Love parameter F (C_13). Can be scalar or array of shape (n,).
+        Love parameter F (C_13). Can be scalar or array of any shape.
     L : np.ndarray | float
-        Love parameter L (C_44). Can be scalar or array of shape (n,).
+        Love parameter L (C_44). Can be scalar or array of any shape.
     N : np.ndarray | float, optional
-        Love parameter N (C_66) (unused but included for completeness). Can be scalar or array of shape (n,).
+        Love parameter N (C_66) (unused but included for completeness). Can be scalar or array of any shape.
 
     Returns
     -------
     a : np.ndarray
-        Creager parameter a, shape (n,) where n is broadcast size
+        Creager parameter a, shape matches broadcast shape of inputs
     b : np.ndarray
-        Creager parameter b, shape (n,) where n is broadcast size
+        Creager parameter b, shape matches broadcast shape of inputs
     c : np.ndarray
-        Creager parameter c, shape (n,) where n is broadcast size
+        Creager parameter c, shape matches broadcast shape of inputs
     """
-    # Broadcast all inputs to a common shape and flatten to 1D
+    # Broadcast all inputs to a common shape (preserve shape like elastic module)
     A_b, C_b, F_b, L_b = np.broadcast_arrays(A, C, F, L)
-    A_flat = np.asarray(A_b).ravel().astype(float)
-    C_flat = np.asarray(C_b).ravel().astype(float)
-    F_flat = np.asarray(F_b).ravel().astype(float)
-    L_flat = np.asarray(L_b).ravel().astype(float)
 
-    b = (C_flat - A_flat) / (2 * A_flat)
-    c = (4 * L_flat + 2 * F_flat - A_flat - C_flat) / (8 * A_flat)
+    b = (C_b - A_b) / (2 * A_b)
+    c = (4 * L_b + 2 * F_b - A_b - C_b) / (8 * A_b)
 
     match direction.lower():
         case "polar":
-            a = C_flat - b - c
+            a = C_b - b - c
         case "equatorial":
-            a = A_flat
+            a = A_b
         case _:
             raise ValueError("direction must be 'polar' or 'equatorial'")
 
@@ -105,11 +101,21 @@ def calculate_traveltime(
     dt : np.ndarray
         Traveltime perturbation. Shape is the result of broadcasting all input shapes.
     """
-    # Convert to arrays and use numpy broadcasting
+    # Convert to arrays
     theta = np.asarray(theta)
     a = np.asarray(a)
     b = np.asarray(b)
     c = np.asarray(c)
+
+    # Expand dimensions so theta broadcasts with leading dimensions of a, b, c
+    # If a, b, c have shape (..., ), and theta has shape (n,),
+    # we want result shape (..., n)
+    # Add trailing dimensions to a, b, c to match theta's dimensions
+    if a.ndim > 0 and theta.ndim > 0:
+        # Add trailing axis to a, b, c for broadcasting with theta
+        a = a[..., np.newaxis]
+        b = b[..., np.newaxis]
+        c = c[..., np.newaxis]
 
     cos_theta = np.cos(theta)
     dt = a + b * cos_theta**2 + c * cos_theta**4
