@@ -172,12 +172,12 @@ def test_love_to_creager_vectorised(direction: Literal["polar", "equatorial"]) -
 def test_calculate_traveltime_vectorised() -> None:
     """Test that calculate_traveltime handles broadcasting correctly."""
     # Test broadcasting with different shaped inputs
+    # Broadcasting with a, b, c shape (2,) and theta shape (3,) produces shape (2, 3)
     theta = np.array([0.0, np.pi / 4, np.pi / 2])  # shape (3,)
     a = np.array([1.0, 2.0])  # shape (2,)
     b = np.array([0.1, 0.2])  # shape (2,)
     c = np.array([0.01, 0.02])  # shape (2,)
 
-    # When a, b, c are 1D and theta is 1D, we get shape (2, 3)
     dt = calculate_traveltime(theta, a, b, c)
 
     # Check output shape is (2, 3) - 2 parameter sets x 3 angles
@@ -192,29 +192,29 @@ def test_calculate_traveltime_vectorised() -> None:
 
 def test_calculate_traveltime_batched() -> None:
     """Test that calculate_traveltime handles batched inputs correctly."""
-    # Test with batched inputs where all shapes match
-    # When both have matching 1D shapes, element-wise computation
+    # When both parameter arrays and theta have the same 1D shape,
+    # the broadcasting behavior expands dimensions resulting in (n, n) output
     a_scalar = np.array([1.0, 2.0, 3.0])
     b_scalar = np.array([0.1, 0.2, 0.3])
     c_scalar = np.array([0.01, 0.02, 0.03])
     theta_scalar = np.array([0.0, np.pi / 4, np.pi / 2])
 
-    # For element-wise, we need scalar computations
+    # For element-wise computation, we need scalar operations
     dt_elements = []
     for i in range(3):
-        dt_i = calculate_traveltime(theta_scalar[i], a_scalar[i], b_scalar[i], c_scalar[i])
+        dt_i = calculate_traveltime(
+            theta_scalar[i], a_scalar[i], b_scalar[i], c_scalar[i]
+        )
         dt_elements.append(dt_i)
-    
-    expected = np.array(dt_elements)
-    
-    # When shapes are the same 1D, it broadcasts to (3, 3) not element-wise
-    # So for true element-wise we need scalars in a loop
-    # Let's verify the broadcasting behavior instead
+
+    expected_diagonal = np.array(dt_elements)
+
+    # The new broadcasting always expands: (3,) x (3,) -> (3, 3)
     dt = calculate_traveltime(theta_scalar, a_scalar, b_scalar, c_scalar)
-    
-    # With new broadcasting: a (3,) + newaxis -> (3, 1), theta (3,) -> result (3, 3)
+
+    # Result shape is (3, 3), not element-wise (3,)
     assert dt.shape == (3, 3)
-    
-    # Check diagonal matches element-wise
+
+    # Check diagonal matches element-wise computation
     for i in range(3):
-        np.testing.assert_allclose(dt[i, i], expected[i])
+        np.testing.assert_allclose(dt[i, i], expected_diagonal[i])

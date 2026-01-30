@@ -84,22 +84,28 @@ def calculate_traveltime(
 ) -> np.ndarray:
     """Calculate the traveltime perturbation according to Creager 1992.
 
+    The broadcasting behavior treats a, b, c as "parameter sets" and theta as
+    "angle values" to evaluate. When both are arrays, theta is broadcast against
+    the last axis of a, b, c. For example, if a, b, c have shape (2, 4) and
+    theta has shape (10,), the result will have shape (2, 4, 10).
+
     Parameters
     ----------
     theta : np.ndarray | float
         Angle between the ray and the symmetry axis (in radians).
-        Can be scalar or array. Will be broadcast with a, b, c.
+        Can be scalar or array.
     a : np.ndarray | float
-        Creager parameter a. Can be scalar or array. Will be broadcast with theta, b, c.
+        Creager parameter a. Can be scalar or array of any shape.
     b : np.ndarray | float
-        Creager parameter b. Can be scalar or array. Will be broadcast with theta, a, c.
+        Creager parameter b. Can be scalar or array of any shape.
     c : np.ndarray | float
-        Creager parameter c. Can be scalar or array. Will be broadcast with theta, a, b.
+        Creager parameter c. Can be scalar or array of any shape.
 
     Returns
     -------
     dt : np.ndarray
-        Traveltime perturbation. Shape is the result of broadcasting all input shapes.
+        Traveltime perturbation. If a, b, c are arrays with shape (...,) and
+        theta is an array with shape (n,), result has shape (..., n).
     """
     # Convert to arrays
     theta = np.asarray(theta)
@@ -107,15 +113,19 @@ def calculate_traveltime(
     b = np.asarray(b)
     c = np.asarray(c)
 
-    # Expand dimensions so theta broadcasts with leading dimensions of a, b, c
-    # If a, b, c have shape (..., ), and theta has shape (n,),
-    # we want result shape (..., n)
-    # Add trailing dimensions to a, b, c to match theta's dimensions
+    # Expand dimensions for broadcasting: theta broadcasts against last axis of a, b, c
+    # Only add dimension if both a/b/c and theta are non-scalar arrays
     if a.ndim > 0 and theta.ndim > 0:
         # Add trailing axis to a, b, c for broadcasting with theta
         a = a[..., np.newaxis]
         b = b[..., np.newaxis]
         c = c[..., np.newaxis]
+    elif a.ndim == 0 and theta.ndim > 0:
+        # Scalar parameters broadcast naturally with array theta
+        pass
+    elif a.ndim > 0 and theta.ndim == 0:
+        # Array parameters with scalar theta - no expansion needed
+        pass
 
     cos_theta = np.cos(theta)
     dt = a + b * cos_theta**2 + c * cos_theta**4
