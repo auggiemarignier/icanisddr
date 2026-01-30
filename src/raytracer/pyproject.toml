@@ -1,17 +1,14 @@
 [project]
-name = "expconfig"
+name = "raytracer"
 version = "0.1.0"
-description = "Add your description here"
+description = "Pure NumPy ray tracing through 3D spherical geometries"
 readme = "README.md"
 authors = [
     { name = "auggiemarignier", email = "auggie.marignier@earth.ox.ac.uk" }
 ]
 requires-python = ">=3.12, <3.14"
 dependencies = [
-    "pydantic>=2.12.5",
-    "pydantic-yaml>=1.6.0",
-    "raytracer",
-    "numpy>=1.24.0",
+    "numpy>=2.3.4",
 ]
 
 [build-system]

@@ -11,6 +11,7 @@ members = [
     "bulkic",
     "expconfig",
     "profiling",
+    "raytracer",
     "sdicani",
     "tti",
 ]
@@ -620,14 +621,18 @@ name = "expconfig"
 version = "0.1.0"
 source = { editable = "src/expconfig" }
 dependencies = [
+    { name = "numpy" },
     { name = "pydantic" },
     { name = "pydantic-yaml" },
+    { name = "raytracer" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "numpy", specifier = ">=1.24.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-yaml", specifier = ">=1.6.0" },
+    { name = "raytracer", editable = "src/raytracer" },
 ]
 
 [[package]]
@@ -2122,6 +2127,17 @@ wheels = [
 ]
 
 [[package]]
+name = "raytracer"
+version = "0.1.0"
+source = { editable = "src/raytracer" }
+dependencies = [
+    { name = "numpy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "numpy", specifier = ">=2.3.4" }]
+
+[[package]]
 name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2385,6 +2401,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "expconfig" },
+    { name = "raytracer" },
     { name = "sampling" },
     { name = "sddr" },
     { name = "tti" },
@@ -2399,6 +2416,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "expconfig", editable = "src/expconfig" },
+    { name = "raytracer", editable = "src/raytracer" },
     { name = "sampling", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling&branch=main" },
     { name = "sddr", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr&branch=main" },
     { name = "tti", editable = "src/tti" },

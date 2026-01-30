@@ -4,7 +4,8 @@ from collections.abc import Callable
 
 import numpy as np
 
-from .config import IC_RADIUS, TrueBulkICConfig
+from .config import TrueBulkICConfig
+from .geometry import IC_RADIUS
 
 DEFAULT_TRUTH = TrueBulkICConfig().as_array()
 RNG = np.random.default_rng(1234)
