@@ -80,20 +80,20 @@ def test_geometry_config():
     assert config.regions[1].label == "OC"
 
     # Convert to composite geometry
-    geometry = config.to_composite_geometry()
+    geometry = config.to_composite_region()
     assert len(geometry.regions) == 2
     assert geometry.labels == ["IC", "OC"]
 
 
-def test_earth_inner_outer_core():
+def test_earth_imic():
     """Test convenience method for standard Earth configuration."""
-    config = GeometryConfig.earth_inner_outer_core()
+    config = GeometryConfig.earth_imic()
 
     assert len(config.regions) == 2
     assert config.regions[0].type == "ball"
-    assert config.regions[0].radius == 1221.5
+    assert config.regions[0].radius == 650.0
     assert config.regions[1].type == "shell"
-    assert config.regions[1].radius_outer == 3480.0
+    assert config.regions[1].radius_outer == 1221.5
 
 
 def test_hemispheric_ic():
@@ -109,7 +109,7 @@ def test_hemispheric_ic():
 
 def test_geometry_config_yaml_serialization():
     """Test that GeometryConfig can be serialized to YAML."""
-    config = GeometryConfig.earth_inner_outer_core()
+    config = GeometryConfig.earth_imic()
 
     # Convert to dict (Pydantic model_dump)
     config_dict = config.model_dump()

@@ -103,10 +103,11 @@ class TravelTimeCalculator:
         )  # shape (batch, cells, npaths)
 
         batch, cells, npaths = dt.shape
-        if self.weights is None:
-            self.weights = np.ones((cells, npaths)) / cells
+        weights = (
+            np.ones((cells, npaths)) / cells if self.weights is None else self.weights
+        )
 
-        return np.sum(self.weights * dt, axis=-2)
+        return np.sum(weights * dt, axis=-2)
 
     @property
     def npaths(self) -> int:

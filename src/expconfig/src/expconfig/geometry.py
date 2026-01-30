@@ -1,5 +1,6 @@
 """Configuration classes for geometric regions."""
 
+from collections.abc import Sequence
 from typing import Literal
 
 import numpy as np
@@ -118,7 +119,7 @@ class HemisphereConfig(RegionConfig):
 
 
 class GeometryConfig(BaseModel):
-    """Configuration for a composite geometry.
+    """Configuration for a composite region.
 
     This defines a complete geometric structure composed of multiple regions
     (e.g., inner core + outer core, or hemispherical shells).
@@ -126,18 +127,18 @@ class GeometryConfig(BaseModel):
     Parameters
     ----------
     regions : list of RegionConfig
-        List of region configurations that make up the geometry.
+        List of region configurations that make up the composite region.
     """
 
     regions: list[BallConfig | SphericalShellConfig | HemisphereConfig]
 
-    def to_composite_geometry(self):
-        """Create a CompositeGeometry from this configuration.
+    def to_composite_region(self):
+        """Create a CompositeRegion from this configuration.
 
         Returns
         -------
-        CompositeGeometry
-            The configured composite geometry with all regions.
+        CompositeRegion
+            The configured composite region with all regions.
         """
         from raytracer import CompositeRegion
 
@@ -173,7 +174,7 @@ class GeometryConfig(BaseModel):
         )
 
     @classmethod
-    def earth_imic(cls, imic_radius: float = 650, ic_radius: float = 1221.5):
+    def earth_imic(cls, imic_radius: float = 650, ic_radius: float = IC_RADIUS):
         """Create a standard Earth configuration with inner most inner core.
 
         Parameters
@@ -203,7 +204,7 @@ class GeometryConfig(BaseModel):
     def hemispheric_ic(
         cls,
         ic_radius: float = 1221.5,
-        normal: list[float] = [1.0, 0.0, 0.0],
+        normal: Sequence[float] = (1.0, 0.0, 0.0),
     ):
         """Create a hemispherically divided inner core.
 
@@ -211,7 +212,7 @@ class GeometryConfig(BaseModel):
         ----------
         ic_radius : float, default=1221.5
             Inner core radius (km).
-        normal : list of float, default=[1.0, 0.0, 0.0]
+        normal : Sequence[float], default=(1.0, 0.0, 0.0)
             Normal vector defining the hemisphere division.
 
         Returns
@@ -223,7 +224,7 @@ class GeometryConfig(BaseModel):
             regions=[
                 HemisphereConfig(
                     radius=ic_radius,
-                    normal=normal,
+                    normal=list(normal),
                     label="IC_east",
                 ),
                 HemisphereConfig(

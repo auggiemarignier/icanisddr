@@ -13,13 +13,13 @@ Pure NumPy implementation for ray tracing through spherical composite geometries
 
 ```python
 import numpy as np
-from raytracer import SphericalShell, Ball, CompositeGeometry, Ray
+from raytracer import SphericalShell, Ball, CompositeRegion, Ray
 
 # Create a composite geometry: inner core + outer core
 inner_core = Ball(radius=1221.5)
 outer_core = SphericalShell(radius_inner=1221.5, radius_outer=3480.0)
 
-geometry = CompositeGeometry(
+geometry = CompositeRegion(
     [inner_core, outer_core],
     labels=["IC", "OC"],
 )
@@ -31,7 +31,7 @@ exit = np.array([[-800.0, 500.0, 300.0]])
 # Calculate distances through each region
 ray = Ray(entry, exit)
 distances = geometry.ray_distances(ray.origin, ray.direction)
-# distances shape: (1, 2) - distance through IC and OC
+# distances shape: (1,)  total distance through inner_core and outer_core
 ```
 
 ## API
@@ -42,9 +42,9 @@ distances = geometry.ray_distances(ray.origin, ray.direction)
 - `SphericalShell(radius_inner, radius_outer)` - Spherical shell
 - `Hemisphere(radius, normal, centre=None)` - Hemispherical region
 
-### CompositeGeometry
+### CompositeRegion
 
-- `CompositeGeometry(regions, labels=None)` - Combine regions
+- `CompositeRegion(regions, labels=None)` - Combine regions
 - `.ray_distances(origin, direction)` - Calculate distances for rays
 
 ### Ray

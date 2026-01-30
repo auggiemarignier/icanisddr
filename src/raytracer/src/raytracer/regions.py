@@ -118,6 +118,7 @@ class SphericalShell(Region):
     def radius_outer(self) -> float:
         """Outer radius of the shell (read-only)."""
         return self.big_ball.radius
+
     def contains(self, point: np.ndarray) -> np.ndarray:
         """Check if points are within the shell."""
         return self.big_ball.contains(point) & ~self.little_ball.contains(point)
@@ -151,7 +152,9 @@ class Hemisphere(Region):
         if radius <= 0:
             raise ValueError("Radius must be positive")
         self.radius = radius
-        self.normal = np.asarray(normal) / np.linalg.norm(normal)
+        if (norm := np.linalg.norm(normal)) == 0:
+            raise ValueError("Normal vector cannot be zero")
+        self.normal = np.asarray(normal) / norm
         self.centre = np.asarray(centre) if centre is not None else np.zeros(3)
 
     def contains(self, point: np.ndarray) -> np.ndarray:
@@ -250,6 +253,35 @@ class CompositeRegion(Region):
         """Check if a point is within any of the regions."""
         return np.any([region.contains(point) for region in self.regions], axis=0)
 
+    def ray_distances_per_region(
+        self, origin: np.ndarray, direction: np.ndarray
+    ) -> np.ndarray:
+        """Calculate distances through each region separately.
+
+        Parameters
+        ----------
+        origin : ndarray, shape (..., 3) or (3,)
+            Ray origin point(s).
+        direction : ndarray, shape (..., 3) or (3,)
+            Ray direction vector(s) (assumed normalised).
+
+        Returns
+        -------
+        distances : ndarray, shape (..., n_regions)
+            Distances through each region.
+        """
+        origin = np.atleast_2d(origin)
+        direction = np.atleast_2d(direction)
+
+        n_rays = origin.shape[0]
+
+        distances = np.zeros((n_rays, len(self.regions)))
+
+        for i, region in enumerate(self.regions):
+            distances[:, i] = region.ray_distances(origin, direction)
+
+        return distances
+
     def ray_distances(self, origin: np.ndarray, direction: np.ndarray) -> np.ndarray:
         """Calculate distances through all regions.
 
@@ -265,15 +297,7 @@ class CompositeRegion(Region):
         distances : ndarray, shape (...,)
             Distance through the whole region.
         """
-        origin = np.atleast_2d(origin)
-        direction = np.atleast_2d(direction)
-
-        n_rays = origin.shape[0]
-
-        distances = np.zeros((n_rays, len(self.regions)))
-
-        for i, region in enumerate(self.regions):
-            distances[:, i] = region.ray_distances(origin, direction)
+        distances = self.ray_distances_per_region(origin, direction)
 
         return distances.sum(axis=1)
 
