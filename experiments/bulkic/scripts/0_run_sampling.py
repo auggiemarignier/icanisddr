@@ -61,7 +61,7 @@ def _setup_likelihood(
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
     ttc = TravelTimeCalculator(
-        ic_in, ic_out, reference_love=PREM.as_array(), nested=True, shear=False
+        ic_in, ic_out, reference_love=PREM.as_array(), nested=True, shear=True
     )
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
     likelihood = GaussianLikelihood(
