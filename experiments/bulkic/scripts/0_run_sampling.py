@@ -74,7 +74,7 @@ def setup(
         ),
         truth,
         noise_level,
-    )
+    )[0]
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
     logger.info("Setting up likelihood function")
