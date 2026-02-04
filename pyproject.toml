@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "SAvage-Dickey Density Ratio for Anisotropic Seismic Tomography of the Inner Core"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
-dependencies = ["sddr", "sampling", "tti", "expconfig", "raytracer"]
+dependencies = ["sddr", "sampling", "tti", "expconfig", "raytracer", "icprem"]
 
 [tool.uv.workspace]
 members = [
