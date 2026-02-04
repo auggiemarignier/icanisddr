@@ -29,7 +29,7 @@ def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
     Parameters
     ----------
     m : ndarray, shape (B, M * 7)
-        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2N}, \delta_{LN}, N, eta1, eta2]
+        Nested model parameters: [A, \delta_{CA}, \delta_{F,A+2N}, L, \delta_{NL}, eta1, eta2]
         M is the number of model segments (e.g. number of pixels).
         B is the batch size (at least 1).
 
@@ -52,15 +52,14 @@ def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
     """
     batch_size = m.shape[0]
     mT = m.reshape(batch_size, -1, 7)
-    return (
-        mT[..., 0],
-        mT[..., 1] + mT[..., 0],
-        mT[..., 2] + mT[..., 0] - 2 * mT[..., 4],
-        mT[..., 3] + mT[..., 4],
-        mT[..., 4],
-        np.radians(mT[..., 5]),
-        np.radians(mT[..., 6]),
-    )
+    A = mT[..., 0]
+    C = mT[..., 1] + A
+    L = mT[..., 3]
+    N = mT[..., 4] + L
+    F = mT[..., 2] + A - 2 * N
+    eta1 = np.radians(mT[..., 5])
+    eta2 = np.radians(mT[..., 6])
+    return (A, C, F, L, N, eta1, eta2)
 
 
 def _unpack_nested_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
