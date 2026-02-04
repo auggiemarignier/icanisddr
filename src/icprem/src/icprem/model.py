@@ -48,7 +48,7 @@ class PREMInnerCore(OneDModel):
 def average(
     property_name: Literal["density", "vp", "vs", "qm", "qk"],
     radius: float,
-    model: OneDModel = PREMInnerCore(),
+    model: OneDModel | None = None,
 ) -> float:
     """Compute the average value of a property over the inner core.
 
@@ -60,6 +60,8 @@ def average(
     Returns:
         The average value of the property over the specified radius.
     """
+    if model is None:
+        model = PREMInnerCore()
     poly = getattr(model, f"{property_name}_poly")
     if poly is None:
         raise ValueError(f"Model does not have property '{property_name}_poly'")
