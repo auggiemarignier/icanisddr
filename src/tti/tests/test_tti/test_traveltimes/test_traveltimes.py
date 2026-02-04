@@ -338,6 +338,10 @@ class TestTravelTimeCalculator:
     ) -> None:
         """Test that the TravelTimeCalculator correctly adds reference Love parameters."""
         reference_love = rng.random(size=5)  # random reference Love parameters
+        # In this test we reuse the shared `calculator` fixture and explicitly override
+        # its `reference_love` attribute instead of constructing a new instance with
+        # `reference_love=...` in __init__. This keeps the fixture usage simple while
+        # still exercising the behavior with non-zero reference Love parameters.
         calculator.reference_love = reference_love  # override default zeros
         lam = 12.0
         mu = 5.0
