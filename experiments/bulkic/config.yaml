@@ -4,7 +4,8 @@ sampling:
   burn_in: 500
   thin: 5
   progress: true
-  parallel: true
+  parallel: false
+  vectorise: true
 priors:
   components:
     - type: gaussian
