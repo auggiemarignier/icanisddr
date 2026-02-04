@@ -4,21 +4,23 @@ version = "0.1.0"
 description = "SAvage-Dickey Density Ratio for Anisotropic Seismic Tomography of the Inner Core"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
-dependencies = [
-    "sddr",
-    "sampling",
-    "tti",
-    "expconfig",
-    "raytracer",
-]
+dependencies = ["sddr", "sampling", "tti", "expconfig", "raytracer", "icprem"]
 
 [tool.uv.workspace]
-members = ["experiments/*", "profiling", "src/tti", "src/expconfig", "src/raytracer"]
+members = [
+    "experiments/*",
+    "profiling",
+    "src/tti",
+    "src/expconfig",
+    "src/raytracer",
+    "src/icprem",
+]
 
 [tool.uv.sources]
 tti = { workspace = true }
 expconfig = { workspace = true }
 raytracer = { workspace = true }
+icprem = { workspace = true }
 sddr = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sddr" }
 sampling = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sampling" }
 
@@ -65,7 +67,7 @@ ignore = [
 fixture-parentheses = false
 
 [tool.ruff.lint.isort]
-known-first-party = ["expconfig", "tti", "sampling"]
+known-first-party = ["expconfig", "tti", "sampling", "icprem"]
 section-order = [
     "future",
     "standard-library",

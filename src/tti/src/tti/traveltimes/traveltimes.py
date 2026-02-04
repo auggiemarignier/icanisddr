@@ -43,6 +43,7 @@ class TravelTimeCalculator:
         self,
         ic_in: np.ndarray,
         ic_out: np.ndarray,
+        reference_love: np.ndarray | None = None,
         weights: np.ndarray | None = None,
         nested: bool = True,
         shear: bool = False,
@@ -55,6 +56,9 @@ class TravelTimeCalculator:
             Where the path enters the inner core (longitude (deg), latitude (deg), radius (km)).
         ic_out : ndarray, shape (npaths, 3)
             Where the path exits the inner core (longitude (deg), latitude (deg), radius (km)).
+        reference_love : ndarray, shape (5,), optional
+            Reference Love parameters [A, C, F, L, N].
+            Default is None, in which case 0 is used.
         weights : ndarray, shape (nsegments, npaths), optional
             Weights for each segment along each path (default is None, which gives equal weights).
         nested : bool, optional
@@ -74,6 +78,15 @@ class TravelTimeCalculator:
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
         self.weights = weights
         self._unpacking_function = _unpackings[(nested, shear)]
+
+        if reference_love is None:
+            self.reference_love = np.zeros(5)
+        else:
+            if reference_love.shape != (5,):
+                raise ValueError(
+                    "reference_love must have shape (5,) containing [A, C, F, L, N]"
+                )
+            self.reference_love = reference_love
 
     def __call__(self, m: np.ndarray) -> np.ndarray:
         """
@@ -97,6 +110,11 @@ class TravelTimeCalculator:
         A, C, F, L, N, eta1, eta2 = self._unpacking_function(
             m
         )  # each shape (batch, cells)
+        A += self.reference_love[0]
+        C += self.reference_love[1]
+        F += self.reference_love[2]
+        L += self.reference_love[3]
+        N += self.reference_love[4]
         D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime(
             self.path_directions, D

@@ -21,10 +21,11 @@ from expconfig.synthetic import (
     create_paths,
     create_synthetic_data,
 )
+from icprem import PREM
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
-from tti.forward import TravelTimeCalculator
+from tti.traveltimes import TravelTimeCalculator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,14 +69,18 @@ def setup(
     logger.info("Creating synthetic data...")
     ic_in, ic_out = create_paths(source_spacing=20.0)
     synthetic_data = create_synthetic_data(
-        TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True),
+        TravelTimeCalculator(
+            ic_in, ic_out, reference_love=PREM.as_array(), nested=False, shear=True
+        ),
         truth,
         noise_level,
     )
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
     logger.info("Setting up likelihood function")
-    ttc = TravelTimeCalculator(ic_in, ic_out, nested=True, shear=False)
+    ttc = TravelTimeCalculator(
+        ic_in, ic_out, reference_love=PREM.as_array(), nested=True, shear=False
+    )
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
     likelihood = GaussianLikelihood(ttc, synthetic_data, inv_covar)
 

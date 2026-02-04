@@ -330,3 +330,37 @@ class TestTravelTimeCalculator:
         dt = calculator(m)
         assert dt.shape == (batch_size, calculator.npaths)
         np.testing.assert_allclose(dt, expected, atol=1e-12)
+
+    def test_traveltime_calclulator_with_reference_love(
+        self,
+        calculator: TravelTimeCalculator,
+        rng: np.random.Generator,
+    ) -> None:
+        """Test that the TravelTimeCalculator correctly adds reference Love parameters."""
+        reference_love = rng.random(size=5)  # random reference Love parameters
+        # In this test we reuse the shared `calculator` fixture and explicitly override
+        # its `reference_love` attribute instead of constructing a new instance with
+        # `reference_love=...` in __init__. This keeps the fixture usage simple while
+        # still exercising the behavior with non-zero reference Love parameters.
+        calculator.reference_love = reference_love  # override default zeros
+        lam = 12.0
+        mu = 5.0
+
+        # determine perturbations that would yield isotropic medium when added to reference
+        dA = (lam + 2 * mu) - reference_love[0]
+        dC = (lam + 2 * mu) - reference_love[1]
+        dF = lam - reference_love[2]
+        dL = mu - reference_love[3]
+        dN = mu - reference_love[4]
+
+        nsegments = 3
+        batch_size = 2
+        m = np.stack(
+            [np.tile(np.array([dA, dC, dF, dL, dN, 0.0, 0.0]), nsegments)] * batch_size
+        )
+
+        dt = calculator(m)
+        expected = lam + 2 * mu
+
+        assert dt.shape == (batch_size, calculator.npaths)
+        np.testing.assert_allclose(dt, expected, atol=1e-12)
