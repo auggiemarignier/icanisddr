@@ -184,6 +184,7 @@ version = "0.1.0"
 source = { virtual = "experiments/bulkic" }
 dependencies = [
     { name = "expconfig" },
+    { name = "icprem" },
     { name = "tti" },
 ]
 
@@ -197,6 +198,7 @@ notebooks = [
 [package.metadata]
 requires-dist = [
     { name = "expconfig", editable = "src/expconfig" },
+    { name = "icprem", editable = "src/icprem" },
     { name = "tti", editable = "src/tti" },
 ]
 
