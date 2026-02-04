@@ -23,13 +23,14 @@ def _compute_average_elastic_moduli() -> tuple[float, float]:
     elif r[-1] < R:
         r = np.append(r, R)
 
+    r_mid = 0.5 * (r[:-1] + r[1:])
     average_weights = r[1:] - r[:-1]
     average_weights_total = np.sum(average_weights)
     bulk_modulus = (
-        average_weights * premic.bulk_modulus(r)[1:]
+        average_weights * premic.bulk_modulus(r_mid)
     ).sum() / average_weights_total
     shear_modulus = (
-        average_weights * premic.shear_modulus(r)[1:]
+        average_weights * premic.shear_modulus(r_mid)
     ).sum() / average_weights_total
     lambda_ = bulk_modulus - (2.0 / 3.0) * shear_modulus
     mu = shear_modulus
