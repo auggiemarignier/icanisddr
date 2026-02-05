@@ -51,7 +51,7 @@ def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
         Azimuthal angle in radians.
     """
     batch_size = m.shape[0]
-    mT = m.reshape(batch_size, -1, 7)
+    mT = m.reshape(batch_size, -1, 7).copy()
     A = mT[..., 0]
     C = mT[..., 1] + A
     L = mT[..., 3]
@@ -95,7 +95,7 @@ def _unpack_nested_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
         Azimuthal angle in radians.
     """
     batch_size = m.shape[0]
-    mT = m.reshape(batch_size, -1, 5)
+    mT = m.reshape(batch_size, -1, 5).copy()
     zeros = np.zeros_like(mT[..., 0])
     return (
         mT[..., 0],
@@ -139,7 +139,7 @@ def _unpack_model_vector(m: np.ndarray) -> seven_arrays:
         Azimuthal angle in radians.
     """
     batch_size = m.shape[0]
-    mT = m.reshape(batch_size, -1, 7)
+    mT = m.reshape(batch_size, -1, 7).copy()
     return (
         mT[..., 0],
         mT[..., 1],
@@ -184,7 +184,7 @@ def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
         Azimuthal angle in radians.
     """
     batch_size = m.shape[0]
-    mT = m.reshape(batch_size, -1, 5)
+    mT = m.reshape(batch_size, -1, 5).copy()
     zeros = np.zeros_like(mT[..., 0])
     return (
         mT[..., 0],
