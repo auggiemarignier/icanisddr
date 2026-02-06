@@ -78,6 +78,10 @@ def _setup_prior(prior_cfg: PriorsConfig) -> CompoundPrior:
 def dump_results(samples: np.ndarray, lnprob: np.ndarray, output_dir: Path) -> None:
     """Dump the results to disk.
 
+    Dumped files are
+    - samples_full.pkl: the full (after burn and thin) MCMC samples
+    - lnprob_full.pkl: the log-probabilities of the full (after burn and thin) MCMC samples
+
     Parameters
     ----------
     samples : np.ndarray
@@ -87,9 +91,9 @@ def dump_results(samples: np.ndarray, lnprob: np.ndarray, output_dir: Path) -> N
     output_dir : Path
         Directory to save the results.
     """
-    with open(output_dir / "samples.pkl", "wb") as f:
+    with open(output_dir / "samples_full.pkl", "wb") as f:
         pickle.dump(samples, f)
-    with open(output_dir / "lnprob.pkl", "wb") as f:
+    with open(output_dir / "lnprob_full.pkl", "wb") as f:
         pickle.dump(lnprob, f)
 
     logger.info(f"Results saved to {output_dir}")
