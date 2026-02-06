@@ -11,7 +11,6 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
-
 import numpy as np
 
 from expconfig import dump_config, load_config
@@ -57,22 +56,22 @@ def _setup_synthetic_data(
 
 
 def _setup_likelihood(
-    ic_in: np.ndarray, ic_out: np.ndarray, synthetic_data: np.ndarray, vectorised: bool
+    ic_in: np.ndarray,
+    ic_out: np.ndarray,
+    synthetic_data: np.ndarray,
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
     ttc = TravelTimeCalculator(
         ic_in, ic_out, reference_love=PREM.as_array(), nested=True, shear=True
     )
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
-    likelihood = GaussianLikelihood(
-        ttc, synthetic_data, inv_covar, vectorised=vectorised
-    )
+    likelihood = GaussianLikelihood(ttc, synthetic_data, inv_covar)
     return likelihood
 
 
-def _setup_prior(prior_cfg: PriorsConfig, vectorised: bool) -> CompoundPrior:
+def _setup_prior(prior_cfg: PriorsConfig) -> CompoundPrior:
     logger.info("Setting up prior distributions...")
-    prior = CompoundPrior.from_dict(prior_cfg.model_dump() | {"vectorised": vectorised})
+    prior = CompoundPrior.from_dict(prior_cfg.model_dump())
     return prior
 
 
@@ -105,10 +104,8 @@ def main() -> None:
     ic_in, ic_out, synthetic_data = _setup_synthetic_data(
         cfg.truth.as_array(), cfg.data.noise_level
     )
-    likelihood = _setup_likelihood(
-        ic_in, ic_out, synthetic_data, cfg.sampling.vectorise
-    )
-    prior = _setup_prior(cfg.priors, cfg.sampling.vectorise)
+    likelihood = _setup_likelihood(ic_in, ic_out, synthetic_data)
+    prior = _setup_prior(cfg.priors)
 
     logger.info("Running MCMC sampling")
     samples, lnprob = mcmc(
