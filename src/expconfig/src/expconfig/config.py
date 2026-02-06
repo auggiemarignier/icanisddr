@@ -65,6 +65,7 @@ class SamplingConfig(BaseModel):
     burn_in: int
     thin: int
     progress: bool
+    vectorise: bool
     parallel: bool
 
 

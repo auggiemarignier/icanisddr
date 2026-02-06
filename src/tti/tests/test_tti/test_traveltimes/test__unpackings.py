@@ -56,11 +56,11 @@ def test__unpack_nested_model_vector(lv: LoveValues) -> None:
     """
     dC = lv.C - lv.A
     dF = lv.F - (lv.A - 2 * lv.N)
-    dL = lv.L - lv.N
+    dN = lv.N - lv.L
 
     # Build m as (B, M, 7) then flatten to (B, 7M)
     B, M = lv.A.shape
-    m_nested = np.stack([lv.A, dC, dF, dL, lv.N, lv.eta1, lv.eta2], axis=-1).reshape(
+    m_nested = np.stack([lv.A, dC, dF, lv.L, dN, lv.eta1, lv.eta2], axis=-1).reshape(
         B, 7 * M
     )
 
