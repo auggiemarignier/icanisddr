@@ -9,22 +9,20 @@ sampling:
 priors:
   components:
     - type: gaussian
-      mean: [0.0, 0.0, 0.0, 0.0, 0.0]
+      mean: [0.0, 0.0, 0.0]
       inv_covar:
-        - [8.903176065773727e-06, 0.0, 0.0, 0.0, 0.0]
-        - [0.0, 4.4515880328868635e-06, 0.0, 0.0, 0.0]
-        - [0.0, 0.0, 5.3047988757750706e-06, 0.0, 0.0]
-        - [0.0, 0.0, 0.0, 8.779900113693801e-04, 0.0]
-        - [0.0, 0.0, 0.0, 0.0, 4.3899500568469004e-04]
-      indices: [0, 1, 2, 3, 4]
+        - [8.903176065773727e-06, 0.0, 0.0]
+        - [0.0, 4.4515880328868635e-06, 0.0]
+        - [0.0, 0.0, 5.3047988757750706e-06]
+      indices: [0, 1, 2]
     - type: uniform
       lower_bounds: -180.0
       upper_bounds: 180.0
-      indices: [5]
+      indices: [3]
     - type: uniform
       lower_bounds: 0.0
       upper_bounds: 90.0
-      indices: [6]
+      indices: [4]
 training:
   batch_size: 24
   epochs: 10
@@ -38,11 +36,11 @@ realnvp:
   temperature: 1.0
 hypotheses:
   - name: transversely_isotropic
-    indices: [5, 6]
+    indices: [3, 4]
     nu: [0.0, 0.0]
   - name: fully_isotropic
-    indices: [1, 2, 4, 5, 6]
-    nu: [0.0, 0.0, 0.0, 0.0, 0.0]
+    indices: [1, 2]
+    nu: [0.0, 0.0]
 truth:
   A: 23.962579175289264
   C: 152.32156972264292
