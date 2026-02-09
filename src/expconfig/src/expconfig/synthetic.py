@@ -14,7 +14,7 @@ RNG = np.random.default_rng(1234)
 def mw_sampling(L: int) -> tuple[np.ndarray, np.ndarray]:
     """Equally spaced points on a sphere using McEwen & Wiaux (2011) sampling."""
 
-    t = np.arange(0, L).astype(np.float64)
+    t = np.arange(0, L).astype(np.float64)[:-1]  # ignore south pole
     thetas = (2 * t + 1) * np.pi / (2 * L - 1)
     p = np.arange(0, 2 * L - 1).astype(np.float64)
     phis = 2 * p * np.pi / (2 * L - 1)
@@ -74,7 +74,7 @@ def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
 
     lon_sources, lat_sources = mw_sampling(int(180 / source_spacing))
     lon_receivers = lon_sources + source_spacing / 2
-    lat_receivers = lat_sources + source_spacing / 2
+    lat_receivers = lat_sources
     sources = np.array(
         [(lon, lat, IC_RADIUS) for lat in lat_sources for lon in lon_sources]
     )
