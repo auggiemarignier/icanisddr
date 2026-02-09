@@ -272,7 +272,7 @@ class TestTravelTimeCalculator:
     ) -> TravelTimeCalculator:
         """Fixture for a TravelTimeCalculator instance with valid paths."""
         ic_in, ic_out = valid_paths
-        return TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True)
+        return TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True, N=True)
 
     def test_initialisation_npaths(self, calculator: TravelTimeCalculator) -> None:
         """Test that the class initialises correctly with valid inputs."""
