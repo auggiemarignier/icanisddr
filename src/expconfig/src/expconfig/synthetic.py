@@ -1,6 +1,7 @@
 """Utilities for creating synthetic data for experiments."""
 
 from collections.abc import Callable
+from typing import Protocol
 
 import numpy as np
 
@@ -24,10 +25,62 @@ def mw_sampling(L: int) -> tuple[np.ndarray, np.ndarray]:
     return lons, lats
 
 
+class NoiseModel(Protocol):
+    """Protocol for noise models used to add noise to synthetic data."""
+
+    def __call__(
+        self,
+        noise_level: float,
+        rng: np.random.Generator,
+        data: np.ndarray | None = None,
+        **kwargs: object,
+    ) -> np.ndarray:
+        """Generate noise to add to synthetic data.
+
+        Parameters
+        ----------
+        noise_level : float
+            Noise level for synthetic data.
+        rng : np.random.Generator
+            Random number generator to use for noise generation.
+        data : ndarray, shape (num_paths,), optional
+            Data to which noise will be added. Some noise models may use the data to determine the scale of the noise.
+        **kwargs : dict
+            Additional keyword arguments for specific noise models.
+
+        Returns
+        -------
+        ndarray, shape (num_paths,)
+            Noise to add to synthetic data.
+        """
+        ...
+
+
+def gaussian_noise_data_max(
+    noise_level: float,
+    rng: np.random.Generator,
+    data: np.ndarray | None = None,
+    **kwargs: object,
+) -> np.ndarray:
+    """Create Gaussian noise with a maximum noise level relative to the maximum absolute value of the data."""
+    if data is None:
+        raise ValueError(
+            "Data must be provided for gaussian_noise_data_max noise model"
+        )
+    return rng.normal(loc=0.0, scale=np.abs(data).max() * noise_level, size=data.shape)
+
+
+noise_models: dict[str, NoiseModel] = {
+    "gaussian_data_max": gaussian_noise_data_max,
+}
+
+
 def create_synthetic_data(
     calculator_fn: Callable[[np.ndarray], np.ndarray],
     truth: np.ndarray = DEFAULT_TRUTH,
     noise_level: float = 0.05,
+    noise_model: str = "gaussian_data_max",
+    noise_kwargs: dict[str, object] | None = None,
 ) -> np.ndarray:
     """Create synthetic travel time data for bulk IC model.
 
@@ -39,6 +92,13 @@ def create_synthetic_data(
         True bulk IC model parameters.
     noise_level : float, optional
         Noise level for synthetic data. Default is 0.05.
+    noise_model : str, optional
+        Noise model to use for synthetic data. Default is "gaussian_data_max".
+    noise_kwargs : dict[str, object], optional
+        Additional keyword arguments to pass to the selected noise model. If ``None``,
+        no extra keyword arguments are forwarded (equivalent to an empty dict). The
+        contents of this dictionary depend on the specific noise model and are passed
+        through as ``**noise_kwargs`` to the noise model callable.
 
     Returns
     -------
@@ -46,12 +106,26 @@ def create_synthetic_data(
         Synthetic relative travel time perturbations for each path.
     """
     synthetic_data = calculator_fn(truth)
-    noise = RNG.normal(
-        loc=0.0,
-        scale=np.abs(synthetic_data).max() * noise_level,
-        size=synthetic_data.shape,
+
+    # If noise level is zero, always return the un-noised data regardless of noise_model.
+    if noise_level == 0.0:
+        return synthetic_data
+
+    # Explicitly support "none"/"identity" as no-noise models.
+    if noise_model in ("none", "identity"):
+        return synthetic_data
+
+    noise_model_fn = noise_models.get(noise_model)
+    if noise_model_fn is None:
+        available = ", ".join(sorted(noise_models.keys()))
+        raise ValueError(
+            f"Unknown noise model '{noise_model}'. "
+            f"Available noise models are: {available}. "
+            "Use noise_level=0.0 or noise_model='none'/'identity' to disable noise."
+        )
+    return synthetic_data + noise_model_fn(
+        noise_level, RNG, synthetic_data, **(noise_kwargs or {})
     )
-    return synthetic_data + noise
 
 
 def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
