@@ -110,9 +110,16 @@ class TestNoiseModelsRegistry:
 class TestCreateSyntheticData:
     """Tests for create_synthetic_data function."""
 
+    # Dummy input matching DEFAULT_TRUTH shape (7 parameters for bulk IC model)
+    DUMMY_TRUTH = np.zeros(7)
+
     @staticmethod
     def _dummy_calculator(truth: np.ndarray) -> np.ndarray:
-        """Dummy calculator function for testing."""
+        """Dummy calculator function for testing.
+        
+        Returns fixed synthetic data regardless of input, mimicking the behavior
+        of a calculator function that produces travel time data.
+        """
         return np.array([1.0, 2.0, 3.0, 4.0])
 
     def test_with_default_noise_model(self):
@@ -125,7 +132,7 @@ class TestCreateSyntheticData:
         assert isinstance(result, np.ndarray)
         assert result.shape == (4,)
         # Result should differ from clean data due to noise
-        clean_data = self._dummy_calculator(np.zeros(7))
+        clean_data = self._dummy_calculator(self.DUMMY_TRUTH)
         assert not np.allclose(result, clean_data)
 
     def test_with_non_default_noise_model(self):
@@ -153,7 +160,7 @@ class TestCreateSyntheticData:
             )
 
             # Expected: clean data + constant 0.5 noise
-            expected = self._dummy_calculator(np.zeros(7)) + 0.5
+            expected = self._dummy_calculator(self.DUMMY_TRUTH) + 0.5
             np.testing.assert_array_almost_equal(result, expected)
         finally:
             # Clean up registry
@@ -185,7 +192,7 @@ class TestCreateSyntheticData:
             )
 
             # Expected: clean data + (0.5 * 2.0) noise
-            expected = self._dummy_calculator(np.zeros(7)) + 1.0
+            expected = self._dummy_calculator(self.DUMMY_TRUTH) + 1.0
             np.testing.assert_array_almost_equal(result, expected)
         finally:
             del noise_models["test_kwargs"]
@@ -199,7 +206,7 @@ class TestCreateSyntheticData:
         )
 
         # Should return exactly the clean data, no noise added
-        expected = self._dummy_calculator(np.zeros(7))
+        expected = self._dummy_calculator(self.DUMMY_TRUTH)
         np.testing.assert_array_equal(result, expected)
 
     def test_noise_level_zero_ignores_noise_model(self):
@@ -211,7 +218,7 @@ class TestCreateSyntheticData:
             noise_model="this_does_not_exist",
         )
 
-        expected = self._dummy_calculator(np.zeros(7))
+        expected = self._dummy_calculator(self.DUMMY_TRUTH)
         np.testing.assert_array_equal(result, expected)
 
     def test_unknown_noise_model_raises_error(self):
@@ -246,7 +253,7 @@ class TestCreateSyntheticData:
         )
 
         # Should return clean data despite non-zero noise_level
-        expected = self._dummy_calculator(np.zeros(7))
+        expected = self._dummy_calculator(self.DUMMY_TRUTH)
         np.testing.assert_array_equal(result, expected)
 
     def test_noise_model_identity_returns_clean_data(self):
@@ -258,7 +265,7 @@ class TestCreateSyntheticData:
         )
 
         # Should return clean data despite non-zero noise_level
-        expected = self._dummy_calculator(np.zeros(7))
+        expected = self._dummy_calculator(self.DUMMY_TRUTH)
         np.testing.assert_array_equal(result, expected)
 
     def test_noise_kwargs_none_works_correctly(self):
