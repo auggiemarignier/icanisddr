@@ -101,11 +101,23 @@ def create_synthetic_data(
         Synthetic relative travel time perturbations for each path.
     """
     synthetic_data = calculator_fn(truth)
-    noise_model_fn = noise_models.get(noise_model)
 
-    if noise_model_fn is None or noise_level == 0.0:
+    # If noise level is zero, always return the un-noised data regardless of noise_model.
+    if noise_level == 0.0:
         return synthetic_data
 
+    # Explicitly support "none"/"identity" as no-noise models.
+    if noise_model in ("none", "identity"):
+        return synthetic_data
+
+    noise_model_fn = noise_models.get(noise_model)
+    if noise_model_fn is None:
+        available = ", ".join(sorted(noise_models.keys()))
+        raise ValueError(
+            f"Unknown noise model '{noise_model}'. "
+            f"Available noise models are: {available}. "
+            "Use noise_level=0.0 or noise_model='none'/'identity' to disable noise."
+        )
     return synthetic_data + noise_model_fn(
         noise_level, RNG, synthetic_data, **(noise_kwargs or {})
     )
