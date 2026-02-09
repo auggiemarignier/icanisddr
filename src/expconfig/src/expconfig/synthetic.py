@@ -1,6 +1,7 @@
 """Utilities for creating synthetic data for experiments."""
 
 from collections.abc import Callable
+from typing import Protocol
 
 import numpy as np
 
@@ -24,14 +25,51 @@ def mw_sampling(L: int) -> tuple[np.ndarray, np.ndarray]:
     return lons, lats
 
 
+class NoiseModel(Protocol):
+    """Protocol for noise models used to add noise to synthetic data."""
+
+    def __call__(
+        self,
+        noise_level: float,
+        rng: np.random.Generator,
+        data: np.ndarray | None = None,
+        **kwargs: object,
+    ) -> np.ndarray:
+        """Generate noise to add to synthetic data.
+
+        Parameters
+        ----------
+        noise_level : float
+            Noise level for synthetic data.
+        rng : np.random.Generator
+            Random number generator to use for noise generation.
+        data : ndarray, shape (num_paths,), optional
+            Data to which noise will be added. Some noise models may use the data to determine the scale of the noise.
+        **kwargs : dict
+            Additional keyword arguments for specific noise models.
+
+        Returns
+        -------
+        ndarray, shape (num_paths,)
+            Noise to add to synthetic data.
+        """
+
+
 def gaussian_noise_data_max(
-    data: np.ndarray, noise_level: float, rng: np.random.Generator
+    noise_level: float,
+    rng: np.random.Generator,
+    data: np.ndarray | None = None,
+    **kwargs: object,
 ) -> np.ndarray:
     """Create Gaussian noise with a maximum noise level relative to the maximum absolute value of the data."""
+    if data is None:
+        raise ValueError(
+            "Data must be provided for gaussian_noise_data_max noise model"
+        )
     return rng.normal(loc=0.0, scale=np.abs(data).max() * noise_level, size=data.shape)
 
 
-noise_models = {
+noise_models: dict[str, NoiseModel] = {
     "gaussian_data_max": gaussian_noise_data_max,
 }
 
@@ -41,6 +79,7 @@ def create_synthetic_data(
     truth: np.ndarray = DEFAULT_TRUTH,
     noise_level: float = 0.05,
     noise_model: str = "gaussian_data_max",
+    noise_kwargs: dict[str, object] | None = None,
 ) -> np.ndarray:
     """Create synthetic travel time data for bulk IC model.
 
@@ -66,7 +105,9 @@ def create_synthetic_data(
     if noise_model_fn is None or noise_level == 0.0:
         return synthetic_data
 
-    return synthetic_data + noise_model_fn(synthetic_data, noise_level, RNG)
+    return synthetic_data + noise_model_fn(
+        noise_level, RNG, synthetic_data, **(noise_kwargs or {})
+    )
 
 
 def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
