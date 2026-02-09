@@ -46,7 +46,12 @@ def _setup_synthetic_data(
     ic_in, ic_out = create_paths(source_spacing=30.0)
     synthetic_data = create_synthetic_data(
         TravelTimeCalculator(
-            ic_in, ic_out, reference_love=PREM.as_array(), nested=False, shear=True
+            ic_in,
+            ic_out,
+            reference_love=PREM.as_array(),
+            nested=False,
+            shear=True,
+            N=True,
         ),
         truth,
         noise_level,
@@ -62,7 +67,7 @@ def _setup_likelihood(
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
     ttc = TravelTimeCalculator(
-        ic_in, ic_out, reference_love=PREM.as_array(), nested=True, shear=True
+        ic_in, ic_out, reference_love=PREM.as_array(), nested=True, shear=True, N=False
     )
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
     likelihood = GaussianLikelihood(ttc, synthetic_data, inv_covar)

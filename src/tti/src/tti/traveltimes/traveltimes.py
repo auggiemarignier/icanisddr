@@ -47,6 +47,7 @@ class TravelTimeCalculator:
         weights: np.ndarray | None = None,
         nested: bool = True,
         shear: bool = False,
+        N: bool = False,
     ) -> None:
         """Initialise calculator.
 
@@ -69,6 +70,8 @@ class TravelTimeCalculator:
                 [A, C, F, L, N, eta1, eta2]
         shear : bool, optional
             Whether the shear parameters L and N are included in the model (default is False).
+        N : bool, optional
+            Whether the N parameter is included in the model (default is False).
         """
 
         self._validate_paths(ic_in, ic_out)
@@ -77,7 +80,7 @@ class TravelTimeCalculator:
         self.ic_out = ic_out
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
         self.weights = weights
-        self._unpacking_function = _unpackings[(nested, shear)]
+        self._unpacking_function = _unpackings[nested][(shear, N)]
 
         if reference_love is None:
             self.reference_love = np.zeros(5)
