@@ -70,9 +70,7 @@ class TestGaussianNoiseDataMax:
         data = np.array([1.0, 2.0, 3.0])
 
         # This should work without issues even with arbitrary extra kwargs
-        noise = gaussian_noise_data_max(
-            noise_level=0.1, rng=rng, data=data, foo="bar"
-        )
+        noise = gaussian_noise_data_max(noise_level=0.1, rng=rng, data=data, foo="bar")
 
         assert isinstance(noise, np.ndarray)
 
@@ -116,7 +114,7 @@ class TestCreateSyntheticData:
     @staticmethod
     def _dummy_calculator(truth: np.ndarray) -> np.ndarray:
         """Dummy calculator function for testing.
-        
+
         Returns fixed synthetic data regardless of input, mimicking the behavior
         of a calculator function that produces travel time data.
         """
@@ -137,6 +135,7 @@ class TestCreateSyntheticData:
 
     def test_with_non_default_noise_model(self):
         """Test selecting a non-default noise model."""
+
         # First, register a simple test noise model
         def simple_noise(
             noise_level: float,
@@ -168,6 +167,7 @@ class TestCreateSyntheticData:
 
     def test_forwarding_noise_kwargs(self):
         """Test that noise_kwargs are forwarded to the noise model."""
+
         # Register a noise model that uses kwargs
         def kwargs_noise(
             noise_level: float,
