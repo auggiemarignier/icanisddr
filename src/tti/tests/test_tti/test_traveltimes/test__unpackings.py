@@ -7,8 +7,10 @@ import pytest
 
 from tti.traveltimes._unpackings import (
     _unpack_model_vector,
+    _unpack_model_vector_no_N,
     _unpack_model_vector_no_shear,
     _unpack_nested_model_vector,
+    _unpack_nested_model_vector_no_N,
     _unpack_nested_model_vector_no_shear,
 )
 
@@ -143,6 +145,57 @@ def test__unpack_model_vector_no_shear(lv) -> None:
     np.testing.assert_allclose(C, lv.C)
     np.testing.assert_allclose(F, lv.F)
     np.testing.assert_allclose(L, np.zeros_like(lv.L))
+    np.testing.assert_allclose(N, np.zeros_like(lv.N))
+    np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+    np.testing.assert_allclose(eta2, np.radians(lv.eta2))
+
+
+def test__unpack_model_vector_no_N(lv) -> None:
+    """Test unpacking of model vector with no N parameter into Love parameters.
+
+    Tests that the unpacking function correctly extracts Love parameters
+    when the model vector doesn't include the N parameter.
+    The angles eta1 and eta2 should be converted from degrees to radians.
+    """
+
+    # Build m as (B, M, 6) then flatten to (B, 6M)
+    B, M = lv.A.shape
+    m = np.stack([lv.A, lv.C, lv.F, lv.L, lv.eta1, lv.eta2], axis=-1).reshape(B, 6 * M)
+
+    A, C, F, L, N, eta1, eta2 = _unpack_model_vector_no_N(m)
+
+    np.testing.assert_allclose(A, lv.A)
+    np.testing.assert_allclose(C, lv.C)
+    np.testing.assert_allclose(F, lv.F)
+    np.testing.assert_allclose(L, lv.L)
+    np.testing.assert_allclose(N, np.zeros_like(lv.N))
+    np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+    np.testing.assert_allclose(eta2, np.radians(lv.eta2))
+
+
+def test__unpack_nested_model_vector_no_N(lv) -> None:
+    """Test unpacking of nested model vector with no N parameter into Love parameters.
+
+    Tests that the unpacking function correctly extracts Love parameters
+    when the model vector doesn't include the N parameter.
+    The angles eta1 and eta2 should be converted from degrees to radians.
+    """
+
+    dC = lv.C - lv.A
+    dF = lv.F - lv.A  # no shear anisotropy term
+
+    # Build m as (B, M, 6) then flatten to (B, 6M)
+    B, M = lv.A.shape
+    m_nested = np.stack([lv.A, dC, dF, lv.L, lv.eta1, lv.eta2], axis=-1).reshape(
+        B, 6 * M
+    )
+
+    A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector_no_N(m_nested)
+
+    np.testing.assert_allclose(A, lv.A)
+    np.testing.assert_allclose(C, lv.C)
+    np.testing.assert_allclose(F, lv.F)
+    np.testing.assert_allclose(L, lv.L)
     np.testing.assert_allclose(N, np.zeros_like(lv.N))
     np.testing.assert_allclose(eta1, np.radians(lv.eta1))
     np.testing.assert_allclose(eta2, np.radians(lv.eta2))
