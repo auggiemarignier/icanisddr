@@ -24,10 +24,23 @@ def mw_sampling(L: int) -> tuple[np.ndarray, np.ndarray]:
     return lons, lats
 
 
+def gaussian_noise_data_max(
+    data: np.ndarray, noise_level: float, rng: np.random.Generator
+) -> np.ndarray:
+    """Create Gaussian noise with a maximum noise level relative to the maximum absolute value of the data."""
+    return rng.normal(loc=0.0, scale=np.abs(data).max() * noise_level, size=data.shape)
+
+
+noise_models = {
+    "gaussian_data_max": gaussian_noise_data_max,
+}
+
+
 def create_synthetic_data(
     calculator_fn: Callable[[np.ndarray], np.ndarray],
     truth: np.ndarray = DEFAULT_TRUTH,
     noise_level: float = 0.05,
+    noise_model: str = "gaussian_data_max",
 ) -> np.ndarray:
     """Create synthetic travel time data for bulk IC model.
 
@@ -39,6 +52,8 @@ def create_synthetic_data(
         True bulk IC model parameters.
     noise_level : float, optional
         Noise level for synthetic data. Default is 0.05.
+    noise_model : str, optional
+        Noise model to use for synthetic data. Default is "gaussian_data_max".
 
     Returns
     -------
@@ -46,12 +61,12 @@ def create_synthetic_data(
         Synthetic relative travel time perturbations for each path.
     """
     synthetic_data = calculator_fn(truth)
-    noise = RNG.normal(
-        loc=0.0,
-        scale=np.abs(synthetic_data).max() * noise_level,
-        size=synthetic_data.shape,
-    )
-    return synthetic_data + noise
+    noise_model_fn = noise_models.get(noise_model)
+
+    if noise_model_fn is None or noise_level == 0.0:
+        return synthetic_data
+
+    return synthetic_data + noise_model_fn(synthetic_data, noise_level, RNG)
 
 
 def create_paths(source_spacing: float) -> tuple[np.ndarray, np.ndarray]:
