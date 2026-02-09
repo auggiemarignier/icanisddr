@@ -94,6 +94,11 @@ def create_synthetic_data(
         Noise level for synthetic data. Default is 0.05.
     noise_model : str, optional
         Noise model to use for synthetic data. Default is "gaussian_data_max".
+    noise_kwargs : dict[str, object], optional
+        Additional keyword arguments to pass to the selected noise model. If ``None``,
+        no extra keyword arguments are forwarded (equivalent to an empty dict). The
+        contents of this dictionary depend on the specific noise model and are passed
+        through as ``**noise_kwargs`` to the noise model callable.
 
     Returns
     -------
