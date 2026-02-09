@@ -43,7 +43,7 @@ def _setup_synthetic_data(
     truth: np.ndarray, noise_level: float
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     logger.info("Creating synthetic data...")
-    ic_in, ic_out = create_paths(source_spacing=20.0)
+    ic_in, ic_out = create_paths(source_spacing=30.0)
     synthetic_data = create_synthetic_data(
         TravelTimeCalculator(
             ic_in, ic_out, reference_love=PREM.as_array(), nested=False, shear=True
