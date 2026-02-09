@@ -64,13 +64,13 @@ class TestGaussianNoiseDataMax:
 
     def test_conforms_to_protocol(self):
         """Test that function conforms to NoiseModel protocol."""
-        # Check that the function can be used as a NoiseModel
+        # Check that the function can be used as a NoiseModel with extra kwargs
         rng = np.random.default_rng(42)
         data = np.array([1.0, 2.0, 3.0])
 
-        # This should work without issues
+        # This should work without issues even with arbitrary extra kwargs
         noise = gaussian_noise_data_max(
-            noise_level=0.1, rng=rng, data=data, extra_kwargs=None
+            noise_level=0.1, rng=rng, data=data, foo="bar"
         )
 
         assert isinstance(noise, np.ndarray)
