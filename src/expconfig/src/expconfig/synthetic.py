@@ -53,6 +53,7 @@ class NoiseModel(Protocol):
         ndarray, shape (num_paths,)
             Noise to add to synthetic data.
         """
+        ...
 
 
 def gaussian_noise_data_max(
