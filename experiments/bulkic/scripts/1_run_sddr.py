@@ -34,6 +34,8 @@ class SDDRResult(BaseModel):
     """Class to store SDDR result."""
 
     hypothesis_name: str
+    indices: list[int]
+    nu: list[float]
     log_bf: float
 
 
@@ -70,7 +72,7 @@ def run_sddr_experiment(
     samples: np.ndarray,
     indices: list[int],
     prior: PriorFunction,
-    nu: np.ndarray,
+    nu: list[float],
     cfg: Config,
 ) -> float:
     """Run the synthetic bulk IC SDDR experiment."""
@@ -86,15 +88,15 @@ def run_sddr_experiment(
     marg_prior = marginalise_prior(prior, indices)
 
     logger.info("Calculating Savage-Dickey density ratio at point nu")
-    sddr_h1 = sddr(marg_posterior, marg_prior, nu)
+    sddr_h1 = sddr(marg_posterior, marg_prior, np.array(nu))
     logger.info(f"logSDDR: {sddr_h1:.4f}")
 
     logger.info("Calculating harmonic SDDR for comparison")
     flow_model = RealNVPModel(ndim_in=marg_prior.n, standardize=True, temperature=1.0)
     harm_sddr = hmsddr(flow_model, marginalise_samples(samples, indices))
     flow_log_bf, flow_log_bf_std = harm_sddr.log_bayes_factor(
-        log_prior=marg_prior(nu),
-        value=nu,
+        log_prior=marg_prior(np.array(nu)),
+        value=np.array(nu),
         nbootstraps=10,
         bootstrap_proportion=0.5,
         bootstrap=True,
@@ -151,15 +153,21 @@ def main() -> None:
         logger.info("========================================")
         logger.info("")
         logger.info(f"Running SDDR for hypothesis: {hypothesis.name}")
-        nu = np.array(hypothesis.nu)
         bf = run_sddr_experiment(
             samples=samples,
             indices=hypothesis.indices,
-            nu=nu,
+            nu=hypothesis.nu,
             prior=prior,
             cfg=cfg,
         )
-        bfs.append(SDDRResult(hypothesis_name=hypothesis.name, log_bf=bf))
+        bfs.append(
+            SDDRResult(
+                hypothesis_name=hypothesis.name,
+                indices=hypothesis.indices,
+                nu=hypothesis.nu,
+                log_bf=bf,
+            )
+        )
 
     logger.info("Dumping results to disk")
     summary = ResultsSummary(sddr_results=bfs)
