@@ -7,12 +7,17 @@ from ._unpackings import _unpackings
 from .paths import calculate_path_direction_vector
 
 
-def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> np.ndarray:
+def calculate_relative_traveltime(
+    n: np.ndarray, D: np.ndarray, normalisation: float = 1.0
+) -> np.ndarray:
     r"""
     Calculate relative traveltime perturbation.
 
     .. math::
-        \frac{\delta t}{t_{\mathrm{PREM}}} = \sum_{i,j,k,l = 1}^3 n_i n_j n_k n_l D_{ijkl}(\eta_1, \eta_2, \delta A, \delta C, \delta F | N = N_{\mathrm{PREM}}, L = L_{PREM})
+        \frac{\delta t}{t_{\mathrm{PREM}}} \propto{} \sum_{i,j,k,l = 1}^3 n_i n_j n_k n_l D_{ijkl}(\eta_1, \eta_2, \delta A, \delta C, \delta F | N = N_{\mathrm{PREM}}, L = L_{PREM})
+
+    where :math:`n` is the ray direction unit vector, :math:`D` is the 4th-order perturbation tensor.
+    For inner core travel times, the proportionality constant is :math:`-1/(2 \rho_{\mathrm{PREM}} v_{\mathrm{PREM}}^2)`, where :math:`\rho_{\mathrm{PREM}}` and :math:`v_{\mathrm{PREM}}` are the average inner core density and seismic velocity in PREM.
 
     Parameters
     ----------
@@ -20,6 +25,8 @@ def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> np.ndarray:
         Ray direction unit vector(s).
     D : ndarray, shape (..., 3, 3, 3, 3)
         4th-order perturbation tensor.  Leading dimensions are arbitrary.
+    normalisation : float, optional
+        Normalisation constant to apply to the relative traveltime perturbation (default is 1.0).
 
     Returns
     -------
@@ -33,7 +40,9 @@ def calculate_relative_traveltime(n: np.ndarray, D: np.ndarray) -> np.ndarray:
 
     # ijkl are the components of the 4th-order tensor D
     # p is the path index
-    return np.einsum("...ijkl,...pi,...pj,...pk,...pl->...p", D, n, n, n, n)
+    return normalisation * np.einsum(
+        "...ijkl,...pi,...pj,...pk,...pl->...p", D, n, n, n, n
+    )
 
 
 class TravelTimeCalculator:

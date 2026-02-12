@@ -55,6 +55,35 @@ def test_traveltime_batch() -> None:
     np.testing.assert_allclose(dt_batch, expected)
 
 
+def test_traveltime_batch_with_normalisation() -> None:
+    """Test traveltime calculation for a batch of ray directions with an explicit normalisation."""
+
+    D = np.zeros((3, 3, 3, 3))
+    D[0, 0, 0, 0] = 1.0
+    D[1, 1, 1, 1] = 2.0
+    D[2, 2, 2, 2] = 3.0
+    D = np.broadcast_to(D, (2, 4, 3, 3, 3, 3))
+
+    n_batch = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            [1.0, 0.0, 0.0],
+        ]
+    )
+    n_paths = n_batch.shape[0]
+
+    dt_batch = calculate_relative_traveltime(n_batch, D, normalisation=2.0)
+
+    expected_per_path = np.array([1.0, 2.0, 3.0, 2.0, 1.0])
+    expected = np.broadcast_to(2.0 * expected_per_path, (2, 4, n_paths))
+
+    assert dt_batch.shape == (2, 4, n_paths)
+    np.testing.assert_allclose(dt_batch, expected)
+
+
 def test_traveltime_isotropic_independent_of_direction(
     rng: np.random.Generator,
 ) -> None:
