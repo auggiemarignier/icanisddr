@@ -403,15 +403,18 @@ class TestTravelTimeCalculator:
         self,
         nsegments: int,
         batch_size: int,
-        calculator: TravelTimeCalculator,
+        valid_paths: tuple[np.ndarray, np.ndarray],
     ) -> None:
         """Test that the normalisation factor is applied correctly in the traveltime calculation.
 
         Testing the isotropic case.
         """
-        # override fixture's default normalisation with a different value
+        # Create calculator with explicit normalisation value
         n = 2.0
-        calculator.normalisation = n
+        ic_in, ic_out = valid_paths
+        calculator = TravelTimeCalculator(
+            ic_in, ic_out, nested=False, shear=True, N=True, normalisation=n
+        )
 
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu

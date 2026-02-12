@@ -54,10 +54,10 @@ class TravelTimeCalculator:
         ic_out: np.ndarray,
         reference_love: np.ndarray | None = None,
         weights: np.ndarray | None = None,
-        normalisation: float = 1.0,
         nested: bool = True,
         shear: bool = False,
         N: bool = False,
+        normalisation: float = 1.0,
     ) -> None:
         """Initialise calculator.
 
@@ -82,6 +82,8 @@ class TravelTimeCalculator:
             Whether the shear parameters L and N are included in the model (default is False).
         N : bool, optional
             Whether the N parameter is included in the model (default is False).
+        normalisation : float, optional
+            Normalisation constant to apply to the relative traveltime perturbation (default is 1.0).
         """
 
         self._validate_paths(ic_in, ic_out)
