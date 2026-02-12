@@ -14,7 +14,7 @@ def calculate_relative_traveltime(
     Calculate relative traveltime perturbation.
 
     .. math::
-        \frac{\delta t}{t_{\mathrm{PREM}}} \propto{} \sum_{i,j,k,l = 1}^3 n_i n_j n_k n_l D_{ijkl}(\eta_1, \eta_2, \delta A, \delta C, \delta F | N = N_{\mathrm{PREM}}, L = L_{PREM})
+        \frac{\delta t}{t_{\mathrm{PREM}}} \propto{} \sum_{i,j,k,l = 1}^3 n_i n_j n_k n_l D_{ijkl}(\eta_1, \eta_2, \delta A, \delta C, \delta F | N = N_{\mathrm{PREM}}, L = L_{\mathrm{PREM}})
 
     where :math:`n` is the ray direction unit vector, :math:`D` is the 4th-order perturbation tensor.
     For inner core travel times, the proportionality constant is :math:`-1/(2 \rho_{\mathrm{PREM}} v_{\mathrm{PREM}}^2)`, where :math:`\rho_{\mathrm{PREM}}` and :math:`v_{\mathrm{PREM}}` are the average inner core density and seismic velocity in PREM.
