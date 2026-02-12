@@ -132,7 +132,7 @@ class TravelTimeCalculator:
         N += self.reference_love[4]
         D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime(
-            self.path_directions, D, self.normalisation
+            self.path_directions, D, normalisation=self.normalisation
         )  # shape (batch, cells, npaths)
 
         batch, cells, npaths = dt.shape
