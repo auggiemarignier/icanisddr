@@ -54,6 +54,7 @@ class TravelTimeCalculator:
         ic_out: np.ndarray,
         reference_love: np.ndarray | None = None,
         weights: np.ndarray | None = None,
+        normalisation: float = 1.0,
         nested: bool = True,
         shear: bool = False,
         N: bool = False,
@@ -100,6 +101,8 @@ class TravelTimeCalculator:
                 )
             self.reference_love = reference_love
 
+        self.normalisation = normalisation
+
     def __call__(self, m: np.ndarray) -> np.ndarray:
         """
         Calculate relative traveltime perturbations for all paths given TTI model parameters.
@@ -129,7 +132,7 @@ class TravelTimeCalculator:
         N += self.reference_love[4]
         D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime(
-            self.path_directions, D
+            self.path_directions, D, self.normalisation
         )  # shape (batch, cells, npaths)
 
         batch, cells, npaths = dt.shape

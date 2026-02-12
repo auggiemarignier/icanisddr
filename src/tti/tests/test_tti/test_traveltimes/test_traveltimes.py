@@ -393,3 +393,34 @@ class TestTravelTimeCalculator:
 
         assert dt.shape == (batch_size, calculator.npaths)
         np.testing.assert_allclose(dt, expected, atol=1e-12)
+
+    @pytest.mark.parametrize(
+        "nsegments,batch_size",
+        [(1, 1), (4, 1), (4, 2)],
+        ids=["single_segment", "multiple_segments", "multiple_segments_batch"],
+    )
+    def test_traveltime_calculator_with_normalisation(
+        self,
+        nsegments: int,
+        batch_size: int,
+        calculator: TravelTimeCalculator,
+    ) -> None:
+        """Test that the normalisation factor is applied correctly in the traveltime calculation.
+
+        Testing the isotropic case.
+        """
+        # override fixture's default normalisation with a different value
+        n = 2.0
+        calculator.normalisation = n
+
+        lam, mu = 12.0, 5.0
+        a = lam + 2 * mu
+        m = np.stack(
+            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+        )
+
+        expected = n * (lam + 2 * mu)
+
+        dt = calculator(m)
+        assert dt.shape == (batch_size, calculator.npaths)
+        np.testing.assert_allclose(dt, expected, atol=1e-12)
