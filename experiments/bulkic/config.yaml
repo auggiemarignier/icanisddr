@@ -51,4 +51,4 @@ truth:
   eta1: 0.0
   eta2: 0.0
 data:
-  noise_level: 0.05
+  noise_level: 0.2
