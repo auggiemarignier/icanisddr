@@ -4,6 +4,7 @@ import logging
 import os
 import pickle
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -19,7 +20,7 @@ from expconfig.synthetic import (
     create_paths,
     create_synthetic_data,
 )
-from icprem import PREM
+from icprem import PREM_IC_RHO, PREM_IC_VP
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
@@ -32,6 +33,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+IC_IN, IC_OUT = create_paths(source_spacing=30.0)
+NORMALISATION = -1 / (2 * PREM_IC_RHO * (PREM_IC_VP * 1e3) ** 2)
+BASE_TTC_FACTORY = partial(
+    TravelTimeCalculator,
+    ic_in=IC_IN,
+    ic_out=IC_OUT,
+    normalisation=NORMALISATION,
+)
+
+# Synthetic data computed based on absolute perturbations from PREM including shear components
+SYNTH_CALCULATOR = BASE_TTC_FACTORY(nested=False, shear=True, N=True)
+# Forward model takes nested parameters and includes L but excludes N
+FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True, shear=True, N=False)
 
 CFG_FILE = Path(__file__).parent.parent / "config.yaml"
 OUTPUT_DIR = (
@@ -39,38 +53,12 @@ OUTPUT_DIR = (
 )
 
 
-def _setup_synthetic_data(
-    truth: np.ndarray, noise_level: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    logger.info("Creating synthetic data...")
-    ic_in, ic_out = create_paths(source_spacing=30.0)
-    synthetic_data = create_synthetic_data(
-        TravelTimeCalculator(
-            ic_in,
-            ic_out,
-            reference_love=PREM.as_array(),
-            nested=False,
-            shear=True,
-            N=True,
-        ),
-        truth,
-        noise_level,
-    )[0]
-    logger.info(f"Synthetic data shape: {synthetic_data.shape}")
-    return ic_in, ic_out, synthetic_data
-
-
 def _setup_likelihood(
-    ic_in: np.ndarray,
-    ic_out: np.ndarray,
     synthetic_data: np.ndarray,
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
-    ttc = TravelTimeCalculator(
-        ic_in, ic_out, reference_love=PREM.as_array(), nested=True, shear=True, N=False
-    )
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
-    likelihood = GaussianLikelihood(ttc, synthetic_data, inv_covar)
+    likelihood = GaussianLikelihood(FORWARD_CALCULATOR, synthetic_data, inv_covar)
     return likelihood
 
 
@@ -110,10 +98,16 @@ def main() -> None:
     cfg = load_config(CFG_FILE)
 
     rng = np.random.default_rng(42)
-    ic_in, ic_out, synthetic_data = _setup_synthetic_data(
-        cfg.truth.as_array(), cfg.data.noise_level
-    )
-    likelihood = _setup_likelihood(ic_in, ic_out, synthetic_data)
+
+    logger.info("Creating synthetic data...")
+    synthetic_data = create_synthetic_data(
+        SYNTH_CALCULATOR,
+        cfg.truth.as_array(),
+        cfg.data.noise_level,
+    )[0]
+    logger.info(f"Synthetic data shape: {synthetic_data.shape}")
+
+    likelihood = _setup_likelihood(synthetic_data)
     prior = _setup_prior(cfg.priors)
 
     logger.info("Running MCMC sampling")
