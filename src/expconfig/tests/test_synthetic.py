@@ -85,6 +85,16 @@ class TestGaussianNoiseDataMax:
         expected_scale = np.abs(data).max() * 0.1  # 0.4
         assert np.isclose(np.std(noise), expected_scale, rtol=0.3)
 
+    def test_with_zero_data(self):
+        """Test that noise model works when data is all zeros."""
+        rng = np.random.default_rng(42)
+        data = np.zeros(100)
+
+        noise = gaussian_noise_data_max(noise_level=0.1, rng=rng, data=data)
+
+        # Should not raise error and should produce noise with scale equal to noise_level
+        assert np.isclose(np.std(noise), 0.1, rtol=0.3)
+
 
 class TestNoiseModelsRegistry:
     """Tests for the noise_models registry."""
@@ -280,3 +290,29 @@ class TestCreateSyntheticData:
 
         assert isinstance(result, np.ndarray)
         assert result.shape == (4,)
+
+    def test_with_zero_calculator_adds_noise(self):
+        """Integration test: create_synthetic_data with calculator returning zeros.
+
+        This test ensures that when a calculator returns all zeros, the noise model
+        is still applied correctly through the full call path. This prevents regressions
+        if the registry behavior or call path changes.
+        """
+
+        def zero_calculator(_truth: np.ndarray) -> np.ndarray:
+            """Dummy calculator that returns all zeros."""
+            return np.zeros(100)
+
+        result = create_synthetic_data(
+            calculator_fn=zero_calculator,
+            noise_level=0.1,
+            noise_model="gaussian_data_max",
+        )
+
+        # Result should not be all zeros - noise should be added
+        assert not np.allclose(result, 0.0)
+        # Result should have non-zero standard deviation
+        assert np.std(result) > 0.0
+        # The standard deviation should be approximately equal to noise_level
+        # Using rtol=0.3 consistent with other std checks - accounts for randomness
+        assert np.isclose(np.std(result), 0.1, rtol=0.3)
