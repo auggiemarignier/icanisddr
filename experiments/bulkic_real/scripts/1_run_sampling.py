@@ -54,7 +54,11 @@ def _setup_data(
     ic_in = np.stack(df.in_location.values)
     ic_out = np.stack(df.out_location.values)
     dt_over_t = (df.delta_t / df.inner_core_travel_time).values
-    sigma = df["reference_phase"].map(noise_levels).values
+    #  The noise levels for each reference phase are given in seconds, so we need to convert them to fractional traveltime perturbations by dividing by the inner core travel time.
+    # In principle this gives a different sigma for each observation.
+    sigma = (
+        df["reference_phase"].map(noise_levels) / df["inner_core_travel_time"]
+    ).values
     logger.info(f"Real data shape: {dt_over_t.shape}")
     return ic_in, ic_out, dt_over_t, sigma
 
