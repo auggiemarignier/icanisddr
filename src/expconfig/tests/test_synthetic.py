@@ -299,7 +299,6 @@ class TestCreateSyntheticData:
         if the registry behavior or call path changes.
         """
 
-        @staticmethod
         def zero_calculator(truth: np.ndarray) -> np.ndarray:
             """Dummy calculator that returns all zeros."""
             return np.zeros(100)
