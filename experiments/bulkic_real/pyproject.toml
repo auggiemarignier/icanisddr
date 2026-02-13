@@ -1,0 +1,23 @@
+[project]
+name = "bulkic_real"
+version = "0.1.0"
+description = "Scripts for bulk IC analysis with real data"
+readme = "README.md"
+requires-python = ">=3.12, <3.14"
+dependencies = [
+    "tti",
+    "expconfig",
+    "pandas>=3.0.0",
+    "pyarrow>=23.0.0",
+]
+
+[tool.uv.sources]
+tti = { workspace = true }
+expconfig = { workspace = true }
+
+[dependency-groups]
+notebooks = [
+    "cartopy>=0.25.0",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.8",
+]
