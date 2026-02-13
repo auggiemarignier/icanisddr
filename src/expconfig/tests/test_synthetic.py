@@ -299,7 +299,7 @@ class TestCreateSyntheticData:
         if the registry behavior or call path changes.
         """
 
-        def zero_calculator(truth: np.ndarray) -> np.ndarray:
+        def zero_calculator(_truth: np.ndarray) -> np.ndarray:
             """Dummy calculator that returns all zeros."""
             return np.zeros(100)
 
@@ -314,4 +314,5 @@ class TestCreateSyntheticData:
         # Result should have non-zero standard deviation
         assert np.std(result) > 0.0
         # The standard deviation should be approximately equal to noise_level
+        # Using rtol=0.3 consistent with other std checks - accounts for randomness
         assert np.isclose(np.std(result), 0.1, rtol=0.3)
