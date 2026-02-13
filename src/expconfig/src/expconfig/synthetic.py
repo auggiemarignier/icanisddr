@@ -67,7 +67,11 @@ def gaussian_noise_data_max(
         raise ValueError(
             "Data must be provided for gaussian_noise_data_max noise model"
         )
-    return rng.normal(loc=0.0, scale=np.abs(data).max() * noise_level, size=data.shape)
+    data_max = np.abs(data).max()
+    scale = noise_level  # handles the case where data_max is zero (e.g. if the truth is zero and the calculator returns zero for all paths)
+    if data_max > 0:
+        scale *= data_max
+    return rng.normal(loc=0.0, scale=scale, size=data.shape)
 
 
 noise_models: dict[str, NoiseModel] = {

@@ -85,6 +85,16 @@ class TestGaussianNoiseDataMax:
         expected_scale = np.abs(data).max() * 0.1  # 0.4
         assert np.isclose(np.std(noise), expected_scale, rtol=0.3)
 
+    def test_with_zero_data(self):
+        """Test that noise model works when data is all zeros."""
+        rng = np.random.default_rng(42)
+        data = np.zeros(100)
+
+        noise = gaussian_noise_data_max(noise_level=0.1, rng=rng, data=data)
+
+        # Should not raise error and should produce noise with scale equal to noise_level
+        assert np.isclose(np.std(noise), 0.1, rtol=0.3)
+
 
 class TestNoiseModelsRegistry:
     """Tests for the noise_models registry."""
