@@ -290,3 +290,29 @@ class TestCreateSyntheticData:
 
         assert isinstance(result, np.ndarray)
         assert result.shape == (4,)
+
+    def test_with_zero_calculator_adds_noise(self):
+        """Integration test: create_synthetic_data with calculator returning zeros.
+
+        This test ensures that when a calculator returns all zeros, the noise model
+        is still applied correctly through the full call path. This prevents regressions
+        if the registry behavior or call path changes.
+        """
+
+        @staticmethod
+        def zero_calculator(truth: np.ndarray) -> np.ndarray:
+            """Dummy calculator that returns all zeros."""
+            return np.zeros(100)
+
+        result = create_synthetic_data(
+            calculator_fn=zero_calculator,
+            noise_level=0.1,
+            noise_model="gaussian_data_max",
+        )
+
+        # Result should not be all zeros - noise should be added
+        assert not np.allclose(result, 0.0)
+        # Result should have non-zero standard deviation
+        assert np.std(result) > 0.0
+        # The standard deviation should be approximately equal to noise_level
+        assert np.isclose(np.std(result), 0.1, rtol=0.3)
