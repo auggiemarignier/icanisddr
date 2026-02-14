@@ -1,7 +1,7 @@
 sampling:
   nwalkers: 400
-  nsteps: 1000
-  burn_in: 250
+  nsteps: 3000
+  burn_in: 1000
   thin: 5
   progress: true
   parallel: true
@@ -37,8 +37,8 @@ realnvp:
   temperature: 1.0
 hypotheses:
   - name: transversely_isotropic
-    indices: [4, 5]
-    nu: [0.0, 0.0]
+    indices: [5]
+    nu: [0.0]
   - name: fully_isotropic
     indices: [1, 2, 3]
     nu: [0.0, 0.0, 0.0]
