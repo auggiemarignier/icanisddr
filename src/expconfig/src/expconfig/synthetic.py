@@ -4,12 +4,37 @@ from collections.abc import Callable
 from typing import Protocol
 
 import numpy as np
+from pydantic import BaseModel
 
-from .config import TrueBulkICConfig
 from .geometry import IC_RADIUS
 
-DEFAULT_TRUTH = TrueBulkICConfig().as_array()
 RNG = np.random.default_rng(1234)
+
+
+class TrueBulkICConfig(BaseModel):
+    """True bulk IC model parameters.
+
+    These parameters define a single elastic tensor for the entire inner core.
+    This is cylindrically anisotropic with symmetry axis along the Earth's rotation axis.
+    The Love parameters are relative perturbations, not absolute values.
+    The values for A, C, F are from Brett et al. (2024), while L and N are set to 0 (i.e. the absolute values are equal to the reference model).
+    The angles eta1 and eta2 are in degrees.
+    """
+
+    A: float = 0.0143
+    C: float = 0.0909
+    F: float = -0.0858
+    L: float = 0.0
+    N: float = 0.0
+    eta1: float = 0.0
+    eta2: float = 0.0
+
+    def as_array(self) -> np.ndarray:
+        """Return the parameters as a numpy array."""
+        return np.array([self.A, self.C, self.F, self.L, self.N, self.eta1, self.eta2])
+
+
+DEFAULT_TRUTH = TrueBulkICConfig().as_array()
 
 
 def mw_sampling(L: int) -> tuple[np.ndarray, np.ndarray]:
