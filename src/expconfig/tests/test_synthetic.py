@@ -1,9 +1,16 @@
 """Tests for synthetic data creation and noise models."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
+from sddr.sddr import RealNVPConfig, TrainConfig
 
+from expconfig.config import HypothesisConfig, PriorsConfig, SamplingConfig
 from expconfig.synthetic import (
+    DataConfig,
+    SynthConfig,
+    TrueBulkICConfig,
     create_synthetic_data,
     gaussian_noise_data_max,
     noise_models,
@@ -316,3 +323,45 @@ class TestCreateSyntheticData:
         # The standard deviation should be approximately equal to noise_level
         # Using rtol=0.3 consistent with other std checks - accounts for randomness
         assert np.isclose(np.std(result), 0.1, rtol=0.3)
+
+
+class TestSyntheticConfig:
+    """Tests for the SynthConfig dataclass."""
+
+    def test_loadable_dumpable(self, tmp_path: Path) -> None:
+        """Test that SynthConfig can be dumped and loaded correctly."""
+        config = SynthConfig(
+            sampling=SamplingConfig(
+                nwalkers=10,
+                nsteps=100,
+                burn_in=10,
+                thin=1,
+                progress=False,
+                vectorise=False,
+                parallel=False,
+            ),
+            priors=PriorsConfig(components=[{}]),
+            training=TrainConfig(
+                epochs=1,
+                batch_size=1,
+                verbose=False,
+            ),
+            realnvp=RealNVPConfig(
+                n_scaled_layers=1,
+                n_unscaled_layers=1,
+            ),
+            hypotheses=[
+                HypothesisConfig(
+                    name="test_hypothesis",
+                    indices=[0],
+                    nu=[0.0],
+                )
+            ],
+            truth=TrueBulkICConfig(),
+            data=DataConfig(),
+        )
+
+        config.dump(tmp_path / "synth_config.yaml")
+        loaded_config = SynthConfig.load(tmp_path / "synth_config.yaml")
+        assert isinstance(loaded_config, SynthConfig)
+        assert loaded_config == config
