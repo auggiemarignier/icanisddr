@@ -1,6 +1,9 @@
 """Configuration SDDR IC anisotropy experiment."""
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Self
 
 import yaml
 from pydantic import BaseModel, Field
@@ -67,16 +70,27 @@ class ExpConfig(BaseModel):
         description="Geometric configuration of regions.",
     )
 
+    @classmethod
+    def load[T](cls: type[T], path: str | Path) -> T:
+        """Load configuration from YAML file."""
 
-def load_config(path: str | Path) -> ExpConfig:
+        return load_config(path, model=cls)
+
+    def dump(self: Self, path: str | Path) -> None:
+        """Dump configuration to YAML file."""
+
+        dump_config(self, path)
+
+
+def load_config[T](path: str | Path, model: type[T] = ExpConfig) -> T:
     """Load configuration from YAML file."""
 
     with open(path) as f:
         raw = yaml.safe_load(f)
-    return ExpConfig(**raw)
+    return model(**raw)
 
 
-def dump_config(cfg: ExpConfig, path: str | Path) -> None:
+def dump_config[T](cfg: T, path: str | Path) -> None:
     """Dump configuration to YAML file."""
 
     with open(path, "w") as f:
