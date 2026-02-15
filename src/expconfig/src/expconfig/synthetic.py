@@ -6,6 +6,7 @@ from typing import Protocol
 import numpy as np
 from pydantic import BaseModel, Field
 
+from .config import ExpConfig
 from .geometry import IC_RADIUS
 
 RNG = np.random.default_rng(1234)
@@ -41,6 +42,13 @@ class DataConfig(BaseModel):
         0.05,
         description="Noise level.",
     )
+
+
+class SynthConfig(ExpConfig):
+    """Configuration for synthetic bulk IC SDDR experiment."""
+
+    data: DataConfig = Field(default_factory=DataConfig)
+    truth: TrueBulkICConfig = Field(default_factory=TrueBulkICConfig)
 
 
 DEFAULT_TRUTH = TrueBulkICConfig().as_array()

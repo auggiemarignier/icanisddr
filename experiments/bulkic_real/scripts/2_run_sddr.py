@@ -19,7 +19,7 @@ from sddr.sddr import (
     sddr,
 )
 
-from expconfig import Config, load_config
+from expconfig import ExpConfig, load_config
 from sampling.priors import CompoundPrior, PriorFunction
 
 logging.basicConfig(
@@ -73,7 +73,7 @@ def run_sddr_experiment(
     indices: list[int],
     prior: PriorFunction,
     nu: list[float],
-    cfg: Config,
+    cfg: ExpConfig,
 ) -> float:
     """Run the real data bulk IC SDDR experiment."""
 

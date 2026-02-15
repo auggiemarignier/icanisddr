@@ -5,9 +5,9 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field
 from pydantic_yaml import to_yaml_str
+from sddr.sddr import RealNVPConfig, TrainConfig
 
 from .geometry import GeometryConfig
-from .synthetic import DataConfig, TrueBulkICConfig
 
 
 class GaussianComponentConfig(BaseModel):
@@ -46,25 +46,6 @@ class SamplingConfig(BaseModel):
     parallel: bool
 
 
-class TrainConfig(BaseModel):
-    """Configuration for training the flow model."""
-
-    batch_size: int = 256
-    epochs: int = 1000
-    verbose: bool = True
-
-
-class RealNVPConfig(BaseModel):
-    """Configuration for the RealNVP flow model."""
-
-    n_scaled_layers: int = 2
-    n_unscaled_layers: int = 4
-    learning_rate: float = 0.001  # this is here rather than in TrainConfig because of how `harmonic` uses it
-    momentum: float = 0.9
-    standardize: bool = False
-    temperature: float = 0.95
-
-
 class HypothesisConfig(BaseModel):
     """Configuration for a single hypothesis test."""
 
@@ -73,7 +54,7 @@ class HypothesisConfig(BaseModel):
     nu: list[float]
 
 
-class Config(BaseModel):
+class ExpConfig(BaseModel):
     """Overall configuration for synthetic bulk IC experiment."""
 
     sampling: SamplingConfig
@@ -81,23 +62,21 @@ class Config(BaseModel):
     training: TrainConfig
     realnvp: RealNVPConfig
     hypotheses: list[HypothesisConfig]
-    truth: TrueBulkICConfig = Field(default_factory=TrueBulkICConfig)
-    data: DataConfig = Field(default_factory=DataConfig)
     geometry: GeometryConfig = Field(
         default_factory=GeometryConfig.earth_inner_core,
         description="Geometric configuration of regions.",
     )
 
 
-def load_config(path: str | Path) -> Config:
+def load_config(path: str | Path) -> ExpConfig:
     """Load configuration from YAML file."""
 
     with open(path) as f:
         raw = yaml.safe_load(f)
-    return Config(**raw)
+    return ExpConfig(**raw)
 
 
-def dump_config(cfg: Config, path: str | Path) -> None:
+def dump_config(cfg: ExpConfig, path: str | Path) -> None:
     """Dump configuration to YAML file."""
 
     with open(path, "w") as f:
