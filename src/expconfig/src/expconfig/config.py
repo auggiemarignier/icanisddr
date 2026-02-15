@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from pydantic_yaml import to_yaml_str
 
 from .geometry import GeometryConfig
-from .synthetic import TrueBulkICConfig
+from .synthetic import DataConfig, TrueBulkICConfig
 
 
 class GaussianComponentConfig(BaseModel):
@@ -71,15 +71,6 @@ class HypothesisConfig(BaseModel):
     name: str
     indices: list[int]
     nu: list[float]
-
-
-class DataConfig(BaseModel):
-    """Configuration for synthetic data generation."""
-
-    noise_level: float = Field(
-        0.05,
-        description="Noise level.",
-    )
 
 
 class Config(BaseModel):

@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Protocol
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .geometry import IC_RADIUS
 
@@ -32,6 +32,15 @@ class TrueBulkICConfig(BaseModel):
     def as_array(self) -> np.ndarray:
         """Return the parameters as a numpy array."""
         return np.array([self.A, self.C, self.F, self.L, self.N, self.eta1, self.eta2])
+
+
+class DataConfig(BaseModel):
+    """Configuration for synthetic data generation."""
+
+    noise_level: float = Field(
+        0.05,
+        description="Noise level.",
+    )
 
 
 DEFAULT_TRUTH = TrueBulkICConfig().as_array()
