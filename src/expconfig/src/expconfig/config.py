@@ -8,7 +8,7 @@ from typing import Self
 import yaml
 from pydantic import BaseModel, Field
 from pydantic_yaml import to_yaml_str
-from sddr.sddr import RealNVPConfig, TrainConfig
+from sddr.sddr import FlowConfig, TrainConfig
 
 from .geometry import GeometryConfig
 
@@ -63,7 +63,7 @@ class ExpConfig(BaseModel):
     sampling: SamplingConfig
     priors: PriorsConfig
     training: TrainConfig
-    realnvp: RealNVPConfig
+    flow: FlowConfig
     hypotheses: list[HypothesisConfig]
     geometry: GeometryConfig = Field(
         default_factory=GeometryConfig.earth_inner_core,
