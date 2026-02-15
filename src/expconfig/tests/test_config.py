@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from sddr.sddr import RealNVPConfig, TrainConfig
+from sddr.sddr import FlowConfig, TrainConfig
 
 from expconfig import ExpConfig, dump_config, load_config
 from expconfig.config import HypothesisConfig, PriorsConfig, SamplingConfig
@@ -32,10 +32,7 @@ def valid_config() -> ExpConfig:
             batch_size=32,
             verbose=True,
         ),
-        realnvp=RealNVPConfig(
-            n_scaled_layers=2,
-            n_unscaled_layers=2,
-        ),
+        flow=FlowConfig(),
         hypotheses=[
             HypothesisConfig(
                 name="H0",

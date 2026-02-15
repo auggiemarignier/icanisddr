@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from sddr.sddr import RealNVPConfig, TrainConfig
+from sddr.sddr import FlowConfig, TrainConfig
 
 from expconfig.config import HypothesisConfig, PriorsConfig, SamplingConfig
 from expconfig.synthetic import (
@@ -346,10 +346,7 @@ class TestSyntheticConfig:
                 batch_size=1,
                 verbose=False,
             ),
-            realnvp=RealNVPConfig(
-                n_scaled_layers=1,
-                n_unscaled_layers=1,
-            ),
+            flow=FlowConfig(),
             hypotheses=[
                 HypothesisConfig(
                     name="test_hypothesis",
