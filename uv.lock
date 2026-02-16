@@ -17,6 +17,7 @@ members = [
     "expconfig",
     "icprem",
     "imic",
+    "imic-real",
     "profiling",
     "raytracer",
     "sdicani",
@@ -883,6 +884,39 @@ wheels = [
 name = "imic"
 version = "0.1.0"
 source = { virtual = "experiments/imic" }
+dependencies = [
+    { name = "expconfig" },
+    { name = "icprem" },
+    { name = "raytracer" },
+    { name = "tti" },
+]
+
+[package.dev-dependencies]
+notebooks = [
+    { name = "cartopy" },
+    { name = "jupyter" },
+    { name = "matplotlib" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "expconfig", editable = "src/expconfig" },
+    { name = "icprem", editable = "src/icprem" },
+    { name = "raytracer", editable = "src/raytracer" },
+    { name = "tti", editable = "src/tti" },
+]
+
+[package.metadata.requires-dev]
+notebooks = [
+    { name = "cartopy", specifier = ">=0.25.0" },
+    { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "matplotlib", specifier = ">=3.10.8" },
+]
+
+[[package]]
+name = "imic-real"
+version = "0.1.0"
+source = { virtual = "experiments/imic_real" }
 dependencies = [
     { name = "expconfig" },
     { name = "icprem" },
