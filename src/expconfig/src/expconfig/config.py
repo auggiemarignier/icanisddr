@@ -7,7 +7,6 @@ from typing import Self
 
 import yaml
 from pydantic import BaseModel, Field
-from pydantic_yaml import to_yaml_str
 from sddr.sddr import FlowConfig, TrainConfig
 
 from .geometry import GeometryConfig
@@ -82,11 +81,26 @@ class ExpConfig(BaseModel):
         dump_config(self, path)
 
 
-def load_config[T](path: str | Path, model: type[T] = ExpConfig) -> T:
+def _lists_to_tuples(obj):
+    """Recursively convert lists in an object to tuples.
+
+    This walks nested dict/list structures produced by YAML and ensures
+    any list is converted to a tuple. Useful when downstream models or
+    dataclasses expect tuples (for hashing/immutability) rather than lists.
+    """
+    if isinstance(obj, list):
+        return tuple(_lists_to_tuples(v) for v in obj)
+    if isinstance(obj, dict):
+        return {k: _lists_to_tuples(v) for k, v in obj.items()}
+    return obj
+
+
+def load_config[T](path: str | Path, model: type[T]) -> T:
     """Load configuration from YAML file."""
 
     with open(path) as f:
         raw = yaml.safe_load(f)
+    raw = _lists_to_tuples(raw)
     return model(**raw)
 
 
@@ -94,4 +108,4 @@ def dump_config[T](cfg: T, path: str | Path) -> None:
     """Dump configuration to YAML file."""
 
     with open(path, "w") as f:
-        f.write(to_yaml_str(cfg))
+        yaml.safe_dump(cfg.model_dump(), f, sort_keys=False)
