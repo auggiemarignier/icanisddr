@@ -1,36 +1,15 @@
 """Configuration SDDR IC anisotropy experiment."""
 
-from pathlib import Path
+from __future__ import annotations
 
-import numpy as np
+from pathlib import Path
+from typing import Self, TypeVar
+
 import yaml
 from pydantic import BaseModel, Field
-from pydantic_yaml import to_yaml_str
+from sddr.sddr import FlowConfig, TrainConfig
 
 from .geometry import GeometryConfig
-
-
-class TrueBulkICConfig(BaseModel):
-    """True bulk IC model parameters.
-
-    These parameters define a single elastic tensor for the entire inner core.
-    This is cylindrically anisotropic with symmetry axis along the Earth's rotation axis.
-    The Love parameters are relative perturbations, not absolute values.
-    The values for A, C, F are from Brett et al. (2024), while L and N are set to 0 (i.e. the absolute values are equal to the reference model).
-    The angles eta1 and eta2 are in degrees.
-    """
-
-    A: float = 0.0143
-    C: float = 0.0909
-    F: float = -0.0858
-    L: float = 0.0
-    N: float = 0.0
-    eta1: float = 0.0
-    eta2: float = 0.0
-
-    def as_array(self) -> np.ndarray:
-        """Return the parameters as a numpy array."""
-        return np.array([self.A, self.C, self.F, self.L, self.N, self.eta1, self.eta2])
 
 
 class GaussianComponentConfig(BaseModel):
@@ -69,25 +48,6 @@ class SamplingConfig(BaseModel):
     parallel: bool
 
 
-class TrainConfig(BaseModel):
-    """Configuration for training the flow model."""
-
-    batch_size: int = 256
-    epochs: int = 1000
-    verbose: bool = True
-
-
-class RealNVPConfig(BaseModel):
-    """Configuration for the RealNVP flow model."""
-
-    n_scaled_layers: int = 2
-    n_unscaled_layers: int = 4
-    learning_rate: float = 0.001  # this is here rather than in TrainConfig because of how `harmonic` uses it
-    momentum: float = 0.9
-    standardize: bool = False
-    temperature: float = 0.95
-
-
 class HypothesisConfig(BaseModel):
     """Configuration for a single hypothesis test."""
 
@@ -96,41 +56,59 @@ class HypothesisConfig(BaseModel):
     nu: list[float]
 
 
-class DataConfig(BaseModel):
-    """Configuration for synthetic data generation."""
-
-    noise_level: float = Field(
-        0.05,
-        description="Noise level.",
-    )
-
-
-class Config(BaseModel):
+class ExpConfig(BaseModel):
     """Overall configuration for synthetic bulk IC experiment."""
 
     sampling: SamplingConfig
     priors: PriorsConfig
     training: TrainConfig
-    realnvp: RealNVPConfig
+    flow: FlowConfig
     hypotheses: list[HypothesisConfig]
-    truth: TrueBulkICConfig = Field(default_factory=TrueBulkICConfig)
-    data: DataConfig = Field(default_factory=DataConfig)
     geometry: GeometryConfig = Field(
         default_factory=GeometryConfig.earth_inner_core,
         description="Geometric configuration of regions.",
     )
 
+    @classmethod
+    def load(cls, path: str | Path) -> Self:
+        """Load configuration from YAML file."""
 
-def load_config(path: str | Path) -> Config:
+        return load_config(path, model=cls)
+
+    def dump(self: Self, path: str | Path) -> None:
+        """Dump configuration to YAML file."""
+
+        dump_config(self, path)
+
+
+def _lists_to_tuples(obj):
+    """Recursively convert lists in an object to tuples.
+
+    This walks nested dict/list structures produced by YAML and ensures
+    any list is converted to a tuple. Useful when downstream models or
+    dataclasses expect tuples (for hashing/immutability) rather than lists.
+    """
+    if isinstance(obj, list):
+        return tuple(_lists_to_tuples(v) for v in obj)
+    if isinstance(obj, dict):
+        return {k: _lists_to_tuples(v) for k, v in obj.items()}
+    return obj
+
+
+T = TypeVar("T", bound=BaseModel)
+
+
+def load_config(path: str | Path, model: type[T]) -> T:
     """Load configuration from YAML file."""
 
     with open(path) as f:
         raw = yaml.safe_load(f)
-    return Config(**raw)
+    raw = _lists_to_tuples(raw)
+    return model(**raw)
 
 
-def dump_config(cfg: Config, path: str | Path) -> None:
+def dump_config(cfg: BaseModel, path: str | Path) -> None:
     """Dump configuration to YAML file."""
 
     with open(path, "w") as f:
-        f.write(to_yaml_str(cfg))
+        yaml.safe_dump(cfg.model_dump(), f, sort_keys=False)

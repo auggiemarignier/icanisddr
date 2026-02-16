@@ -19,7 +19,7 @@ from sddr.sddr import (
     sddr,
 )
 
-from expconfig import Config, load_config
+from expconfig import ExpConfig
 from sampling.priors import CompoundPrior, PriorFunction
 
 logging.basicConfig(
@@ -73,7 +73,7 @@ def run_sddr_experiment(
     indices: list[int],
     prior: PriorFunction,
     nu: list[float],
-    cfg: Config,
+    cfg: ExpConfig,
 ) -> float:
     """Run the real data bulk IC SDDR experiment."""
 
@@ -138,7 +138,7 @@ def main() -> None:
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     results_dir = get_results_dir(n)
     SAMPLES_PATH = results_dir / "samples.pkl"
-    cfg = load_config(results_dir / "config.yaml")
+    cfg = ExpConfig.load(results_dir / "config.yaml")
 
     logger.info("Loading posterior samples from disk")
     with open(SAMPLES_PATH, "rb") as f:
