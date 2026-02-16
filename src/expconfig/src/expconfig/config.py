@@ -70,7 +70,7 @@ class ExpConfig(BaseModel):
     )
 
     @classmethod
-    def load[T](cls: type[T], path: str | Path) -> T:
+    def load(cls, path: str | Path) -> Self:
         """Load configuration from YAML file."""
 
         return load_config(path, model=cls)
