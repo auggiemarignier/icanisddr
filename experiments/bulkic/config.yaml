@@ -40,8 +40,8 @@ flow:
     momentum: 0.9
 hypotheses:
   - name: transversely_isotropic
-    indices: [4, 5]
-    nu: [0.0, 0.0]
+    indices: [5]
+    nu: [0.0]
   - name: fully_isotropic
     indices: [1, 2, 3]
     nu: [0.0, 0.0, 0.0]

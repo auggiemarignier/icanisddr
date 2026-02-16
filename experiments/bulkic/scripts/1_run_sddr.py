@@ -7,19 +7,20 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from harmonic.model import RealNVPModel
+import yaml
+from harmonic.model import RQSplineModel
 from harmonic.sddr import sddr as hmsddr
 from pydantic import BaseModel
-from pydantic_yaml import to_yaml_str
 from sddr.marginalisation import marginalise_prior, marginalise_samples
 from sddr.sddr import (
-    RealNVPConfig,
+    FlowConfig,
     TrainConfig,
     fit_marginalised_posterior,
     sddr,
 )
 
 from expconfig import ExpConfig
+from expconfig.synthetic import SynthConfig
 from sampling.priors import CompoundPrior, PriorFunction
 
 logging.basicConfig(
@@ -47,7 +48,7 @@ class ResultsSummary(BaseModel):
 
 def configure_posterior_fit(
     cfg: dict[str, Any],
-) -> tuple[TrainConfig, RealNVPConfig]:
+) -> tuple[TrainConfig, FlowConfig]:
     """Configure the posterior fitting parameters.
 
     Parameters
@@ -59,13 +60,11 @@ def configure_posterior_fit(
     -------
     train_cfg : TrainConfig
         Training configuration for the flow model.
-    realnvp_cfg : RealNVPConfig
-        RealNVP configuration for the flow model.
+    flow_cfg : FlowConfig
+        Flow configuration for the flow model.
     """
 
-    return TrainConfig(**cfg.get("training", {})), RealNVPConfig(
-        **cfg.get("realnvp", {})
-    )
+    return TrainConfig(**cfg.get("training", {})), FlowConfig(**cfg.get("flow", {}))
 
 
 def run_sddr_experiment(
@@ -78,11 +77,9 @@ def run_sddr_experiment(
     """Run the synthetic bulk IC SDDR experiment."""
 
     logger.info("Configuring posterior fitting parameters")
-    train_cfg, realnvp_cfg = configure_posterior_fit(cfg.model_dump())
+    train_cfg, flow_cfg = configure_posterior_fit(cfg.model_dump())
     logger.info("Training flow model on marginalised samples")
-    marg_posterior = fit_marginalised_posterior(
-        samples, indices, realnvp_cfg, train_cfg
-    )
+    marg_posterior = fit_marginalised_posterior(samples, indices, flow_cfg, train_cfg)
 
     logger.info("Marginalising the prior")
     marg_prior = marginalise_prior(prior, indices)
@@ -92,7 +89,14 @@ def run_sddr_experiment(
     logger.info(f"logSDDR: {sddr_h1:.4f}")
 
     logger.info("Calculating harmonic SDDR for comparison")
-    flow_model = RealNVPModel(ndim_in=marg_prior.n, standardize=True, temperature=1.0)
+    flow_model = RQSplineModel(
+        ndim_in=marg_prior.n,
+        standardize=flow_cfg.standardize,
+        learning_rate=flow_cfg.learning_rate,
+        momentum=flow_cfg.momentum,
+        temperature=flow_cfg.temperature,
+        **flow_cfg.flow_model_config.model_dump(),
+    )
     harm_sddr = hmsddr(flow_model, marginalise_samples(samples, indices))
     flow_log_bf, flow_log_bf_std = harm_sddr.log_bayes_factor(
         log_prior=marg_prior(np.array(nu)),
@@ -138,7 +142,7 @@ def main() -> None:
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     results_dir = get_results_dir(n)
     SAMPLES_PATH = results_dir / "samples.pkl"
-    cfg = load_config(results_dir / "config.yaml")
+    cfg = SynthConfig.load(results_dir / "config.yaml")
 
     logger.info("Loading posterior samples from disk")
     with open(SAMPLES_PATH, "rb") as f:
@@ -172,7 +176,7 @@ def main() -> None:
     logger.info("Dumping results to disk")
     summary = ResultsSummary(sddr_results=bfs)
     with open(results_dir / "sddr_results.yaml", "w") as f:
-        f.write(to_yaml_str(summary))
+        yaml.safe_dump(summary.model_dump(), f)
 
 
 if __name__ == "__main__":
