@@ -19,7 +19,7 @@ from sddr.sddr import (
     sddr,
 )
 
-from expconfig import ExpConfig, load_config
+from expconfig import ExpConfig
 from sampling.priors import CompoundPrior, PriorFunction
 
 logging.basicConfig(
