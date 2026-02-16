@@ -16,7 +16,7 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 import numpy as np
 import pandas as pd
 
-from expconfig import dump_config, load_config
+from expconfig import ExpConfig
 from icprem import PREM_IC_RHO, PREM_IC_VP
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
@@ -112,7 +112,7 @@ def dump_results(samples: np.ndarray, lnprob: np.ndarray, output_dir: Path) -> N
 def main() -> None:
     """Main function for real data bulk IC experiment."""
     logger.info("Starting real data bulk IC experiment")
-    cfg = load_config(CFG_FILE)
+    cfg = ExpConfig.load(CFG_FILE)
 
     rng = np.random.default_rng(42)
     ic_in, ic_out, dt_over_t, sigma = _setup_data(DATA_FILE)
@@ -129,7 +129,7 @@ def main() -> None:
     logger.info("Saving samples to disk")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
     dump_results(samples, lnprob, OUTPUT_DIR)
-    dump_config(cfg, OUTPUT_DIR / "config.yaml")
+    cfg.dump(OUTPUT_DIR / "config.yaml")
 
 
 if __name__ == "__main__":

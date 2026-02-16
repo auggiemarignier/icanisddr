@@ -14,9 +14,9 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 import numpy as np
 
-from expconfig import dump_config, load_config
 from expconfig.config import PriorsConfig
 from expconfig.synthetic import (
+    SynthConfig,
     create_paths,
     create_synthetic_data,
 )
@@ -95,7 +95,7 @@ def dump_results(samples: np.ndarray, lnprob: np.ndarray, output_dir: Path) -> N
 def main() -> None:
     """Main function for synthetic bulk IC experiment."""
     logger.info("Starting synthetic bulk IC experiment")
-    cfg = load_config(CFG_FILE)
+    cfg = SynthConfig.load(CFG_FILE)
 
     rng = np.random.default_rng(42)
 
@@ -120,7 +120,7 @@ def main() -> None:
     logger.info("Saving samples to disk")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
     dump_results(samples, lnprob, OUTPUT_DIR)
-    dump_config(cfg, OUTPUT_DIR / "config.yaml")
+    cfg.dump(OUTPUT_DIR / "config.yaml")
 
 
 if __name__ == "__main__":

@@ -28,13 +28,16 @@ training:
   batch_size: 24
   epochs: 10
   verbose: true
-realnvp:
-  n_scaled_layers: 2
-  n_unscaled_layers: 4
-  learning_rate: 0.001
-  momentum: 0.9
-  standardize: true
-  temperature: 1.0
+flow:
+    flow_type: "RQSpline"
+    model_config:
+      n_layers: 8
+      n_bins: 8
+      hidden_size: [64, 64]
+      spline_range: [-10.0, 10.0]
+    standardize: true
+    learning_rate: 0.001
+    momentum: 0.9
 hypotheses:
   - name: transversely_isotropic
     indices: [4, 5]
