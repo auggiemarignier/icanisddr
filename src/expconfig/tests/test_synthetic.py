@@ -362,3 +362,56 @@ class TestSyntheticConfig:
         loaded_config = SynthConfig.load(tmp_path / "synth_config.yaml")
         assert isinstance(loaded_config, SynthConfig)
         assert loaded_config == config
+
+    def test_multiregion_truth(self) -> None:
+        """Test that SynthConfig can be created with multiregion truth."""
+        config = SynthConfig(
+            sampling=SamplingConfig(
+                nwalkers=10,
+                nsteps=100,
+                burn_in=10,
+                thin=1,
+                progress=False,
+                vectorise=False,
+                parallel=False,
+            ),
+            priors=PriorsConfig(components=[{}]),
+            training=TrainConfig(
+                epochs=1,
+                batch_size=1,
+                verbose=False,
+            ),
+            flow=FlowConfig(),
+            hypotheses=[
+                HypothesisConfig(
+                    name="test_hypothesis",
+                    indices=[0],
+                    nu=[0.0],
+                )
+            ],
+            #
+            # THIS IS THE IMPORTANT BIT
+            #
+            truth=TrueBulkICConfig(
+                A=(0.0, 0.0),
+                C=(0.0, 0.0),
+                F=(0.0, 0.0),
+                L=(0.0, 0.0),
+                N=(0.0, 0.0),
+                eta1=(0.0, 0.0),
+                eta2=(0.0, 0.0),
+            ),
+            #
+            #
+            #
+            data=DataConfig(),
+        )
+
+        assert isinstance(config.truth, TrueBulkICConfig)
+        assert config.truth.A == (0.0, 0.0)
+        assert config.truth.C == (0.0, 0.0)
+        assert config.truth.F == (0.0, 0.0)
+        assert config.truth.L == (0.0, 0.0)
+        assert config.truth.N == (0.0, 0.0)
+        assert config.truth.eta1 == (0.0, 0.0)
+        assert config.truth.eta2 == (0.0, 0.0)

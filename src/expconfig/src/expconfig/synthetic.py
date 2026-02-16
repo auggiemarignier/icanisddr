@@ -22,13 +22,13 @@ class TrueBulkICConfig(BaseModel):
     The angles eta1 and eta2 are in degrees.
     """
 
-    A: float = 0.0143
-    C: float = 0.0909
-    F: float = -0.0858
-    L: float = 0.0
-    N: float = 0.0
-    eta1: float = 0.0
-    eta2: float = 0.0
+    A: float | tuple[float, ...] = 0.0143
+    C: float | tuple[float, ...] = 0.0909
+    F: float | tuple[float, ...] = -0.0858
+    L: float | tuple[float, ...] = 0.0
+    N: float | tuple[float, ...] = 0.0
+    eta1: float | tuple[float, ...] = 0.0
+    eta2: float | tuple[float, ...] = 0.0
 
     def as_array(self) -> np.ndarray:
         """Return the parameters as a numpy array."""
