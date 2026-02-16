@@ -326,7 +326,7 @@ class TestCreateSyntheticData:
 
 
 class TestSyntheticConfig:
-    """Tests for the SynthConfig dataclass."""
+    """Tests for the SynthConfig model."""
 
     def test_loadable_dumpable(self, tmp_path: Path) -> None:
         """Test that SynthConfig can be dumped and loaded correctly."""
