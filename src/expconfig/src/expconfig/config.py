@@ -104,7 +104,7 @@ def load_config[T](path: str | Path, model: type[T]) -> T:
     return model(**raw)
 
 
-def dump_config[T](cfg: T, path: str | Path) -> None:
+def dump_config(cfg: BaseModel, path: str | Path) -> None:
     """Dump configuration to YAML file."""
 
     with open(path, "w") as f:
