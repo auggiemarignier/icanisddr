@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Self
+from typing import Self, TypeVar
 
 import yaml
 from pydantic import BaseModel, Field
@@ -95,7 +95,10 @@ def _lists_to_tuples(obj):
     return obj
 
 
-def load_config[T](path: str | Path, model: type[T]) -> T:
+T = TypeVar("T", bound=BaseModel)
+
+
+def load_config(path: str | Path, model: type[T]) -> T:
     """Load configuration from YAML file."""
 
     with open(path) as f:
