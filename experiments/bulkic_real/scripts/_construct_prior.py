@@ -16,10 +16,10 @@ LF_CORR = -0.75  # correlation coefficient between L and F in the Gaussian prior
 
 def construct_prior_covariance() -> np.ndarray:
     """Construct the covariance matrix for the Gaussian prior on the Love parameters."""
-    variances = (SCALE * PREM.as_array()[:-1]) ** 2  # [:-1] to exclude N
+    variances = (SCALE * PREM.as_array()[:-2]) ** 2  # [:-1] to exclude N
     cov = np.diag(variances)
-    cov[2, 3] = LF_CORR * np.sqrt(variances[2] * variances[3])  # F-L correlation
-    cov[3, 2] = cov[2, 3]  # symmetric covariance matrix
+    # cov[2, 3] = LF_CORR * np.sqrt(variances[2] * variances[3])  # F-L correlation
+    # cov[3, 2] = cov[2, 3]  # symmetric covariance matrix
     return cov
 
 

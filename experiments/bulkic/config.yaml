@@ -9,21 +9,20 @@ sampling:
 priors:
   components:
     - type: gaussian
-      mean: [0.0, 0.0, 0.0, 0.0]
+      mean: [0.0, 0.0, 0.0]
       inv_covar:
-        - [8.853085068278257e-24, 0.0, 0.0, 0.0]
-        - [0.0, 8.853085068278257e-24, 0.0, 0.0]
-        - [0.0, 0.0, 1.03458883e-23, 9.29788229e-23]
-        - [0.0, 0.0, 9.29788229e-23, 1.70531347e-21]
-      indices: [0, 1, 2, 3]
-    - type: uniform
+        - [8.85308507e-24, 0.00000000e+00, 0.00000000e+00]
+        - [0.00000000e+00, 8.85308507e-24, 0.00000000e+00]
+        - [0.00000000e+00, 0.00000000e+00, 1.38949022e-23]
+      indices: [0, 1, 2]
+    - type: wrapped_uniform
       lower_bounds: -180.0
       upper_bounds: 180.0
-      indices: [4]
+      indices: [3]
     - type: uniform
       lower_bounds: 0.0
       upper_bounds: 90.0
-      indices: [5]
+      indices: [4]
 training:
   batch_size: 24
   epochs: 10
@@ -40,7 +39,7 @@ flow:
     momentum: 0.9
 hypotheses:
   - name: transversely_isotropic
-    indices: [5]
+    indices: [4]
     nu: [0.0]
   - name: fully_isotropic
     indices: [1, 2, 3]
