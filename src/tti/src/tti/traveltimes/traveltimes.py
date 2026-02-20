@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from ..elastic.fourth import tilted_transverse_isotropic_tensor as ttit4
 from ..elastic.voigt import n_outer_n
+from ..elastic.voigt import tilted_transverse_isotropic_tensor as ttitv
 from ._unpackings import _unpackings
 from .paths import calculate_path_direction_vector
 
@@ -166,8 +166,8 @@ class TravelTimeCalculator:
         F += self.reference_love[2]
         L += self.reference_love[3]
         N += self.reference_love[4]
-        D = ttit4(A, C, F, L, N, eta1, eta2)
-        dt = calculate_relative_traveltime_4th(
+        D = ttitv(A, C, F, L, N, eta1, eta2)
+        dt = calculate_relative_traveltime_voigt(
             self.path_directions, D, normalisation=self.normalisation
         )  # shape (batch, cells, npaths)
 

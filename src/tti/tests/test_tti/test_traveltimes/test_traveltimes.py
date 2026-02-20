@@ -5,12 +5,12 @@ from typing import Literal
 import numpy as np
 import pytest
 
-from tti.elastic import (
+from tti.elastic.creager import calculate_traveltime as calc_dt_creager
+from tti.elastic.creager import love_to_creager
+from tti.elastic.fourth import (
     isotropic_tensor,
     transverse_isotropic_tensor,
 )
-from tti.elastic.creager import calculate_traveltime as calc_dt_creager
-from tti.elastic.creager import love_to_creager
 from tti.elastic.voigt_mapping import elastic_tensor_to_voigt
 from tti.traveltimes import TravelTimeCalculator
 from tti.traveltimes.traveltimes import (
