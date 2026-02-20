@@ -131,3 +131,74 @@ def transformation_to_voigt(T: np.ndarray) -> np.ndarray:
     mask = k != l
     T_voigt = np.where(mask, T_voigt + T[..., i, j, l, k], T_voigt)
     return T_voigt
+
+
+def matrix_to_voigt(R: np.ndarray) -> np.ndarray:
+    """Convert a 3x3 transformation matrix to Voigt notation using Bond's law.
+
+    Parameters
+    ----------
+    R : ndarray, shape (..., 3, 3)
+        3x3 transformation matrix
+
+    Returns
+    -------
+    R_voigt : ndarray, shape (..., 6, 6)
+        Transformation matrix in Voigt notation
+    """
+
+    # get the notation the same as in Brett et al., 2024
+    r11 = R[..., 0, 0]
+    r12 = R[..., 0, 1]
+    r13 = R[..., 0, 2]
+    r21 = R[..., 1, 0]
+    r22 = R[..., 1, 1]
+    r23 = R[..., 1, 2]
+    r31 = R[..., 2, 0]
+    r32 = R[..., 2, 1]
+    r33 = R[..., 2, 2]
+
+    # Build the 6x6 Bond transformation matrix in Voigt notation
+    row0 = np.stack(
+        [r11**2, r12**2, r13**2, 2 * r12 * r13, 2 * r11 * r13, 2 * r11 * r12], axis=-1
+    )
+    row1 = np.stack(
+        [r21**2, r22**2, r23**2, 2 * r22 * r23, 2 * r21 * r23, 2 * r21 * r22], axis=-1
+    )
+    row2 = np.stack(
+        [r31**2, r32**2, r33**2, 2 * r32 * r33, 2 * r31 * r33, 2 * r31 * r32], axis=-1
+    )
+    row3 = np.stack(
+        [
+            r21 * r31,
+            r22 * r32,
+            r23 * r33,
+            r22 * r33 + r23 * r32,
+            r21 * r33 + r23 * r31,
+            r21 * r32 + r22 * r31,
+        ],
+        axis=-1,
+    )
+    row4 = np.stack(
+        [
+            r11 * r31,
+            r12 * r32,
+            r13 * r33,
+            r12 * r33 + r13 * r32,
+            r11 * r33 + r13 * r31,
+            r11 * r32 + r12 * r31,
+        ],
+        axis=-1,
+    )
+    row5 = np.stack(
+        [
+            r11 * r21,
+            r12 * r22,
+            r13 * r23,
+            r12 * r23 + r13 * r22,
+            r11 * r23 + r13 * r21,
+            r11 * r22 + r12 * r21,
+        ],
+        axis=-1,
+    )
+    return np.stack([row0, row1, row2, row3, row4, row5], axis=-2)
