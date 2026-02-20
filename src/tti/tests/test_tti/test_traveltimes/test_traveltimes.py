@@ -11,8 +11,74 @@ from tti.elastic import (
 )
 from tti.elastic.creager import calculate_traveltime as calc_dt_creager
 from tti.elastic.creager import love_to_creager
+from tti.elastic.voigt_mapping import elastic_tensor_to_voigt
 from tti.traveltimes import TravelTimeCalculator
-from tti.traveltimes.traveltimes import calculate_relative_traveltime
+from tti.traveltimes.traveltimes import (
+    calculate_relative_traveltime_4th,
+    calculate_relative_traveltime_voigt,
+)
+
+
+def make_arbitrary_symmetric_D() -> np.ndarray:
+    """Construct a deterministic, arbitrary 4th-order tensor with minor and major symmetries.
+
+    The helper sets a handful of independent components and mirrors them so that
+    D[i,j,k,l] = D[j,i,k,l] = D[i,j,l,k] = D[k,l,i,j]. This keeps tests
+    deterministic while exercising off-diagonal components.
+    """
+    D = np.zeros((3, 3, 3, 3))
+
+    def set_sym(i: int, j: int, k: int, l: int, value: float) -> None:
+        pairs_ij = [(i, j), (j, i)]
+        pairs_kl = [(k, l), (l, k)]
+        for a, b in pairs_ij:
+            for c, d in pairs_kl:
+                D[a, b, c, d] = value
+                D[c, d, a, b] = value
+
+    # Primary diagonal-like entries
+    set_sym(0, 0, 0, 0, 1.0)
+    set_sym(1, 1, 1, 1, 2.0)
+    set_sym(2, 2, 2, 2, 3.0)
+
+    # Some off-diagonal couplings (mirrored by set_sym)
+    set_sym(0, 0, 1, 1, 0.5)
+    set_sym(0, 0, 2, 2, 0.25)
+    set_sym(1, 1, 2, 2, 0.75)
+
+    # Shear-like components
+    set_sym(0, 1, 0, 1, 0.1)
+    set_sym(0, 2, 0, 2, 0.2)
+    set_sym(1, 2, 1, 2, 0.3)
+
+    return D
+
+
+@pytest.mark.parametrize(
+    "shape,",
+    [(3, 3, 3, 3), (2, 3, 3, 3, 3), (2, 4, 3, 3, 3, 3)],
+    ids=["single", "cells", "batch_cells"],
+)
+def test_traveltime_voigt_fourth_equivalence(shape: tuple[int, ...]) -> None:
+    """Test that the Voigt and 4th-order tensor versions of traveltime calculation are equivalent."""
+
+    D = make_arbitrary_symmetric_D()
+    D = np.broadcast_to(D, shape)
+
+    n_batch = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)]
+        ]
+    )
+
+    dt_4th = calculate_relative_traveltime_4th(n_batch, D)
+    D_voigt = elastic_tensor_to_voigt(D)
+    dt_voigt = calculate_relative_traveltime_voigt(n_batch, D_voigt)
+
+    np.testing.assert_allclose(dt_4th, dt_voigt)
 
 
 def test_traveltime_zero_for_zero_perturbation() -> None:
@@ -21,7 +87,7 @@ def test_traveltime_zero_for_zero_perturbation() -> None:
     D = np.zeros((3, 3, 3, 3))
     n = np.array([0.0, 0.0, 1.0])
 
-    dt = calculate_relative_traveltime(n, D)
+    dt = calculate_relative_traveltime_4th(n, D)
 
     assert dt == 0.0
 
@@ -46,7 +112,7 @@ def test_traveltime_batch() -> None:
     )
     n_paths = n_batch.shape[0]
 
-    dt_batch = calculate_relative_traveltime(n_batch, D)
+    dt_batch = calculate_relative_traveltime_4th(n_batch, D)
 
     expected_per_path = np.array([1.0, 2.0, 3.0, 2.0, 1.0])
     expected = np.broadcast_to(expected_per_path, (2, 4, n_paths))
@@ -75,7 +141,7 @@ def test_traveltime_batch_with_normalisation() -> None:
     )
     n_paths = n_batch.shape[0]
 
-    dt_batch = calculate_relative_traveltime(n_batch, D, normalisation=2.0)
+    dt_batch = calculate_relative_traveltime_4th(n_batch, D, normalisation=2.0)
 
     expected_per_path = np.array([1.0, 2.0, 3.0, 2.0, 1.0])
     expected = np.broadcast_to(2.0 * expected_per_path, (2, 4, n_paths))
@@ -96,7 +162,7 @@ def test_traveltime_isotropic_independent_of_direction(
     directions = rng.normal(size=(10, 3))
     directions = directions / np.linalg.norm(directions, axis=1, keepdims=True)
 
-    results = calculate_relative_traveltime(directions, D)
+    results = calculate_relative_traveltime_4th(directions, D)
     expected = (lam + 2 * mu).item()
 
     np.testing.assert_allclose(results, expected)
@@ -109,8 +175,8 @@ def test_traveltime_linear_in_perturbation(rng: np.random.Generator) -> None:
     D = transverse_isotropic_tensor(A, C, F, L, N)
     n = np.array([[1.0, 0.0, 0.0]])
 
-    dt1 = calculate_relative_traveltime(n, D)
-    dt2 = calculate_relative_traveltime(n, 2 * D)
+    dt1 = calculate_relative_traveltime_4th(n, D)
+    dt2 = calculate_relative_traveltime_4th(n, 2 * D)
 
     np.testing.assert_allclose(dt2, 2 * dt1)
 
@@ -129,7 +195,7 @@ def test_traveltime_known_diagonal_tensor() -> None:
     n = np.array([[0.6, 0.0, 0.8]])  # normalised
     expected = 1.0 * (0.6**4) + 3.0 * (0.8**4)
 
-    dt = calculate_relative_traveltime(n, D)
+    dt = calculate_relative_traveltime_4th(n, D)
 
     np.testing.assert_allclose(dt, expected)
 
@@ -141,8 +207,8 @@ def test_traveltime_antiparallel_rays_equal(rng: np.random.Generator) -> None:
     D = transverse_isotropic_tensor(A, C, F, L, N)
 
     n = np.array([[0.6, 0.8, 0.0]])
-    dt_forward = calculate_relative_traveltime(n, D)
-    dt_backward = calculate_relative_traveltime(-n, D)
+    dt_forward = calculate_relative_traveltime_4th(n, D)
+    dt_backward = calculate_relative_traveltime_4th(-n, D)
 
     np.testing.assert_allclose(dt_forward, dt_backward)
 
@@ -153,10 +219,10 @@ def test_traveltime_shape_validation() -> None:
     D = np.zeros((3, 3, 3, 3))
 
     with pytest.raises((ValueError, IndexError)):
-        calculate_relative_traveltime(np.array([1.0, 0.0]), D)  # n wrong shape
+        calculate_relative_traveltime_4th(np.array([1.0, 0.0]), D)  # n wrong shape
 
     with pytest.raises((ValueError, IndexError)):
-        calculate_relative_traveltime(
+        calculate_relative_traveltime_4th(
             np.array([1.0, 0.0, 0.0]), np.zeros((3, 3))
         )  # D wrong shape
 
@@ -171,7 +237,7 @@ def test_traveltime_transverse_isotropic_polar(rng: np.random.Generator) -> None
     D = transverse_isotropic_tensor(A, C, F, L, N)
     n = np.array([[0.0, 0.0, 1.0]])  # along symmetry axis
 
-    dt = calculate_relative_traveltime(n, D)
+    dt = calculate_relative_traveltime_4th(n, D)
 
     expected = C[..., None]
 
@@ -192,7 +258,7 @@ def test_traveltime_transverse_isotropic_equatorial(
     A, C, F, L, N = rng.random(size=(5, 2, 4))
     D = transverse_isotropic_tensor(A, C, F, L, N)
 
-    dt = calculate_relative_traveltime(n, D)
+    dt = calculate_relative_traveltime_4th(n, D)
 
     expected = A[..., None]
 
@@ -226,7 +292,7 @@ def test_traveltime_equivalence_with_creager_isotropic(
     theta = rng.uniform(0, 2 * np.pi, size=10)
     n = np.stack([np.sin(theta), np.zeros_like(theta), np.cos(theta)], axis=-1)
 
-    dt_tti = calculate_relative_traveltime(n, D)
+    dt_tti = calculate_relative_traveltime_4th(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
     np.testing.assert_allclose(dt_tti, dt_creager)
 
@@ -243,7 +309,7 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_parallel(
     theta = np.zeros(10)
     n = np.stack([np.sin(theta), np.zeros_like(theta), np.cos(theta)], axis=-1)
 
-    dt_tti = calculate_relative_traveltime(n, D)
+    dt_tti = calculate_relative_traveltime_4th(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
 
     np.testing.assert_allclose(dt_tti, dt_creager)
@@ -263,7 +329,7 @@ def test_traveltime_equivalence_with_creager_transverse_isotropic_perpendicular(
     theta = np.array([np.pi / 2])
     n = np.stack([np.sin(theta), np.zeros_like(theta), np.cos(theta)], axis=-1)
 
-    dt_tti = calculate_relative_traveltime(n, D)
+    dt_tti = calculate_relative_traveltime_4th(n, D)
     dt_creager = calc_dt_creager(theta, a, b, c)
 
     np.testing.assert_allclose(dt_tti, dt_creager)

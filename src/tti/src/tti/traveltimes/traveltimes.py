@@ -2,12 +2,13 @@
 
 import numpy as np
 
-from ..elastic import tilted_transverse_isotropic_tensor
+from ..elastic.fourth import tilted_transverse_isotropic_tensor as ttit4
+from ..elastic.voigt import n_outer_n
 from ._unpackings import _unpackings
 from .paths import calculate_path_direction_vector
 
 
-def calculate_relative_traveltime(
+def calculate_relative_traveltime_4th(
     n: np.ndarray, D: np.ndarray, normalisation: float = 1.0
 ) -> np.ndarray:
     r"""
@@ -43,6 +44,39 @@ def calculate_relative_traveltime(
     return normalisation * np.einsum(
         "...ijkl,...pi,...pj,...pk,...pl->...p", D, n, n, n, n
     )
+
+
+
+def calculate_relative_traveltime_voigt(n: np.ndarray, D_voigt: np.ndarray, normalisation: float = 1.0) -> np.ndarray:
+    r"""
+    Calculate relative traveltime perturbation in Voigt notation.
+
+    Parameters
+    ----------
+    n : ndarray, shape (npaths, 3)
+        Ray direction unit vector(s).
+    D_voigt : ndarray, shape (..., 6, 6)
+        Elastic tensor in Voigt notation.  Leading dimensions are arbitrary.
+    normalisation : float, optional
+        Normalisation constant to apply to the relative traveltime perturbation (default is 1.0).
+
+    Returns
+    -------
+    np.ndarray, shape (..., npaths)
+        Relative traveltime perturbation.  Batched according to the leading dimensions of D_voigt.
+    """
+    # Broadcast n to match leading dimensions of D_voigt
+    leading_shape = D_voigt.shape[:-2]
+    n = np.atleast_2d(n)
+    n = np.broadcast_to(n, leading_shape + n.shape)
+
+    # Compute outer products of n in Voigt notation
+    non = n_outer_n(n)
+
+    # Compute quadratic form non_p^T D non_p for each path p using batched matmul.
+    # non has shape (..., p, 6) and D_voigt has shape (..., 6, 6).
+    # tmp = non @ D_voigt -> shape (..., p, 6); then sum over last axis.
+    return normalisation * np.sum((non @ D_voigt) * non, axis=-1)
 
 
 class TravelTimeCalculator:
@@ -132,8 +166,8 @@ class TravelTimeCalculator:
         F += self.reference_love[2]
         L += self.reference_love[3]
         N += self.reference_love[4]
-        D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
-        dt = calculate_relative_traveltime(
+        D = ttit4(A, C, F, L, N, eta1, eta2)
+        dt = calculate_relative_traveltime_4th(
             self.path_directions, D, normalisation=self.normalisation
         )  # shape (batch, cells, npaths)
 

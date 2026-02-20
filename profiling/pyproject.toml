@@ -7,6 +7,7 @@ requires-python = ">=3.12, <3.14"
 dependencies = [
     "tti",
     "matplotlib>=3.10.7",
+    "joblib>=1.5.3",
 ]
 
 [tool.uv.sources]

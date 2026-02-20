@@ -179,13 +179,11 @@ def n_outer_n(n: np.ndarray) -> np.ndarray:
     n_outer_n : ndarray, shape (..., 6)
         Outer product of n with itself in Voigt notation.
     """
-    return np.array(
-        [
-            n[..., 0] ** 2,
-            n[..., 1] ** 2,
-            n[..., 2] ** 2,
-            2 * n[..., 1] * n[..., 2],
-            2 * n[..., 0] * n[..., 2],
-            2 * n[..., 0] * n[..., 1],
-        ]
-    ).T
+    non = np.zeros((*n.shape[:-1], 6))
+    non[..., 0] = n[..., 0] ** 2
+    non[..., 1] = n[..., 1] ** 2
+    non[..., 2] = n[..., 2] ** 2
+    non[..., 3] = 2 * n[..., 1] * n[..., 2]
+    non[..., 4] = 2 * n[..., 0] * n[..., 2]
+    non[..., 5] = 2 * n[..., 0] * n[..., 1]
+    return non
