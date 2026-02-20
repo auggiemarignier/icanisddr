@@ -10,6 +10,7 @@ import pytest
 
 from tti.elastic.voigt import (
     isotropic_tensor,
+    n_outer_n,
     transverse_isotropic_tensor,
 )
 
@@ -63,3 +64,37 @@ def test_transverse_isotropic_symmetry(
     else:
         for idx in np.ndindex(C_voigt.shape[:-2]):
             np.testing.assert_array_equal(C_voigt[idx], C_voigt[idx].T)
+
+
+@pytest.mark.parametrize(
+    "shape,",
+    [(3,), (2, 3)],
+    ids=["single", "batch"],
+)
+def test_n_outer_n(shape: tuple[int, ...], rng: np.random.Generator) -> None:
+    """Test that n_outer_n produces the correct outer product in Voigt notation."""
+
+    leading_shape = shape[:-1]
+
+    n = rng.uniform(-1, 1, size=(*leading_shape, 3))
+    n = n / np.linalg.norm(n, axis=-1, keepdims=True)
+
+    n_outer_n_result = n_outer_n(n)
+    assert n_outer_n_result.shape == (*leading_shape, 6)
+
+    expected = []
+    for _n in np.atleast_2d(n):
+        outer = np.outer(_n, _n)
+        expected.append(
+            [
+                outer[0, 0],
+                outer[1, 1],
+                outer[2, 2],
+                2 * outer[1, 2],
+                2 * outer[0, 2],
+                2 * outer[0, 1],
+            ]
+        )
+
+    expected = np.array(expected).squeeze()
+    np.testing.assert_allclose(n_outer_n_result, expected)

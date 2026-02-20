@@ -2,9 +2,8 @@
 
 import numpy as np
 
-from tti.elastic.fourth import transformation_4th_order
-from tti.elastic.voigt_mapping import transformation_to_voigt
-from tti.rotation import rotation_matrix_zy
+from ..rotation import rotation_matrix_zy
+from .voigt_mapping import matrix_to_voigt
 
 
 def isotropic_tensor(lam: np.ndarray, mu: np.ndarray) -> np.ndarray:
@@ -160,8 +159,33 @@ def tilted_transverse_isotropic_tensor(
     C_voigt = transverse_isotropic_tensor(A, C, F, L, N)
 
     R = rotation_matrix_zy(eta1, eta2)
-    R_voigt = transformation_to_voigt(transformation_4th_order(R))
+    R_voigt = matrix_to_voigt(R)
 
     C_rotated_voigt = R_voigt @ C_voigt @ R_voigt.swapaxes(-2, -1)
 
     return C_rotated_voigt
+
+
+def n_outer_n(n: np.ndarray) -> np.ndarray:
+    """Compute the outer product of a vector with itself in Voigt notation.
+
+    Parameters
+    ----------
+    n : ndarray, shape (..., 3)
+        Vector(s) to compute outer product of with themselves.
+
+    Returns
+    -------
+    n_outer_n : ndarray, shape (..., 6)
+        Outer product of n with itself in Voigt notation.
+    """
+    return np.array(
+        [
+            n[..., 0] ** 2,
+            n[..., 1] ** 2,
+            n[..., 2] ** 2,
+            2 * n[..., 1] * n[..., 2],
+            2 * n[..., 0] * n[..., 2],
+            2 * n[..., 0] * n[..., 1],
+        ]
+    ).T
