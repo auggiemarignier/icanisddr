@@ -305,9 +305,9 @@ def gradient_D_wrt_A(
     N : np.ndarray (...,)
         Elastic constant C66.  Unused - kept for interface consistency.
     eta1 : np.ndarray (...,)
-        Tilt angle around the y-axis (in radians)
+        Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
-        Azimuthal angle around the z-axis (in radians)
+        Azimuthal angle around the y-axis (in radians)
 
     Returns
     -------
@@ -341,9 +341,9 @@ def gradient_D_wrt_C(
     N : np.ndarray (...,)
         Elastic constant C66.  Unused - kept for interface consistency.
     eta1 : np.ndarray (...,)
-        Tilt angle around the y-axis (in radians)
+        Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
-        Azimuthal angle around the z-axis (in radians)
+        Azimuthal angle around the y-axis (in radians)
 
     Returns
     -------
@@ -377,9 +377,9 @@ def gradient_D_wrt_F(
     N : np.ndarray (...,)
         Elastic constant C66.  Unused - kept for interface consistency.
     eta1 : np.ndarray (...,)
-        Tilt angle around the y-axis (in radians)
+        Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
-        Azimuthal angle around the z-axis (in radians)
+        Azimuthal angle around the y-axis (in radians)
 
     Returns
     -------
@@ -413,9 +413,9 @@ def gradient_D_wrt_L(
     N : np.ndarray (...,)
         Elastic constant C66.  Unused - kept for interface consistency.
     eta1 : np.ndarray (...,)
-        Tilt angle around the y-axis (in radians)
+        Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
-        Azimuthal angle around the z-axis (in radians)
+        Azimuthal angle around the y-axis (in radians)
 
     Returns
     -------
@@ -449,9 +449,9 @@ def gradient_D_wrt_N(
     N : np.ndarray (...,)
         Elastic constant C66.  Unused - kept for interface consistency.
     eta1 : np.ndarray (...,)
-        Tilt angle around the y-axis (in radians)
+        Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
-        Azimuthal angle around the z-axis (in radians)
+        Azimuthal angle around the y-axis (in radians)
 
     Returns
     -------
@@ -485,9 +485,9 @@ def gradient_D_wrt_eta1(
     N : np.ndarray (...,)
         Elastic constant C66.
     eta1 : np.ndarray (...,)
-        Tilt angle around the y-axis (in radians)
+        Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
-        Azimuthal angle around the z-axis (in radians)
+        Azimuthal angle around the y-axis (in radians)
 
     Returns
     -------
@@ -530,9 +530,9 @@ def gradient_D_wrt_eta2(
     N : np.ndarray (...,)
         Elastic constant C66.
     eta1 : np.ndarray (...,)
-        Tilt angle around the y-axis (in radians)
+        Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
-        Azimuthal angle around the z-axis (in radians)
+        Azimuthal angle around the y-axis (in radians)
 
     Returns
     -------
@@ -575,9 +575,9 @@ def gradient_D(
     N : np.ndarray (...,)
         Elastic constant C66.
     eta1 : np.ndarray (...,)
-        Tilt angle around the y-axis (in radians)
+        Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
-        Azimuthal angle around the z-axis (in radians)
+        Azimuthal angle around the y-axis (in radians)
     Returns
     -------
     dD : np.ndarray (..., 7, 6, 6)
