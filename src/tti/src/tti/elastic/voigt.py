@@ -1,8 +1,14 @@
 """Elastic tensors as Voigt notation matrices."""
 
+from tti.rotation import rotation_matrix_z, rotation_matrix_y
+
 import numpy as np
 
-from ..rotation import rotation_matrix_zy
+from ..rotation import (
+    gradient_rotation_matrix_y,
+    gradient_rotation_matrix_z,
+    rotation_matrix_zy,
+)
 from .voigt_mapping import matrix_to_voigt
 
 
@@ -187,3 +193,272 @@ def n_outer_n(n: np.ndarray) -> np.ndarray:
     non[..., 4] = 2 * n[..., 0] * n[..., 2]
     non[..., 5] = 2 * n[..., 0] * n[..., 1]
     return non
+
+
+dCdA = np.zeros((6, 6))
+dCdA[0, 0] = 1
+dCdA[0, 1] = 1
+dCdA[1, 0] = 1
+dCdA[1, 1] = 1
+dCdA.setflags(write=False)
+
+
+def gradient_C_wrt_A() -> np.ndarray:
+    """Gradient of transverse isotropic elastic tensor wrt Love parameter A.
+
+    Returns
+    -------
+    dCdA : ndarray, shape(6, 6)
+    """
+
+    return dCdA
+
+
+dCdC = np.zeros((6, 6))
+dCdC[2, 2] = 1
+dCdC.setflags(write=False)
+
+
+def gradient_C_wrt_C() -> np.ndarray:
+    """Gradient of transverse isotropic elastic tensor wrt Love parameter C.
+
+    Returns
+    -------
+    dCdC : ndarray, shape(6, 6)
+    """
+
+    return dCdC
+
+
+dCdF = np.zeros((6, 6))
+dCdF[0, 2] = 1
+dCdF[1, 2] = 1
+dCdF[2, 0] = 1
+dCdF[2, 1] = 1
+dCdF.setflags(write=False)
+
+
+def gradient_C_wrt_F() -> np.ndarray:
+    """Gradient of transverse isotropic elastic tensor wrt Love parameter F.
+
+    Returns
+    -------
+    dCdF : ndarray, shape(6, 6)
+    """
+
+    return dCdF
+
+
+dCdL = np.zeros((6, 6))
+dCdL[3, 3] = 1
+dCdL[4, 4] = 1
+dCdL.setflags(write=False)
+
+
+def gradient_C_wrt_L() -> np.ndarray:
+    """Gradient of transverse isotropic elastic tensor wrt Love parameter L.
+
+    Returns
+    -------
+    dCdL : ndarray, shape(6, 6)
+    """
+
+    return dCdL
+
+
+dCdN = np.zeros((6, 6))
+dCdN[0, 1] = -2
+dCdN[1, 0] = -2
+dCdN[5, 5] = 1
+dCdN.setflags(write=False)
+
+
+def gradient_C_wrt_N() -> np.ndarray:
+    """Gradient of transverse isotropic elastic tensor wrt Love parameter N.
+
+    Returns
+    -------
+    dCdN : ndarray, shape(6, 6)
+    """
+
+    return dCdN
+
+
+def gradient_D_wrt_A(
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
+) -> np.ndarray:
+    """Gradient of D wrt A evaluated at eta1, eta2.
+
+    Parameters
+    ----------
+    A : np.ndarray (...,)
+        Elastic constant C11 = C22.  Unused - kept for interface consistency.
+    C : np.ndarray (...,)
+        Elastic constant C33.  Unused - kept for interface consistency.
+    F : np.ndarray (...,)
+        Elastic constant C13 = C23.  Unused - kept for interface consistency.
+    L : np.ndarray (...,)
+        Elastic constant C44 = C55.  Unused - kept for interface consistency.
+    N : np.ndarray (...,)
+        Elastic constant C66.  Unused - kept for interface consistency.
+    eta1 : np.ndarray (...,)
+        Tilt angle around the y-axis (in radians)
+    eta2 : np.ndarray (...,)
+        Azimuthal angle around the z-axis (in radians)
+
+    Returns
+    -------
+    dDdA : np.ndarray (..., 6, 6)
+    """
+    Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
+    return Rzy @ dCdA @ Rzy.T
+
+
+def gradient_D_wrt_C(
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
+) -> np.ndarray:
+    """Gradient of D wrt C evaluated at eta1, eta2.
+
+    Parameters
+    ----------
+    A : np.ndarray (...,)
+        Elastic constant C11 = C22.  Unused - kept for interface consistency.
+    C : np.ndarray (...,)
+        Elastic constant C33.  Unused - kept for interface consistency.
+    F : np.ndarray (...,)
+        Elastic constant C13 = C23.  Unused - kept for interface consistency.
+    L : np.ndarray (...,)
+        Elastic constant C44 = C55.  Unused - kept for interface consistency.
+    N : np.ndarray (...,)
+        Elastic constant C66.  Unused - kept for interface consistency.
+    eta1 : np.ndarray (...,)
+        Tilt angle around the y-axis (in radians)
+    eta2 : np.ndarray (...,)
+        Azimuthal angle around the z-axis (in radians)
+
+    Returns
+    -------
+    dDdC : np.ndarray (..., 6, 6)
+    """
+    Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
+    return Rzy @ dCdC @ Rzy.T
+
+
+def gradient_D_wrt_F(
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
+) -> np.ndarray:
+    """Gradient of D wrt F evaluated at eta1, eta2.
+
+    Parameters
+    ----------
+    A : np.ndarray (...,)
+        Elastic constant C11 = C22.  Unused - kept for interface consistency.
+    C : np.ndarray (...,)
+        Elastic constant C33.  Unused - kept for interface consistency.
+    F : np.ndarray (...,)
+        Elastic constant C13 = C23.  Unused - kept for interface consistency.
+    L : np.ndarray (...,)
+        Elastic constant C44 = C55.  Unused - kept for interface consistency.
+    N : np.ndarray (...,)
+        Elastic constant C66.  Unused - kept for interface consistency.
+    eta1 : np.ndarray (...,)
+        Tilt angle around the y-axis (in radians)
+    eta2 : np.ndarray (...,)
+        Azimuthal angle around the z-axis (in radians)
+
+    Returns
+    -------
+    dDdF : np.ndarray (..., 6, 6)
+    """
+    Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
+    return Rzy @ dCdF @ Rzy.T
+
+
+def gradient_D_wrt_L(
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
+) -> np.ndarray:
+    """Gradient of D wrt L evaluated at eta1, eta2.
+
+    Parameters
+    ----------
+    A : np.ndarray (...,)
+        Elastic constant C11 = C22.  Unused - kept for interface consistency.
+    C : np.ndarray (...,)
+        Elastic constant C33.  Unused - kept for interface consistency.
+    F : np.ndarray (...,)
+        Elastic constant C13 = C23.  Unused - kept for interface consistency.
+    L : np.ndarray (...,)
+        Elastic constant C44 = C55.  Unused - kept for interface consistency.
+    N : np.ndarray (...,)
+        Elastic constant C66.  Unused - kept for interface consistency.
+    eta1 : np.ndarray (...,)
+        Tilt angle around the y-axis (in radians)
+    eta2 : np.ndarray (...,)
+        Azimuthal angle around the z-axis (in radians)
+
+    Returns
+    -------
+    dDdL : np.ndarray (..., 6, 6)
+    """
+    Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
+    return Rzy @ dCdL @ Rzy.T
+
+
+def gradient_D_wrt_N(
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
+) -> np.ndarray:
+    """Gradient of D wrt N evaluated at eta1, eta2.
+
+    Parameters
+    ----------
+    A : np.ndarray (...,)
+        Elastic constant C11 = C22.  Unused - kept for interface consistency.
+    C : np.ndarray (...,)
+        Elastic constant C33.  Unused - kept for interface consistency.
+    F : np.ndarray (...,)
+        Elastic constant C13 = C23.  Unused - kept for interface consistency.
+    L : np.ndarray (...,)
+        Elastic constant C44 = C55.  Unused - kept for interface consistency.
+    N : np.ndarray (...,)
+        Elastic constant C66.  Unused - kept for interface consistency.
+    eta1 : np.ndarray (...,)
+        Tilt angle around the y-axis (in radians)
+    eta2 : np.ndarray (...,)
+        Azimuthal angle around the z-axis (in radians)
+
+    Returns
+    -------
+    dDdN : np.ndarray (..., 6, 6)
+    """
+    Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
+    return Rzy @ dCdN @ Rzy.T
