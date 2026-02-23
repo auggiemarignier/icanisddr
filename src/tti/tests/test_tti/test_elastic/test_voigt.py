@@ -22,6 +22,7 @@ from tti.elastic.voigt import (
     gradient_C_wrt_F,
     gradient_C_wrt_L,
     gradient_C_wrt_N,
+    gradient_D,
     gradient_D_wrt_A,
     gradient_D_wrt_C,
     gradient_D_wrt_eta1,
@@ -205,12 +206,7 @@ class TestGradients:
 
         assert grad.shape == (*leading_shape, 6, 6)
 
-        # Broadcast expected 6x6 constant to leading shape for comparison
-        if leading_shape:
-            expected_b = np.broadcast_to(expected, (*leading_shape, 6, 6))
-        else:
-            expected_b = expected
-
+        expected_b = np.broadcast_to(expected, (*leading_shape, 6, 6))
         np.testing.assert_array_equal(grad, expected_b)
 
     @staticmethod
@@ -286,5 +282,44 @@ class TestGradients:
 
         analytical = gradient_func(A, C, F, L, N, eta1, eta2)
         numerical = TestGradients.finite_diff_D([A, C, F, L, N, eta1, eta2], idx)
+
+        np.testing.assert_allclose(analytical, numerical, atol=1e-6)
+
+    @pytest.mark.parametrize(
+        "shape,",
+        [(6, 6), (2, 6, 6), (2, 4, 6, 6)],
+        ids=["single", "cells", "batch_cells"],
+    )
+    def test_full_gradient_D_finite_diff(
+        self,
+        shape: tuple[int, ...],
+        rng: np.random.Generator,
+    ) -> None:
+        """Compare analytical solution with finite differences."""
+        leading_shape = shape[:-2]
+
+        A = rng.random(size=leading_shape)
+        C = rng.random(size=leading_shape)
+        F = rng.random(size=leading_shape)
+        L = rng.random(size=leading_shape)
+        N = rng.random(size=leading_shape)
+        eta1 = rng.random(size=leading_shape)
+        eta2 = rng.random(size=leading_shape)
+
+        analytical = gradient_D(A, C, F, L, N, eta1, eta2)
+        assert analytical.shape == (
+            *leading_shape,
+            7,
+            6,
+            6,
+        )  # (batch, cells, param, 6, 6)
+
+        numerical = np.stack(
+            [
+                TestGradients.finite_diff_D([A, C, F, L, N, eta1, eta2], idx)
+                for idx in range(7)
+            ],
+            axis=-3,
+        )  # shape (batch, cells, param, 6, 6)
 
         np.testing.assert_allclose(analytical, numerical, atol=1e-6)

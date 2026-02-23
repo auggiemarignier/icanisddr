@@ -549,3 +549,49 @@ def gradient_D_wrt_eta2(
     return dReta2_voigt @ elastic_tensor @ R_voigt.swapaxes(-1, -2) + R_voigt @ (
         elastic_tensor @ dReta2_voigt.swapaxes(-1, -2)
     )
+
+
+def gradient_D(
+    A: np.ndarray,
+    C: np.ndarray,
+    F: np.ndarray,
+    L: np.ndarray,
+    N: np.ndarray,
+    eta1: np.ndarray,
+    eta2: np.ndarray,
+) -> np.ndarray:
+    """Gradient of D with respect to all parameters.
+
+    Parameters
+    ----------
+    A : np.ndarray (...,)
+        Elastic constant C11 = C22.
+    C : np.ndarray (...,)
+        Elastic constant C33.
+    F : np.ndarray (...,)
+        Elastic constant C13 = C23.
+    L : np.ndarray (...,)
+        Elastic constant C44 = C55.
+    N : np.ndarray (...,)
+        Elastic constant C66.
+    eta1 : np.ndarray (...,)
+        Tilt angle around the y-axis (in radians)
+    eta2 : np.ndarray (...,)
+        Azimuthal angle around the z-axis (in radians)
+    Returns
+    -------
+    dD : np.ndarray (..., 7, 6, 6)
+        Gradient of D with respect to A, C, F, L, N, eta1, eta2 in that order.
+    """
+    return np.stack(
+        [
+            gradient_D_wrt_A(A, C, F, L, N, eta1, eta2),
+            gradient_D_wrt_C(A, C, F, L, N, eta1, eta2),
+            gradient_D_wrt_F(A, C, F, L, N, eta1, eta2),
+            gradient_D_wrt_L(A, C, F, L, N, eta1, eta2),
+            gradient_D_wrt_N(A, C, F, L, N, eta1, eta2),
+            gradient_D_wrt_eta1(A, C, F, L, N, eta1, eta2),
+            gradient_D_wrt_eta2(A, C, F, L, N, eta1, eta2),
+        ],
+        axis=-3,
+    )
