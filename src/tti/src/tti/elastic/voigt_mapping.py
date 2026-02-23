@@ -201,7 +201,17 @@ def matrix_to_voigt(R: np.ndarray) -> np.ndarray:
         ],
         axis=-1,
     )
-    return np.stack([row0, row1, row2, row3, row4, row5], axis=-2)
+    # Assemble into final array of shape (..., 6, 6) in a broadcasting-safe way
+    leading_shape = row0.shape[:-1]
+    R_voigt = np.empty((*leading_shape, 6, 6), dtype=row0.dtype)
+    R_voigt[..., 0, :] = row0
+    R_voigt[..., 1, :] = row1
+    R_voigt[..., 2, :] = row2
+    R_voigt[..., 3, :] = row3
+    R_voigt[..., 4, :] = row4
+    R_voigt[..., 5, :] = row5
+
+    return R_voigt
 
 
 def gradient_matrix_to_voigt(R: np.ndarray, dR: np.ndarray) -> np.ndarray:
@@ -308,4 +318,14 @@ def gradient_matrix_to_voigt(R: np.ndarray, dR: np.ndarray) -> np.ndarray:
         axis=-1,
     )
 
-    return np.stack([row0, row1, row2, row3, row4, row5], axis=-2)
+    # Assemble into final array of shape (..., 6, 6) in a broadcasting-safe way
+    leading_shape = row0.shape[:-1]
+    dR_voigt = np.empty((*leading_shape, 6, 6), dtype=row0.dtype)
+    dR_voigt[..., 0, :] = row0
+    dR_voigt[..., 1, :] = row1
+    dR_voigt[..., 2, :] = row2
+    dR_voigt[..., 3, :] = row3
+    dR_voigt[..., 4, :] = row4
+    dR_voigt[..., 5, :] = row5
+
+    return dR_voigt

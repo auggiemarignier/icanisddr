@@ -314,7 +314,7 @@ def gradient_D_wrt_A(
     dDdA : np.ndarray (..., 6, 6)
     """
     Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
-    return Rzy @ dCdA @ Rzy.T
+    return Rzy @ dCdA @ Rzy.swapaxes(-2, -1)
 
 
 def gradient_D_wrt_C(
@@ -350,7 +350,7 @@ def gradient_D_wrt_C(
     dDdC : np.ndarray (..., 6, 6)
     """
     Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
-    return Rzy @ dCdC @ Rzy.T
+    return Rzy @ dCdC @ Rzy.swapaxes(-2, -1)
 
 
 def gradient_D_wrt_F(
@@ -386,7 +386,7 @@ def gradient_D_wrt_F(
     dDdF : np.ndarray (..., 6, 6)
     """
     Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
-    return Rzy @ dCdF @ Rzy.T
+    return Rzy @ dCdF @ Rzy.swapaxes(-2, -1)
 
 
 def gradient_D_wrt_L(
@@ -422,7 +422,7 @@ def gradient_D_wrt_L(
     dDdL : np.ndarray (..., 6, 6)
     """
     Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
-    return Rzy @ dCdL @ Rzy.T
+    return Rzy @ dCdL @ Rzy.swapaxes(-2, -1)
 
 
 def gradient_D_wrt_N(
@@ -458,7 +458,7 @@ def gradient_D_wrt_N(
     dDdN : np.ndarray (..., 6, 6)
     """
     Rzy = matrix_to_voigt(rotation_matrix_zy(eta1, eta2))
-    return Rzy @ dCdN @ Rzy.T
+    return Rzy @ dCdN @ Rzy.swapaxes(-2, -1)
 
 
 def gradient_D_wrt_eta1(

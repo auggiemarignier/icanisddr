@@ -167,6 +167,11 @@ class TestGradients:
         ],
         ids=["A", "C", "F", "L", "N"],
     )
+    @pytest.mark.parametrize(
+        "shape,",
+        [(6, 6), (2, 6, 6), (2, 4, 6, 6)],
+        ids=["single", "cells", "batch_cells"],
+    )
     def test_gradient_D_wrt_Love_no_rotation(
         self,
         gradient_func: Callable[
@@ -182,21 +187,31 @@ class TestGradients:
             np.ndarray,
         ],
         expected: np.ndarray,
+        shape: tuple[int, ...],
         rng: np.random.Generator,
     ) -> None:
         """Test that the gradient of D with respect to Love when no rotation is applied is the same as the gradient of C."""
-        A = rng.random()
-        C = rng.random()
-        F = rng.random()
-        L = rng.random()
-        N = rng.random()
-        eta1 = 0.0
-        eta2 = 0.0
+        leading_shape = shape[:-2]
+
+        A = rng.random(size=leading_shape)
+        C = rng.random(size=leading_shape)
+        F = rng.random(size=leading_shape)
+        L = rng.random(size=leading_shape)
+        N = rng.random(size=leading_shape)
+        eta1 = np.zeros(leading_shape)
+        eta2 = np.zeros(leading_shape)
 
         grad = gradient_func(A, C, F, L, N, eta1, eta2)
 
-        assert grad.shape == (6, 6)
-        np.testing.assert_array_equal(grad, expected)
+        assert grad.shape == (*leading_shape, 6, 6)
+
+        # Broadcast expected 6x6 constant to leading shape for comparison
+        if leading_shape:
+            expected_b = np.broadcast_to(expected, (*leading_shape, 6, 6))
+        else:
+            expected_b = expected
+
+        np.testing.assert_array_equal(grad, expected_b)
 
     @staticmethod
     def finite_diff_D(args: list[np.ndarray], idx: int) -> np.ndarray:
@@ -235,6 +250,11 @@ class TestGradients:
         ],
         ids=["A", "C", "F", "L", "N", "eta1", "eta2"],
     )
+    @pytest.mark.parametrize(
+        "shape,",
+        [(6, 6), (2, 6, 6), (2, 4, 6, 6)],
+        ids=["single", "cells", "batch_cells"],
+    )
     def test_gradient_D_finite_diff(
         self,
         gradient_func: Callable[
@@ -250,16 +270,19 @@ class TestGradients:
             np.ndarray,
         ],
         idx: int,
+        shape: tuple[int, ...],
         rng: np.random.Generator,
     ) -> None:
         """Compare analytical solution with finite differences."""
-        A = rng.random()
-        C = rng.random()
-        F = rng.random()
-        L = rng.random()
-        N = rng.random()
-        eta1 = rng.random()
-        eta2 = rng.random()
+        leading_shape = shape[:-2]
+
+        A = rng.random(size=leading_shape)
+        C = rng.random(size=leading_shape)
+        F = rng.random(size=leading_shape)
+        L = rng.random(size=leading_shape)
+        N = rng.random(size=leading_shape)
+        eta1 = rng.random(size=leading_shape)
+        eta2 = rng.random(size=leading_shape)
 
         analytical = gradient_func(A, C, F, L, N, eta1, eta2)
         numerical = TestGradients.finite_diff_D([A, C, F, L, N, eta1, eta2], idx)
