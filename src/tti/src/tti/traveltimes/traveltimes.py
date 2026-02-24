@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from ..elastic.voigt import n_outer_n
+from ..elastic.voigt import gradient_D, n_outer_n
 from ..elastic.voigt import tilted_transverse_isotropic_tensor as ttitv
 from ._unpackings import _unpackings
 from .paths import calculate_path_direction_vector
@@ -46,8 +46,9 @@ def calculate_relative_traveltime_4th(
     )
 
 
-
-def calculate_relative_traveltime_voigt(n: np.ndarray, D_voigt: np.ndarray, normalisation: float = 1.0) -> np.ndarray:
+def calculate_relative_traveltime_voigt(
+    n: np.ndarray, D_voigt: np.ndarray, normalisation: float = 1.0
+) -> np.ndarray:
     r"""
     Calculate relative traveltime perturbation in Voigt notation.
 
@@ -177,6 +178,45 @@ class TravelTimeCalculator:
         )
 
         return np.sum(weights * dt, axis=-2)
+
+    def gradient(self, m: np.ndarray) -> np.ndarray:
+        """Calculate the gradeient of the traveltime with respect to the Love parameters and rotation angles.
+
+        The gradient commutes with the tensor contraction along ray paths, so we just need the gradient of the elastic tensor, then perform the same contraction.
+
+        Parameters
+        ----------
+        m : ndarray, shape ([batch], 7n,)
+            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times, potentially in a batch.
+            That is, [A₁, C₁, F₁, L₁, N₁, eta1₁, eta2₁, ..., Aₙ, Cₙ, Fₙ, Lₙ, Nₙ, eta1ₙ, eta2ₙ].
+
+        Returns
+        -------
+        ndarray, shape ([batch], npaths, 7n,)
+            Gradients of the relative traveltimes.
+        """
+        m = np.atleast_2d(m)
+        A, C, F, L, N, eta1, eta2 = self._unpacking_function(
+            m
+        )  # each shape (batch, cells)
+        A += self.reference_love[0]
+        C += self.reference_love[1]
+        F += self.reference_love[2]
+        L += self.reference_love[3]
+        N += self.reference_love[4]
+        dD = gradient_D(A, C, F, L, N, eta1, eta2)
+        dt = calculate_relative_traveltime_voigt(
+            self.path_directions, dD, normalisation=self.normalisation
+        )  # shape (batch, cells, nparams=7, npaths)
+
+        batch, cells, nparams, npaths = dt.shape
+        weights = (
+            np.ones((cells, nparams, npaths)) / cells
+            if self.weights is None
+            else np.broadcast_to(self.weights, (cells, nparams, npaths))
+        )
+
+        return np.sum(weights * dt, axis=-3)
 
     @property
     def npaths(self) -> int:

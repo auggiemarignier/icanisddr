@@ -70,7 +70,7 @@ def test_traveltime_voigt_fourth_equivalence(shape: tuple[int, ...]) -> None:
             [1.0, 0.0, 0.0],
             [0.0, 1.0, 0.0],
             [0.0, 0.0, 1.0],
-            [1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)]
+            [1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)],
         ]
     )
 
@@ -493,3 +493,82 @@ class TestTravelTimeCalculator:
         dt = calculator(m)
         assert dt.shape == (batch_size, calculator.npaths)
         np.testing.assert_allclose(dt, expected, atol=1e-12)
+
+    @pytest.mark.parametrize(
+        "nsegments,batch_size",
+        [(1, 1), (4, 1), (4, 2)],
+        ids=["single_segment", "multiple_segments", "multiple_segments_batch"],
+    )
+    def test_gradient_wrt_model_parameters(
+        self,
+        nsegments: int,
+        batch_size: int,
+        calculator: TravelTimeCalculator,
+        rng: np.random.Generator,
+    ) -> None:
+        """Test that the gradient with respect to model parameters is calculated without error.
+
+        Comparing with a finite difference approximation.
+        """
+
+        def finite_diff(m: np.ndarray, idx: int) -> np.ndarray:
+            """Finite difference approximation of the gradient with respect to model parameter at index idx."""
+            epsilon = 1e-6
+            m_plus = m.copy()
+            m_minus = m.copy()
+            m_plus[..., idx] += epsilon
+            m_minus[..., idx] -= epsilon
+            dt_plus = calculator(m_plus)
+            dt_minus = calculator(m_minus)
+            return (dt_plus - dt_minus) / (2 * epsilon)
+
+        m = np.stack(
+            [np.tile(rng.random(size=7), nsegments)] * batch_size
+        )  # random model parameters
+
+        grad = calculator.gradient(m)
+        assert grad.shape == (batch_size, 7, calculator.npaths)
+
+        expected = np.stack([finite_diff(m, idx) for idx in range(7)], axis=-2)
+        assert np.testing.assert_allclose(grad, expected, atol=1e-6)
+
+    def test_gradient_analytical_polar_path_no_rotation(self) -> None:
+        """Test the travel time gradient for a polar path and polar symmetry axis.
+
+        In this case, only C will have non-zero gradients.
+        """
+        m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])
+        ttc = TravelTimeCalculator(
+            ic_in=np.array([[0.0, 90.0, 1.0]]),
+            ic_out=np.array([[0.0, -90.0, 1.0]]),
+            nested=False,
+            shear=True,
+            N=True,
+        )
+
+        grad = ttc.gradient(m)
+        expected = np.zeros((1, 7, 1))  # (batch, nparams, npaths)
+        expected[:, 1, :] = 1  # C is index 1
+
+        np.testing.assert_allclose(grad, expected, atol=1e-12)
+
+    def test_gradient_analytical_equatorial_path_no_rotation(self) -> None:
+        """Test the travel time gradient for an equatorial path and polar symmetry axis.
+
+        In this case, A, F, L will have non-zero gradients.
+        """
+        m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])
+        ttc = TravelTimeCalculator(
+            ic_in=np.array([[0.0, 0.0, 1.0]]),
+            ic_out=np.array([[180.0, 0.0, 1.0]]),
+            nested=False,
+            shear=True,
+            N=True,
+        )
+
+        grad = ttc.gradient(m)
+        expected = np.zeros((1, 7, 1))  # (batch, nparams, npaths)
+        expected[:, 0, :] = 1  # A is index 0
+        expected[]
+
+        np.testing.assert_allclose(grad, expected, atol=1e-12)
