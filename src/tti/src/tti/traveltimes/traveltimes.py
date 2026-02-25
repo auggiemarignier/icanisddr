@@ -158,29 +158,19 @@ class TravelTimeCalculator:
         ndarray, shape ([batch], npaths,)
             Relative traveltime perturbations for each path.
         """
-        m = np.atleast_2d(m)
-        A, C, F, L, N, eta1, eta2 = self._unpacking_function(
-            m
-        )  # each shape (batch, cells)
-        A += self.reference_love[0]
-        C += self.reference_love[1]
-        F += self.reference_love[2]
-        L += self.reference_love[3]
-        N += self.reference_love[4]
+        A, C, F, L, N, eta1, eta2 = self._model_vector_to_parameters(m)
         D = ttitv(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime_voigt(
             self.path_directions, D, normalisation=self.normalisation
         )  # shape (batch, cells, npaths)
 
         batch, cells, npaths = dt.shape
-        weights = (
-            np.ones((cells, npaths)) / cells if self.weights is None else self.weights
-        )
+        weights = 1 / cells if self.weights is None else self.weights[None, ...]
 
         return np.sum(weights * dt, axis=-2)
 
     def gradient(self, m: np.ndarray) -> np.ndarray:
-        """Calculate the gradeient of the traveltime with respect to the Love parameters and rotation angles.
+        """Calculate the gradient of the traveltime with respect to the Love parameters and rotation angles.
 
         The gradient commutes with the tensor contraction along ray paths, so we just need the gradient of the elastic tensor, then perform the same contraction.
 
@@ -195,15 +185,8 @@ class TravelTimeCalculator:
         ndarray, shape ([batch], npaths, 7n,)
             Gradients of the relative traveltimes.
         """
-        m = np.atleast_2d(m)
-        A, C, F, L, N, eta1, eta2 = self._unpacking_function(
-            m
-        )  # each shape (batch, cells)
-        A += self.reference_love[0]
-        C += self.reference_love[1]
-        F += self.reference_love[2]
-        L += self.reference_love[3]
-        N += self.reference_love[4]
+        A, C, F, L, N, eta1, eta2 = self._model_vector_to_parameters(m)
+
         dD = gradient_D(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime_voigt(
             self.path_directions, dD, normalisation=self.normalisation
@@ -262,3 +245,31 @@ class TravelTimeCalculator:
             raise ValueError(
                 f"In and out coordinates must be different for each path (path {idx})"
             )
+
+    def _model_vector_to_parameters(
+        self, m: np.ndarray
+    ) -> tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]:
+        """Convert a model vector to the individual parameters A, C, F, L, N, eta1, eta2."""
+        m = np.atleast_2d(m)
+        A, C, F, L, N, eta1, eta2 = self._unpacking_function(m)
+        A, C, F, L, N = self._add_reference_love(A, C, F, L, N)
+        return A, C, F, L, N, eta1, eta2
+
+    def _add_reference_love(
+        self, A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Add reference Love parameters to the model parameters."""
+        A += self.reference_love[0]
+        C += self.reference_love[1]
+        F += self.reference_love[2]
+        L += self.reference_love[3]
+        N += self.reference_love[4]
+        return A, C, F, L, N
