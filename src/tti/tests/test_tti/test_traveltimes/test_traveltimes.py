@@ -555,7 +555,7 @@ class TestTravelTimeCalculator:
     def test_gradient_analytical_equatorial_path_no_rotation(self) -> None:
         """Test the travel time gradient for an equatorial path and polar symmetry axis.
 
-        In this case, A, F, L will have non-zero gradients.
+        In this case, only A will have non-zero gradients.
         """
         m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])
         ttc = TravelTimeCalculator(
@@ -569,6 +569,32 @@ class TestTravelTimeCalculator:
         grad = ttc.gradient(m)
         expected = np.zeros((1, 7, 1))  # (batch, nparams, npaths)
         expected[:, 0, :] = 1  # A is index 0
-        expected[]
+
+        np.testing.assert_allclose(grad, expected, atol=1e-12)
+
+    def test_gradient_analytical_no_rotation(self) -> None:
+        """Test the travel time gradient for a general path and polar symmetry axis.
+
+        Only checking the gradients for the Love parameters here because they're easy to write down analytically.
+        """
+        m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])
+        ttc = TravelTimeCalculator(
+            ic_in=np.array([[45.0, 45.0, 1.0], [135.0, 45.0, 1.0]]),
+            ic_out=np.array([[-135.0, -45.0, 1.0], [-45.0, -45.0, 1.0]]),
+            nested=False,
+            shear=True,
+            N=True,
+        )
+        n1 = ttc.path_directions[:, 0]
+        n2 = ttc.path_directions[:, 1]
+        n3 = ttc.path_directions[:, 2]
+
+        grad = ttc.gradient(m)
+        expected = np.zeros((1, 7, ttc.npaths))  # (batch, nparams, npaths)
+        expected[:, 0, :] = (n1**2 + n2**2) ** 2  # A
+        expected[:, 1, :] = n3**4  # C
+        expected[:, 2, :] = 2 * n3**2 * (n1**2 + n2**2)  # F
+        expected[:, 3, :] = 4 * n3**2 * (n1**2 + n2**2)  # L
+        expected[:, 4, :] = 0  # N
 
         np.testing.assert_allclose(grad, expected, atol=1e-12)
