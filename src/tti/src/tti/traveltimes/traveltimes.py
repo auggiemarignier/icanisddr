@@ -217,7 +217,7 @@ class TravelTimeCalculator:
         weights = (
             np.ones((cells, nparams, npaths)) / cells
             if self.weights is None
-            else np.broadcast_to(self.weights, (cells, nparams, npaths))
+            else np.stack([self.weights] * nparams, axis=1)
         )
 
         return np.sum(weights * dt, axis=-3)
