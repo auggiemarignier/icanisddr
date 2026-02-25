@@ -637,3 +637,27 @@ class TestTravelTimeCalculatorGradient:
         expected[:, 4, :] = 0  # N
 
         np.testing.assert_allclose(grad, expected, atol=1e-12)
+
+    def test_gradient_no_shear(
+        self, valid_paths: tuple[np.ndarray, np.ndarray]
+    ) -> None:
+        """Test that the gradient is calculated without error when shear parameters are not included."""
+        calculator = TravelTimeCalculator(
+            *valid_paths, nested=False, shear=False, N=False
+        )
+
+        m = np.array([[1.0, 1.0, 1.0, 0.0, 0.0]])  # only A, C, F, eta1, eta2
+
+        grad = calculator.gradient(m)
+        assert grad.shape == (1, 5, calculator.npaths)
+
+    def test_gradient_no_N(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
+        """Test that the gradient is calculated without error when N parameter is not included."""
+        calculator = TravelTimeCalculator(
+            *valid_paths, nested=False, shear=True, N=False
+        )
+
+        m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]])  # only A, C, F, L, eta1, eta2
+
+        grad = calculator.gradient(m)
+        assert grad.shape == (1, 6, calculator.npaths)
