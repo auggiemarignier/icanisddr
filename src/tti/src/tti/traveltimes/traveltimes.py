@@ -126,7 +126,11 @@ class TravelTimeCalculator:
         self.ic_in = ic_in
         self.ic_out = ic_out
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
+
         self.weights = weights
+        # To avoid repeatedly validating and broadcasting weights for different numbers of cells, we cache the resolved weights for each (n_cells, n_paths) combination.
+        self._weights_cache: dict[tuple[int, int], np.ndarray] = {}
+
         self._unpacking_function = _unpackings[nested][(shear, N)]
 
         if reference_love is None:
@@ -165,9 +169,9 @@ class TravelTimeCalculator:
         )  # shape (batch, cells, npaths)
 
         batch, cells, npaths = dt.shape
-        weights = 1 / cells if self.weights is None else self.weights[None, ...]
+        weights = self._resolve_weights(cells)
 
-        return np.sum(weights * dt, axis=-2)
+        return np.sum(weights[None, ...] * dt, axis=-2)
 
     def gradient(self, m: np.ndarray) -> np.ndarray:
         """Calculate the gradient of the traveltime with respect to the Love parameters and rotation angles.
@@ -197,13 +201,9 @@ class TravelTimeCalculator:
         dt[..., 5:7, :] *= np.pi / 180.0
 
         batch, cells, nparams, npaths = dt.shape
-        weights = (
-            np.ones((cells, nparams, npaths)) / cells
-            if self.weights is None
-            else np.stack([self.weights] * nparams, axis=1)
-        )
+        weights = self._resolve_weights(cells)
 
-        return np.sum(weights * dt, axis=-3)
+        return np.sum(weights[None, :, None, :] * dt, axis=-3)
 
     @property
     def npaths(self) -> int:
@@ -273,3 +273,21 @@ class TravelTimeCalculator:
         L += self.reference_love[3]
         N += self.reference_love[4]
         return A, C, F, L, N
+
+    def _resolve_weights(self, n_cells: int) -> np.ndarray:
+        """Resolve weights to a shape of (n_cells, n_paths) if they are not already."""
+        key = (n_cells, self.npaths)
+        w = self._weights_cache.get(key)
+        if w is not None:
+            return w
+
+        provided_weights = self.weights
+        if provided_weights is None:
+            w = np.full(key, 1.0 / n_cells)
+        elif provided_weights.shape == key:
+            w = provided_weights
+        else:
+            raise ValueError("Weights must be either None or shape (n_cells, n_paths)")
+
+        self._weights_cache[key] = w
+        return w
