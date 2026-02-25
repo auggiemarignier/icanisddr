@@ -513,11 +513,11 @@ class TestTravelTimeCalculator:
 
         def finite_diff(m: np.ndarray, idx: int) -> np.ndarray:
             """Finite difference approximation of the gradient with respect to model parameter at index idx."""
-            epsilon = 1e-6
+            epsilon = 1e-9
             m_plus = m.copy()
             m_minus = m.copy()
-            m_plus[..., idx] += epsilon
-            m_minus[..., idx] -= epsilon
+            m_plus[..., idx::7] += epsilon  # perturb the idx-th parameter in each segment
+            m_minus[..., idx::7] -= epsilon
             dt_plus = calculator(m_plus)
             dt_minus = calculator(m_minus)
             return (dt_plus - dt_minus) / (2 * epsilon)
@@ -530,7 +530,7 @@ class TestTravelTimeCalculator:
         assert grad.shape == (batch_size, 7, calculator.npaths)
 
         expected = np.stack([finite_diff(m, idx) for idx in range(7)], axis=-2)
-        assert np.testing.assert_allclose(grad, expected, atol=1e-6)
+        np.testing.assert_allclose(grad, expected, atol=1e-6)
 
     def test_gradient_analytical_polar_path_no_rotation(self) -> None:
         """Test the travel time gradient for a polar path and polar symmetry axis.
