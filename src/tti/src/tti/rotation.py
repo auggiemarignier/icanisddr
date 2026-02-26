@@ -203,16 +203,16 @@ def gradient_rotation_matrix_zy(
 
     Parameters
     ----------
-    alpha : float
-        Rotation angle around the z-axis in radians.
-    beta : float
-        Rotation angle around the y-axis in radians.
+    alpha : float or ndarray
+        Rotation angle(s) around the z-axis in radians.
+    beta : float or ndarray
+        Rotation angle(s) around the y-axis in radians.
 
     Returns
     -------
-    dR_dalpha : ndarray, shape (3, 3)
+    dR_dalpha : ndarray, shape (..., 3, 3)
         Gradient of the rotation matrix with respect to the rotation angle alpha.
-    dR_dbeta : ndarray, shape (3, 3)
+    dR_dbeta : ndarray, shape (..., 3, 3)
         Gradient of the rotation matrix with respect to the rotation angle beta.
     """
     R_z = rotation_matrix_z(alpha)
