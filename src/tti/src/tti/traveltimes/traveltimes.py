@@ -2,17 +2,9 @@
 
 import numpy as np
 
-from ..elastic.voigt import (
-    gradient_D,
-    gradient_D_wrt_A,
-    gradient_D_wrt_C,
-    gradient_D_wrt_eta1,
-    gradient_D_wrt_eta2,
-    gradient_D_wrt_F,
-    gradient_D_wrt_L,
-    n_outer_n,
-)
+from ..elastic.voigt import n_outer_n
 from ..elastic.voigt import tilted_transverse_isotropic_tensor as ttitv
+from ._gradient_D import _gradient_D_functions
 from ._unpackings import _unpackings
 from .paths import calculate_path_direction_vector
 
@@ -141,7 +133,7 @@ class TravelTimeCalculator:
         self._weights_cache: dict[tuple[int, int], np.ndarray] = {}
 
         self._unpacking_function = _unpackings[nested][(shear, N)]
-        self._gradient_D_function = _gradient_D_fuctions[(shear, N)]
+        self._gradient_D_function = _gradient_D_functions[nested][(shear, N)]
 
         if reference_love is None:
             self.reference_love = np.zeros(5)
@@ -301,101 +293,3 @@ class TravelTimeCalculator:
 
         self._weights_cache[key] = w
         return w
-
-
-def gradient_D_no_shear(
-    A: np.ndarray,
-    C: np.ndarray,
-    F: np.ndarray,
-    L: np.ndarray,
-    N: np.ndarray,
-    eta1: np.ndarray,
-    eta2: np.ndarray,
-) -> np.ndarray:
-    """Gradient of D with respect to A, C, F, eta1, eta2.
-
-    Parameters
-    ----------
-    A : np.ndarray (...,)
-        Elastic constant C11 = C22.
-    C : np.ndarray (...,)
-        Elastic constant C33.
-    F : np.ndarray (...,)
-        Elastic constant C13 = C23.
-    L : np.ndarray (...,)
-        Elastic constant C44 = C55.
-    N : np.ndarray (...,)
-        Elastic constant C66.
-    eta1 : np.ndarray (...,)
-        Tilt angle around the z-axis (in radians)
-    eta2 : np.ndarray (...,)
-        Azimuthal angle around the y-axis (in radians)
-
-    Returns
-    -------
-    dD : np.ndarray (..., 5, 6, 6)
-        Gradient of D with respect to A, C, F, eta1, eta2 in that order.
-    """
-    return np.stack(
-        [
-            gradient_D_wrt_A(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_C(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_F(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_eta1(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_eta2(A, C, F, L, N, eta1, eta2),
-        ],
-        axis=-3,
-    )
-
-
-def _gradient_D_no_N(
-    A: np.ndarray,
-    C: np.ndarray,
-    F: np.ndarray,
-    L: np.ndarray,
-    N: np.ndarray,
-    eta1: np.ndarray,
-    eta2: np.ndarray,
-) -> np.ndarray:
-    """Gradient of D with respect to A, C, F, L, eta1, eta2 (no N).
-
-    Parameters
-    ----------
-    A : np.ndarray (...,)
-        Elastic constant C11 = C22.
-    C : np.ndarray (...,)
-        Elastic constant C33.
-    F : np.ndarray (...,)
-        Elastic constant C13 = C23.
-    L : np.ndarray (...,)
-        Elastic constant C44 = C55.
-    N : np.ndarray (...,)
-        Elastic constant C66.
-    eta1 : np.ndarray (...,)
-        Tilt angle around the z-axis (in radians)
-    eta2 : np.ndarray (...,)
-        Azimuthal angle around the y-axis (in radians)
-
-    Returns
-    -------
-    dD : np.ndarray (..., 6, 6, 6)
-        Gradient of D with respect to A, C, F, L, eta1, eta2 in that order.
-    """
-    return np.stack(
-        [
-            gradient_D_wrt_A(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_C(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_F(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_L(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_eta1(A, C, F, L, N, eta1, eta2),
-            gradient_D_wrt_eta2(A, C, F, L, N, eta1, eta2),
-        ],
-        axis=-3,
-    )
-
-
-_gradient_D_fuctions = {
-    (False, False): gradient_D_no_shear,
-    (True, False): _gradient_D_no_N,
-    (True, True): gradient_D,
-}

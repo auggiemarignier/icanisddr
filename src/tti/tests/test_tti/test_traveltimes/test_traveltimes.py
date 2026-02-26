@@ -661,3 +661,38 @@ class TestTravelTimeCalculatorGradient:
 
         grad = calculator.gradient(m)
         assert grad.shape == (1, 6, calculator.npaths)
+
+    def test_gradient_nested(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
+        """Test that the gradient is calculated without error when nested is True."""
+        calculator = TravelTimeCalculator(
+            *valid_paths, nested=True, shear=True, N=True
+        )
+
+        m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 14) i.e. 1 batch, 2 cells, 7 params per cell
+
+        grad = calculator.gradient(m)
+        assert grad.shape == (1, 7, calculator.npaths)  # summed over cells
+
+    def test_gradient_nested_no_N(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
+        """Test that the gradient is calculated without error when nested is True and N is not included."""
+        calculator = TravelTimeCalculator(
+            *valid_paths, nested=True, shear=True, N=False
+        )
+
+        m = np.array([[1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 12) i.e. 1 batch, 2 cells, 6 params per cell
+
+        grad = calculator.gradient(m)
+        assert grad.shape == (1, 6, calculator.npaths)  # summed over cells
+
+    def test_gradient_nested_no_shear(
+        self, valid_paths: tuple[np.ndarray, np.ndarray]
+    ) -> None:
+        """Test that the gradient is calculated without error when nested is True and shear is False."""
+        calculator = TravelTimeCalculator(
+            *valid_paths, nested=True, shear=False, N=False
+        )
+
+        m = np.array([[1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 10) i.e. 1 batch, 2 cells, 5 params per cell
+
+        grad = calculator.gradient(m)
+        assert grad.shape == (1, 5, calculator.npaths)  # summed over cells
