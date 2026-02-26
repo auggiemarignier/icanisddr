@@ -506,8 +506,8 @@ class TestTravelTimeCalculatorGradient:
         epsilon = 1e-7
         m_plus = m.copy()
         m_minus = m.copy()
-        m_plus[..., idx::7] += epsilon  # perturb the idx-th parameter in each segment
-        m_minus[..., idx::7] -= epsilon
+        m_plus[..., idx] += epsilon
+        m_minus[..., idx] -= epsilon
         dt_plus = calculator(m_plus)
         dt_minus = calculator(m_minus)
         return (dt_plus - dt_minus) / (2 * epsilon)
@@ -534,10 +534,10 @@ class TestTravelTimeCalculatorGradient:
         )  # random model parameters
 
         grad = calculator.gradient(m)
-        assert grad.shape == (batch_size, 7, calculator.npaths)
+        assert grad.shape == (batch_size, 7 * nsegments, calculator.npaths)
 
         expected = np.stack(
-            [self.finite_diff(m, idx, calculator) for idx in range(7)], axis=-2
+            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)], axis=-2
         )
         np.testing.assert_allclose(grad, expected, atol=1e-6)
 
@@ -566,10 +566,10 @@ class TestTravelTimeCalculatorGradient:
         )  # random model parameters
 
         grad = calculator.gradient(m)
-        assert grad.shape == (batch_size, 7, calculator.npaths)
+        assert grad.shape == (batch_size, 7 * nsegments, calculator.npaths)
 
         expected = np.stack(
-            [self.finite_diff(m, idx, calculator) for idx in range(7)], axis=-2
+            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)], axis=-2
         )
         np.testing.assert_allclose(grad, expected, atol=1e-6)
 
@@ -604,10 +604,10 @@ class TestTravelTimeCalculatorGradient:
         )  # random model parameters
 
         grad = calculator.gradient(m)
-        assert grad.shape == (batch_size, 7, calculator.npaths)
+        assert grad.shape == (batch_size, 7 * nsegments, calculator.npaths)
 
         expected = np.stack(
-            [self.finite_diff(m, idx, calculator) for idx in range(7)], axis=-2
+            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)], axis=-2
         )
         np.testing.assert_allclose(grad, expected, atol=1e-4)
 
@@ -671,7 +671,7 @@ class TestTravelTimeCalculatorGradient:
         m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 14) i.e. 1 batch, 2 cells, 7 params per cell
 
         grad = calculator.gradient(m)
-        assert grad.shape == (1, 7, calculator.npaths)  # summed over cells
+        assert grad.shape == (1, 7 * 2, calculator.npaths)  # summed over cells
 
     def test_gradient_nested_no_N(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
         """Test that the gradient is calculated without error when nested is True and N is not included."""
@@ -682,7 +682,7 @@ class TestTravelTimeCalculatorGradient:
         m = np.array([[1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 12) i.e. 1 batch, 2 cells, 6 params per cell
 
         grad = calculator.gradient(m)
-        assert grad.shape == (1, 6, calculator.npaths)  # summed over cells
+        assert grad.shape == (1, 6 * 2, calculator.npaths)  # summed over cells
 
     def test_gradient_nested_no_shear(
         self, valid_paths: tuple[np.ndarray, np.ndarray]
@@ -695,4 +695,4 @@ class TestTravelTimeCalculatorGradient:
         m = np.array([[1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 10) i.e. 1 batch, 2 cells, 5 params per cell
 
         grad = calculator.gradient(m)
-        assert grad.shape == (1, 5, calculator.npaths)  # summed over cells
+        assert grad.shape == (1, 5 * 2, calculator.npaths)  # summed over cells

@@ -188,7 +188,7 @@ class TravelTimeCalculator:
 
         Returns
         -------
-        ndarray, shape ([batch], npaths, 7n,)
+        ndarray, shape ([batch], 7n, npaths)
             Gradients of the relative traveltimes.
         """
         A, C, F, L, N, eta1, eta2 = self._model_vector_to_parameters(m)
@@ -196,7 +196,7 @@ class TravelTimeCalculator:
         dD = self._gradient_D_function(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime_voigt(
             self.path_directions, dD, normalisation=self.normalisation
-        )  # shape (batch, cells, nparams=7, npaths)
+        )  # shape (batch, cells, nparams, npaths)
 
         # The gradient functions `gradient_D_wrt_eta1/eta2` return derivatives wrt radians
         # Convert back to degrees (angles are stored in the last two parameter slots)
@@ -204,8 +204,12 @@ class TravelTimeCalculator:
 
         batch, cells, nparams, npaths = dt.shape
         weights = self._resolve_weights(cells)
+        # Apply weights per cell and path
+        dt_weighted = weights[None, :, None, :] * dt  # shape (batch, cells, nparams, npaths)
+        # Flatten over cells and nparams to get shape (batch, 7n, npaths)
+        dt_weighted = dt_weighted.reshape(batch, cells * nparams, npaths)
 
-        return np.sum(weights[None, :, None, :] * dt, axis=-3)
+        return dt_weighted
 
     @property
     def npaths(self) -> int:
