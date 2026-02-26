@@ -1,17 +1,11 @@
 """Synthetic bulk IC experiment entry point."""
 
 import logging
-import os
 import pickle
 from datetime import datetime
 from functools import partial
 from pathlib import Path
 
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 import numpy as np
 
 from expconfig.config import PriorsConfig
@@ -23,7 +17,7 @@ from expconfig.synthetic import (
 from icprem import PREM_IC_RHO, PREM_IC_VP
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
-from sampling.sampling import MCMCConfig, mcmc
+from sampling.sampling import MCMCConfig, nuts
 from tti.traveltimes import TravelTimeCalculator
 
 logging.basicConfig(
@@ -44,8 +38,8 @@ BASE_TTC_FACTORY = partial(
 
 # Synthetic data computed based on absolute perturbations from PREM including shear components
 SYNTH_CALCULATOR = BASE_TTC_FACTORY(nested=False, shear=True, N=True)
-# Forward model takes nested parameters and includes L but excludes N
-FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True, shear=True, N=False)
+# Forward model takes nested parameters, excluding shear components
+FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True, shear=False, N=False)
 
 CFG_FILE = Path(__file__).parent.parent / "config.yaml"
 OUTPUT_DIR = (
@@ -53,12 +47,22 @@ OUTPUT_DIR = (
 )
 
 
+def _gradient(x: np.ndarray) -> np.ndarray:
+    """Thin wrapper for the forward calculator gradient to swap axes for pints compatibility."""
+    return FORWARD_CALCULATOR.gradient(x).swapaxes(-2, -1)
+
+
 def _setup_likelihood(
     synthetic_data: np.ndarray,
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
-    likelihood = GaussianLikelihood(FORWARD_CALCULATOR, synthetic_data, inv_covar)
+    likelihood = GaussianLikelihood(
+        FORWARD_CALCULATOR,
+        synthetic_data,
+        inv_covar,
+        forward_fn_gradient=_gradient,
+    )
     return likelihood
 
 
@@ -111,7 +115,7 @@ def main() -> None:
     prior = _setup_prior(cfg.priors)
 
     logger.info("Running MCMC sampling")
-    samples, lnprob = mcmc(
+    samples, lnprob = nuts(
         prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
 

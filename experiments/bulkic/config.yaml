@@ -1,8 +1,8 @@
 sampling:
-  nwalkers: 400
-  nsteps: 1000
-  burn_in: 250
-  thin: 5
+  nwalkers: 8
+  nsteps: 1500
+  burn_in: 0
+  thin: 0
   progress: true
   parallel: true
   vectorise: false
