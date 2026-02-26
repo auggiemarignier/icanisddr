@@ -2,12 +2,14 @@
 
 import numpy as np
 
-from ..elastic import tilted_transverse_isotropic_tensor
+from ..elastic.voigt import n_outer_n
+from ..elastic.voigt import tilted_transverse_isotropic_tensor as ttitv
+from ._gradient_D import _gradient_D_functions
 from ._unpackings import _unpackings
 from .paths import calculate_path_direction_vector
 
 
-def calculate_relative_traveltime(
+def calculate_relative_traveltime_4th(
     n: np.ndarray, D: np.ndarray, normalisation: float = 1.0
 ) -> np.ndarray:
     r"""
@@ -43,6 +45,40 @@ def calculate_relative_traveltime(
     return normalisation * np.einsum(
         "...ijkl,...pi,...pj,...pk,...pl->...p", D, n, n, n, n
     )
+
+
+def calculate_relative_traveltime_voigt(
+    n: np.ndarray, D_voigt: np.ndarray, normalisation: float = 1.0
+) -> np.ndarray:
+    r"""
+    Calculate relative traveltime perturbation in Voigt notation.
+
+    Parameters
+    ----------
+    n : ndarray, shape (npaths, 3)
+        Ray direction unit vector(s).
+    D_voigt : ndarray, shape (..., 6, 6)
+        Elastic tensor in Voigt notation.  Leading dimensions are arbitrary.
+    normalisation : float, optional
+        Normalisation constant to apply to the relative traveltime perturbation (default is 1.0).
+
+    Returns
+    -------
+    np.ndarray, shape (..., npaths)
+        Relative traveltime perturbation.  Batched according to the leading dimensions of D_voigt.
+    """
+    # Broadcast n to match leading dimensions of D_voigt
+    leading_shape = D_voigt.shape[:-2]
+    n = np.atleast_2d(n)
+    n = np.broadcast_to(n, leading_shape + n.shape)
+
+    # Compute outer products of n in Voigt notation
+    non = n_outer_n(n)
+
+    # Compute quadratic form non_p^T D non_p for each path p using batched matmul.
+    # non has shape (..., p, 6) and D_voigt has shape (..., 6, 6).
+    # tmp = non @ D_voigt -> shape (..., p, 6); then sum over last axis.
+    return normalisation * np.sum((non @ D_voigt) * non, axis=-1)
 
 
 class TravelTimeCalculator:
@@ -91,8 +127,13 @@ class TravelTimeCalculator:
         self.ic_in = ic_in
         self.ic_out = ic_out
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
+
         self.weights = weights
+        # To avoid repeatedly validating and broadcasting weights for different numbers of cells, we cache the resolved weights for each (n_cells, n_paths) combination.
+        self._weights_cache: dict[tuple[int, int], np.ndarray] = {}
+
         self._unpacking_function = _unpackings[nested][(shear, N)]
+        self._gradient_D_function = _gradient_D_functions[nested][(shear, N)]
 
         if reference_love is None:
             self.reference_love = np.zeros(5)
@@ -123,26 +164,52 @@ class TravelTimeCalculator:
         ndarray, shape ([batch], npaths,)
             Relative traveltime perturbations for each path.
         """
-        m = np.atleast_2d(m)
-        A, C, F, L, N, eta1, eta2 = self._unpacking_function(
-            m
-        )  # each shape (batch, cells)
-        A += self.reference_love[0]
-        C += self.reference_love[1]
-        F += self.reference_love[2]
-        L += self.reference_love[3]
-        N += self.reference_love[4]
-        D = tilted_transverse_isotropic_tensor(A, C, F, L, N, eta1, eta2)
-        dt = calculate_relative_traveltime(
+        A, C, F, L, N, eta1, eta2 = self._model_vector_to_parameters(m)
+        D = ttitv(A, C, F, L, N, eta1, eta2)
+        dt = calculate_relative_traveltime_voigt(
             self.path_directions, D, normalisation=self.normalisation
         )  # shape (batch, cells, npaths)
 
         batch, cells, npaths = dt.shape
-        weights = (
-            np.ones((cells, npaths)) / cells if self.weights is None else self.weights
-        )
+        weights = self._resolve_weights(cells)
 
-        return np.sum(weights * dt, axis=-2)
+        return np.sum(weights[None, ...] * dt, axis=-2)
+
+    def gradient(self, m: np.ndarray) -> np.ndarray:
+        """Calculate the gradient of the traveltime with respect to the Love parameters and rotation angles.
+
+        The gradient commutes with the tensor contraction along ray paths, so we just need the gradient of the elastic tensor, then perform the same contraction.
+
+        Parameters
+        ----------
+        m : ndarray, shape ([batch], 7n,)
+            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times, potentially in a batch.
+            That is, [A₁, C₁, F₁, L₁, N₁, eta1₁, eta2₁, ..., Aₙ, Cₙ, Fₙ, Lₙ, Nₙ, eta1ₙ, eta2ₙ].
+
+        Returns
+        -------
+        ndarray, shape ([batch], 7n, npaths)
+            Gradients of the relative traveltimes.
+        """
+        A, C, F, L, N, eta1, eta2 = self._model_vector_to_parameters(m)
+
+        dD = self._gradient_D_function(A, C, F, L, N, eta1, eta2)
+        dt = calculate_relative_traveltime_voigt(
+            self.path_directions, dD, normalisation=self.normalisation
+        )  # shape (batch, cells, nparams, npaths)
+
+        # The gradient functions `gradient_D_wrt_eta1/eta2` return derivatives wrt radians
+        # Convert back to degrees (angles are stored in the last two parameter slots)
+        dt[..., -2:, :] *= np.pi / 180.0
+
+        batch, cells, nparams, npaths = dt.shape
+        weights = self._resolve_weights(cells)
+        # Apply weights per cell and path
+        dt_weighted = weights[None, :, None, :] * dt  # shape (batch, cells, nparams, npaths)
+        # Flatten over cells and nparams to get shape (batch, 7n, npaths)
+        dt_weighted = dt_weighted.reshape(batch, cells * nparams, npaths)
+
+        return dt_weighted
 
     @property
     def npaths(self) -> int:
@@ -184,3 +251,49 @@ class TravelTimeCalculator:
             raise ValueError(
                 f"In and out coordinates must be different for each path (path {idx})"
             )
+
+    def _model_vector_to_parameters(
+        self, m: np.ndarray
+    ) -> tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]:
+        """Convert a model vector to the individual parameters A, C, F, L, N, eta1, eta2."""
+        m = np.atleast_2d(m)
+        A, C, F, L, N, eta1, eta2 = self._unpacking_function(m)
+        A, C, F, L, N = self._add_reference_love(A, C, F, L, N)
+        return A, C, F, L, N, eta1, eta2
+
+    def _add_reference_love(
+        self, A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Add reference Love parameters to the model parameters."""
+        A += self.reference_love[0]
+        C += self.reference_love[1]
+        F += self.reference_love[2]
+        L += self.reference_love[3]
+        N += self.reference_love[4]
+        return A, C, F, L, N
+
+    def _resolve_weights(self, n_cells: int) -> np.ndarray:
+        """Resolve weights to a shape of (n_cells, n_paths) if they are not already."""
+        key = (n_cells, self.npaths)
+        w = self._weights_cache.get(key)
+        if w is not None:
+            return w
+
+        provided_weights = self.weights
+        if provided_weights is None:
+            w = np.full(key, 1.0 / n_cells)
+        elif provided_weights.shape == key:
+            w = provided_weights
+        else:
+            raise ValueError("Weights must be either None or shape (n_cells, n_paths)")
+
+        self._weights_cache[key] = w
+        return w

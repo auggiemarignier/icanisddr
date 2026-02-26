@@ -131,3 +131,201 @@ def transformation_to_voigt(T: np.ndarray) -> np.ndarray:
     mask = k != l
     T_voigt = np.where(mask, T_voigt + T[..., i, j, l, k], T_voigt)
     return T_voigt
+
+
+def matrix_to_voigt(R: np.ndarray) -> np.ndarray:
+    """Convert a 3x3 transformation matrix to Voigt notation using Bond's law.
+
+    Parameters
+    ----------
+    R : ndarray, shape (..., 3, 3)
+        3x3 transformation matrix
+
+    Returns
+    -------
+    R_voigt : ndarray, shape (..., 6, 6)
+        Transformation matrix in Voigt notation
+    """
+
+    # get the notation the same as in Brett et al., 2024
+    r11 = R[..., 0, 0]
+    r12 = R[..., 0, 1]
+    r13 = R[..., 0, 2]
+    r21 = R[..., 1, 0]
+    r22 = R[..., 1, 1]
+    r23 = R[..., 1, 2]
+    r31 = R[..., 2, 0]
+    r32 = R[..., 2, 1]
+    r33 = R[..., 2, 2]
+
+    # Build the 6x6 Bond transformation matrix in Voigt notation
+    row0 = np.stack(
+        [r11**2, r12**2, r13**2, 2 * r12 * r13, 2 * r11 * r13, 2 * r11 * r12], axis=-1
+    )
+    row1 = np.stack(
+        [r21**2, r22**2, r23**2, 2 * r22 * r23, 2 * r21 * r23, 2 * r21 * r22], axis=-1
+    )
+    row2 = np.stack(
+        [r31**2, r32**2, r33**2, 2 * r32 * r33, 2 * r31 * r33, 2 * r31 * r32], axis=-1
+    )
+    row3 = np.stack(
+        [
+            r21 * r31,
+            r22 * r32,
+            r23 * r33,
+            r22 * r33 + r23 * r32,
+            r21 * r33 + r23 * r31,
+            r21 * r32 + r22 * r31,
+        ],
+        axis=-1,
+    )
+    row4 = np.stack(
+        [
+            r11 * r31,
+            r12 * r32,
+            r13 * r33,
+            r12 * r33 + r13 * r32,
+            r11 * r33 + r13 * r31,
+            r11 * r32 + r12 * r31,
+        ],
+        axis=-1,
+    )
+    row5 = np.stack(
+        [
+            r11 * r21,
+            r12 * r22,
+            r13 * r23,
+            r12 * r23 + r13 * r22,
+            r11 * r23 + r13 * r21,
+            r11 * r22 + r12 * r21,
+        ],
+        axis=-1,
+    )
+    # Assemble into final array of shape (..., 6, 6) in a broadcasting-safe way
+    leading_shape = row0.shape[:-1]
+    R_voigt = np.empty((*leading_shape, 6, 6), dtype=row0.dtype)
+    R_voigt[..., 0, :] = row0
+    R_voigt[..., 1, :] = row1
+    R_voigt[..., 2, :] = row2
+    R_voigt[..., 3, :] = row3
+    R_voigt[..., 4, :] = row4
+    R_voigt[..., 5, :] = row5
+
+    return R_voigt
+
+
+def gradient_matrix_to_voigt(R: np.ndarray, dR: np.ndarray) -> np.ndarray:
+    """Compute derivative of the Bond Voigt transform `matrix_to_voigt(R)` given `R` and its derivative `dR`.
+
+    This applies the product / chain rule elementwise to the mapping in `matrix_to_voigt` so callers can obtain dR_voigt/dtheta = d(matrix_to_voigt(R))/dtheta.
+
+    Parameters
+    ----------
+    R : ndarray, shape (..., 3, 3)
+        Rotation matrix.
+    dR : ndarray, shape (..., 3, 3)
+        Derivative of the rotation matrix with respect to a scalar.
+
+    Returns
+    -------
+    dR_voigt : ndarray, shape (..., 6, 6)
+        Derivative of the 6x6 Voigt transformation matrix.
+    """
+    r11 = R[..., 0, 0]
+    r12 = R[..., 0, 1]
+    r13 = R[..., 0, 2]
+    r21 = R[..., 1, 0]
+    r22 = R[..., 1, 1]
+    r23 = R[..., 1, 2]
+    r31 = R[..., 2, 0]
+    r32 = R[..., 2, 1]
+    r33 = R[..., 2, 2]
+
+    dr11 = dR[..., 0, 0]
+    dr12 = dR[..., 0, 1]
+    dr13 = dR[..., 0, 2]
+    dr21 = dR[..., 1, 0]
+    dr22 = dR[..., 1, 1]
+    dr23 = dR[..., 1, 2]
+    dr31 = dR[..., 2, 0]
+    dr32 = dR[..., 2, 1]
+    dr33 = dR[..., 2, 2]
+
+    row0 = np.stack(
+        [
+            2 * r11 * dr11,
+            2 * r12 * dr12,
+            2 * r13 * dr13,
+            2 * (dr12 * r13 + r12 * dr13),
+            2 * (dr11 * r13 + r11 * dr13),
+            2 * (dr11 * r12 + r11 * dr12),
+        ],
+        axis=-1,
+    )
+    row1 = np.stack(
+        [
+            2 * r21 * dr21,
+            2 * r22 * dr22,
+            2 * r23 * dr23,
+            2 * (dr22 * r23 + r22 * dr23),
+            2 * (dr21 * r23 + r21 * dr23),
+            2 * (dr21 * r22 + r21 * dr22),
+        ],
+        axis=-1,
+    )
+    row2 = np.stack(
+        [
+            2 * r31 * dr31,
+            2 * r32 * dr32,
+            2 * r33 * dr33,
+            2 * (dr32 * r33 + r32 * dr33),
+            2 * (dr31 * r33 + r31 * dr33),
+            2 * (dr31 * r32 + r31 * dr32),
+        ],
+        axis=-1,
+    )
+    row3 = np.stack(
+        [
+            dr21 * r31 + r21 * dr31,
+            dr22 * r32 + r22 * dr32,
+            dr23 * r33 + r23 * dr33,
+            dr22 * r33 + r22 * dr33 + dr23 * r32 + r23 * dr32,
+            dr21 * r33 + r21 * dr33 + dr23 * r31 + r23 * dr31,
+            dr21 * r32 + r21 * dr32 + dr22 * r31 + r22 * dr31,
+        ],
+        axis=-1,
+    )
+    row4 = np.stack(
+        [
+            dr11 * r31 + r11 * dr31,
+            dr12 * r32 + r12 * dr32,
+            dr13 * r33 + r13 * dr33,
+            dr12 * r33 + r12 * dr33 + dr13 * r32 + r13 * dr32,
+            dr11 * r33 + r11 * dr33 + dr13 * r31 + r13 * dr31,
+            dr11 * r32 + r11 * dr32 + dr12 * r31 + r12 * dr31,
+        ],
+        axis=-1,
+    )
+    row5 = np.stack(
+        [
+            dr11 * r21 + r11 * dr21,
+            dr12 * r22 + r12 * dr22,
+            dr13 * r23 + r13 * dr23,
+            dr12 * r23 + r12 * dr23 + dr13 * r22 + r13 * dr22,
+            dr11 * r23 + r11 * dr23 + dr13 * r21 + r13 * dr21,
+            dr11 * r22 + r11 * dr22 + dr12 * r21 + r12 * dr21,
+        ],
+        axis=-1,
+    )
+
+    # Assemble into final array of shape (..., 6, 6) in a broadcasting-safe way
+    leading_shape = row0.shape[:-1]
+    dR_voigt = np.empty((*leading_shape, 6, 6), dtype=row0.dtype)
+    dR_voigt[..., 0, :] = row0
+    dR_voigt[..., 1, :] = row1
+    dR_voigt[..., 2, :] = row2
+    dR_voigt[..., 3, :] = row3
+    dR_voigt[..., 4, :] = row4
+    dR_voigt[..., 5, :] = row5
+
+    return dR_voigt

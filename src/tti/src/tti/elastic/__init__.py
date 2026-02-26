@@ -2,18 +2,17 @@
 
 import numpy as np
 
-from .fourth import isotropic_tensor as it4
-from .fourth import tilted_transverse_isotropic_tensor
-from .fourth import transverse_isotropic_tensor as tit4
+from .voigt import isotropic_tensor as itv
+from .voigt import tilted_transverse_isotropic_tensor
+from .voigt import transverse_isotropic_tensor as titv
 
 
 def isotropic_tensor(lam: np.ndarray, mu: np.ndarray) -> np.ndarray:
     """
-    Construct an isotropic elastic tensor (4th-order representation).
+    Construct an isotropic elastic tensor in Voigt notation (6x6 matrix).
 
-    This returns the tensor as a (n, 3, 3, 3, 3) array, suitable for direct tensor operations
-    like rotations and contractions. For 6x6 Voigt notation, use
-    isotropic_tensor_voigt() instead.
+    Returns the tensor as a (..., 6, 6) array in Voigt notation. For the full
+    4th-order representation, use tti.elastic.fourth.isotropic_tensor() instead.
 
     Parameters
     ----------
@@ -24,26 +23,25 @@ def isotropic_tensor(lam: np.ndarray, mu: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    C : ndarray, shape (n, 3, 3, 3, 3)
-        Isotropic elastic tensor in 4th-order form.
+    C : ndarray, shape (..., 6, 6)
+        Isotropic elastic tensor in Voigt notation.
 
     See Also
     --------
-    tti.elastic.voigt.isotropic_tensor : Voigt notation (6x6) version
-    tti.elastic.fourth.isotropic_tensor : Direct alias to this implementation
+    tti.elastic.fourth.isotropic_tensor : 4th-order tensor representation
     """
-    return it4(lam, mu)
+    return itv(lam, mu)
 
 
 def transverse_isotropic_tensor(
     A: np.ndarray, C: np.ndarray, F: np.ndarray, L: np.ndarray, N: np.ndarray
 ) -> np.ndarray:
     """
-    Construct a transverse isotropic elastic tensor (4th-order representation).
+    Construct a transverse isotropic elastic tensor in Voigt notation (6x6 matrix).
 
-    This returns the tensor as a 3x3x3x3 array, suitable for direct tensor operations
-    like rotations and contractions. For 6x6 Voigt notation, use
-    transverse_isotropic_tensor_voigt() instead.
+    Returns the tensor as a (..., 6, 6) array in Voigt notation. For the full
+    4th-order representation, use tti.elastic.fourth.transverse_isotropic_tensor()
+    instead.
 
     Parameters
     ----------
@@ -60,15 +58,14 @@ def transverse_isotropic_tensor(
 
     Returns
     -------
-    C : ndarray, shape (..., 3, 3, 3, 3)
-        Transverse isotropic elastic tensor in 4th-order form.
+    C : ndarray, shape (..., 6, 6)
+        Transverse isotropic elastic tensor in Voigt notation.
 
     See Also
     --------
-    tti.elastic.voigt.transverse_isotropic_tensor : Voigt notation (6x6) version
-    tti.elastic.fourth.transverse_isotropic_tensor : Direct alias to this implementation
+    tti.elastic.fourth.transverse_isotropic_tensor : 4th-order tensor representation
     """
-    return tit4(A, C, F, L, N)
+    return titv(A, C, F, L, N)
 
 
 __all__ = [
