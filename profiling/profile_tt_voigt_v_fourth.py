@@ -39,7 +39,7 @@ def make_arbitrary_symmetric_D() -> np.ndarray:
     """
     D = np.zeros((3, 3, 3, 3))
 
-    def set_sym(i: int, j: int, k: int, l: int, value: float) -> None:
+    def set_sym(i: int, j: int, k: int, l: int, value: float) -> None:  # noqa: E741
         pairs_ij = [(i, j), (j, i)]
         pairs_kl = [(k, l), (l, k)]
         for a, b in pairs_ij:

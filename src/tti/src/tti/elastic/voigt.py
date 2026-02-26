@@ -578,6 +578,7 @@ def gradient_D(
         Tilt angle around the z-axis (in radians)
     eta2 : np.ndarray (...,)
         Azimuthal angle around the y-axis (in radians)
+
     Returns
     -------
     dD : np.ndarray (..., 7, 6, 6)
