@@ -6,6 +6,10 @@ import numpy as np
 import pytest
 
 from tti.rotation import (
+    gradient_rotation_matrix_x,
+    gradient_rotation_matrix_y,
+    gradient_rotation_matrix_z,
+    gradient_rotation_matrix_zy,
     rotation_matrix_x,
     rotation_matrix_y,
     rotation_matrix_z,
@@ -236,3 +240,132 @@ def test_batch_rotations(
 
     R_batch = R(angles)
     assert R_batch.shape == leading_shape + (3, 3)
+
+
+def fd_grad(fun, x, eps=1e-6):
+    """Finite-difference derivative of a function `fun` with respect to each element of `x`.
+
+    `fun` should accept an array `x` and return an array of shape `x.shape + (3,3)`.
+    The return value has shape `x.shape + (3,3)` containing the partial derivative
+    of `fun` with respect to each element of `x` at the corresponding position.
+    """
+    x = np.asarray(x, dtype=float)
+    out = np.zeros(x.shape + (3, 3), dtype=float)
+    for idx, _ in np.ndenumerate(x):
+        x_plus = x.copy()
+        x_minus = x.copy()
+        x_plus[idx] += eps
+        x_minus[idx] -= eps
+        f_plus = fun(x_plus)
+        f_minus = fun(x_minus)
+        out[idx] = (f_plus[idx] - f_minus[idx]) / (2 * eps)
+    return out
+
+
+def fd_grad_twoarg(fun, a, b, eps=1e-6):
+    """Finite-difference partials of `fun(a, b)` with respect to `a` and `b`.
+
+    Returns tuple `(d_fun_da, d_fun_db)` each shaped `a.shape + (3,3)`.
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    d_a = np.zeros(a.shape + (3, 3), dtype=float)
+    d_b = np.zeros(a.shape + (3, 3), dtype=float)
+    for idx, _ in np.ndenumerate(a):
+        a_plus = a.copy()
+        a_minus = a.copy()
+        a_plus[idx] += eps
+        a_minus[idx] -= eps
+        f_plus = fun(a_plus, b)
+        f_minus = fun(a_minus, b)
+        d_a[idx] = (f_plus[idx] - f_minus[idx]) / (2 * eps)
+
+        b_plus = b.copy()
+        b_minus = b.copy()
+        b_plus[idx] += eps
+        b_minus[idx] -= eps
+        f_plus = fun(a, b_plus)
+        f_minus = fun(a, b_minus)
+        d_b[idx] = (f_plus[idx] - f_minus[idx]) / (2 * eps)
+
+    return d_a, d_b
+
+
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (),
+        (5,),
+        (2, 3),
+    ],
+    ids=["scalar", "1d", "2d"],
+)
+def test_gradient_rotation_matrix_z_matches_finite_difference(
+    shape: tuple[int, ...], rng: np.random.Generator
+):
+    """Test that the gradient of the z-rotation matrix matches finite-difference gradients for various input shapes."""
+    angles = rng.uniform(-2.0, 2.0, size=shape)
+    dR_numeric = fd_grad(lambda th: rotation_matrix_z(th), angles)
+    dR_analytic = gradient_rotation_matrix_z(angles)
+    assert np.allclose(dR_numeric, dR_analytic, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (),
+        (5,),
+        (2, 3),
+    ],
+    ids=["scalar", "1d", "2d"],
+)
+def test_gradient_rotation_matrix_y_matches_finite_difference(
+    shape: tuple[int, ...], rng: np.random.Generator
+):
+    """Test that the gradient of the y-rotation matrix matches finite-difference gradients for various input shapes."""
+    angles = rng.uniform(-2.0, 2.0, size=shape)
+    dR_numeric = fd_grad(lambda th: rotation_matrix_y(th), angles)
+    dR_analytic = gradient_rotation_matrix_y(angles)
+    assert np.allclose(dR_numeric, dR_analytic, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (),
+        (5,),
+        (2, 3),
+    ],
+    ids=["scalar", "1d", "2d"],
+)
+def test_gradient_rotation_matrix_x_matches_finite_difference(
+    shape: tuple[int, ...], rng: np.random.Generator
+):
+    """Test that the gradient of the x-rotation matrix matches finite-difference gradients for various input shapes."""
+    angles = rng.uniform(-2.0, 2.0, size=shape)
+    dR_numeric = fd_grad(lambda th: rotation_matrix_x(th), angles)
+    dR_analytic = gradient_rotation_matrix_x(angles)
+    assert np.allclose(dR_numeric, dR_analytic, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (),
+        (5,),
+        (2, 3),
+    ],
+    ids=["scalar", "1d", "2d"],
+)
+def test_gradient_rotation_matrix_zy_matches_finite_difference(
+    shape: tuple[int, ...], rng: np.random.Generator
+) -> None:
+    """Test that the gradient of the combined z-y rotation matrix matches finite-difference gradients for various input shapes."""
+    alpha = rng.uniform(-2.0, 2.0, size=shape)
+    beta = rng.uniform(-2.0, 2.0, size=shape)
+    d_alpha_num, d_beta_num = fd_grad_twoarg(
+        lambda a, b: rotation_matrix_zy(a, b), alpha, beta
+    )
+    d_alpha_analytic, d_beta_analytic = gradient_rotation_matrix_zy(alpha, beta)
+    assert np.allclose(d_alpha_num, d_alpha_analytic, atol=1e-6)
+    assert np.allclose(d_beta_num, d_beta_analytic, atol=1e-6)
