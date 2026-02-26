@@ -199,8 +199,8 @@ class TravelTimeCalculator:
         )  # shape (batch, cells, nparams=7, npaths)
 
         # The gradient functions `gradient_D_wrt_eta1/eta2` return derivatives wrt radians
-        # Convert back to degrees
-        dt[..., 5:7, :] *= np.pi / 180.0
+        # Convert back to degrees (angles are stored in the last two parameter slots)
+        dt[..., -2:, :] *= np.pi / 180.0
 
         batch, cells, nparams, npaths = dt.shape
         weights = self._resolve_weights(cells)
