@@ -503,7 +503,7 @@ class TestTravelTimeCalculatorGradient:
         m: np.ndarray, idx: int, calculator: TravelTimeCalculator
     ) -> np.ndarray:
         """Finite difference approximation of the gradient with respect to model parameter at index idx."""
-        epsilon = 1e-9
+        epsilon = 1e-7
         m_plus = m.copy()
         m_minus = m.copy()
         m_plus[..., idx::7] += epsilon  # perturb the idx-th parameter in each segment
