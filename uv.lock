@@ -2487,7 +2487,7 @@ wheels = [
 [[package]]
 name = "sampling"
 version = "0.1.0"
-source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling&branch=main#0c45b0ddfabda01325c7a7ede8dbf160fbbf58e3" }
+source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling&branch=main#8191f0c24a7268bcd6a20454269d47d704434b9b" }
 dependencies = [
     { name = "emcee" },
     { name = "numpy" },
@@ -2570,7 +2570,7 @@ wheels = [
 [[package]]
 name = "sddr"
 version = "0.1.0"
-source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr&branch=main#0c45b0ddfabda01325c7a7ede8dbf160fbbf58e3" }
+source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr&branch=main#8191f0c24a7268bcd6a20454269d47d704434b9b" }
 dependencies = [
     { name = "harmonic" },
     { name = "numpy" },
