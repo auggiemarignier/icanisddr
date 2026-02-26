@@ -10,9 +10,9 @@ from collections.abc import Callable
 import numpy as np
 import pytest
 
-from tti.elastic import tilted_transverse_isotropic_tensor
 from tti.elastic.voigt import (
     dCdA,
+    tilted_transverse_isotropic_tensor,
     dCdC,
     dCdF,
     dCdL,

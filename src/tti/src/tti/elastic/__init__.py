@@ -2,9 +2,9 @@
 
 import numpy as np
 
-from .voigt import isotropic_tensor as itv
-from .voigt import tilted_transverse_isotropic_tensor
-from .voigt import transverse_isotropic_tensor as titv
+from .fourth import isotropic_tensor as it4
+from .fourth import tilted_transverse_isotropic_tensor
+from .fourth import transverse_isotropic_tensor as tit4
 
 
 def isotropic_tensor(lam: np.ndarray, mu: np.ndarray) -> np.ndarray:
@@ -32,7 +32,7 @@ def isotropic_tensor(lam: np.ndarray, mu: np.ndarray) -> np.ndarray:
     tti.elastic.voigt.isotropic_tensor : Voigt notation (6x6) version
     tti.elastic.fourth.isotropic_tensor : Direct alias to this implementation
     """
-    return itv(lam, mu)
+    return it4(lam, mu)
 
 
 def transverse_isotropic_tensor(
@@ -68,7 +68,7 @@ def transverse_isotropic_tensor(
     tti.elastic.voigt.transverse_isotropic_tensor : Voigt notation (6x6) version
     tti.elastic.fourth.transverse_isotropic_tensor : Direct alias to this implementation
     """
-    return titv(A, C, F, L, N)
+    return tit4(A, C, F, L, N)
 
 
 __all__ = [
