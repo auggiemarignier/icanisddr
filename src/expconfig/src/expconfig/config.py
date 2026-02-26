@@ -7,8 +7,8 @@ from typing import Self, TypeVar
 
 import yaml
 from pydantic import BaseModel, Field
-from sddr.sddr import FlowConfig, TrainConfig
 
+from ._sddr import FlowConfig, TrainConfig
 from .geometry import GeometryConfig
 
 

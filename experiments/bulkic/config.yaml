@@ -30,7 +30,7 @@ training:
   verbose: true
 flow:
     flow_type: "RQSpline"
-    model_config:
+    flow_model_config:
       n_layers: 8
       n_bins: 8
       hidden_size: [64, 64]
