@@ -1,0 +1,60 @@
+sampling:
+  nwalkers: 400
+  nsteps: 3000
+  burn_in: 250
+  thin: 15
+  progress: true
+  parallel: true
+  vectorise: false
+priors:
+  components:
+    - type: gaussian
+      mean: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      inv_covar:
+        - [8.853085068278257e-24, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        - [0.0, 8.853085068278257e-24, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        - [0.0, 0.0, 1.03458883e-23, 9.29788229e-23, 0.0, 0.0, 0.0, 0.0]
+        - [0.0, 0.0, 9.29788229e-23, 1.70531347e-21, 0.0, 0.0, 0.0, 0.0]
+        - [0.0, 0.0, 0.0, 0.0, 8.853085068278257e-24, 0.0, 0.0, 0.0]
+        - [0.0, 0.0, 0.0, 0.0, 0.0, 8.853085068278257e-24, 0.0, 0.0]
+        - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.03458883e-23, 9.29788229e-23]
+        - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.29788229e-23, 1.70531347e-21]
+      indices: [0, 1, 2, 3, 6, 7, 8, 9]
+    - type: uniform
+      lower_bounds: [-180.0, -180.0]
+      upper_bounds: [180.0, 180.0]
+      indices: [4, 10]
+    - type: uniform
+      lower_bounds: [0.0, 0.0]
+      upper_bounds: [90.0, 90.0]
+      indices: [5, 11]
+training:
+  batch_size: 24
+  epochs: 10
+  verbose: true
+flow:
+    flow_type: "RQSpline"
+    flow_model_config:
+      n_layers: 8
+      n_bins: 8
+      hidden_size: [64, 64]
+      spline_range: [-10.0, 10.0]
+    standardize: true
+    learning_rate: 0.001
+    momentum: 0.9
+geometry:
+  regions:
+    - type: ball
+      radius: 400.0
+      label: IC
+    - type: shell
+      radius_inner: 400.0
+      radius_outer: 1221.5
+      label: OC
+hypotheses:
+  - name: Completely transverse isotropic
+    indices: [5, 11]
+    nu: [0.0, 0.0]
+  - name: Completely isotropic
+    indices: [1, 2, 3, 7, 8, 9]
+    nu: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

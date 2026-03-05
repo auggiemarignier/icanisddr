@@ -1,4 +1,4 @@
-"""Synthetic bulk IC experiment entry point."""
+"""Real data IMIC experiment entry point."""
 
 import logging
 import pickle
@@ -74,7 +74,7 @@ def run_sddr_experiment(
     nu: list[float],
     cfg: ExpConfig,
 ) -> float:
-    """Run the synthetic bulk IC SDDR experiment."""
+    """Run the real data IMIC SDDR experiment."""
 
     logger.info("Configuring posterior fitting parameters")
     train_cfg, flow_cfg = configure_posterior_fit(cfg.model_dump())
@@ -136,8 +136,8 @@ def get_results_dir(n: int = 0) -> Path:
 
 
 def main() -> None:
-    """Main function for synthetic bulk IC experiment."""
-    logger.info("Starting synthetic bulk IC experiment")
+    """Main function for real data IMIC experiment."""
+    logger.info("Starting real data IMIC experiment")
 
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     results_dir = get_results_dir(n)

@@ -1,11 +1,17 @@
-"""Synthetic bulk IC experiment entry point."""
+"""Synthetic IMIC experiment entry point."""
 
 import logging
+import os
 import pickle
 from datetime import datetime
 from functools import partial
 from pathlib import Path
 
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 import numpy as np
 
 from expconfig.config import PriorsConfig
@@ -15,10 +21,12 @@ from expconfig.synthetic import (
     create_synthetic_data,
 )
 from icprem import PREM_IC_RHO, PREM_IC_VP
+from raytracer import Ball, CompositeRegion, SphericalShell
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
-from sampling.sampling import MCMCConfig, nuts
+from sampling.sampling import MCMCConfig, mcmc
 from tti.traveltimes import TravelTimeCalculator
+from tti.traveltimes.paths import calculate_path_direction_vector
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,29 +35,48 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+CFG = SynthConfig.load(Path(__file__).parent.parent / "config.yaml")
+
+REGION = CompositeRegion(
+    [
+        Ball(radius=CFG.geometry.regions[0].radius),
+        SphericalShell(
+            radius_inner=CFG.geometry.regions[1].radius_inner,
+            radius_outer=CFG.geometry.regions[1].radius_outer,
+        ),
+    ],
+    labels=[r.label for r in CFG.geometry.regions],
+)
+
 IC_IN, IC_OUT = create_paths(source_spacing=30.0)
+path_directions = calculate_path_direction_vector(IC_IN, IC_OUT)
+total_distances = REGION.ray_distances(IC_IN, path_directions)
+
+# Not sure why some rays have zero total distance.  Discard for now
+valid_rays = total_distances > 0
+IC_IN = IC_IN[valid_rays]
+IC_OUT = IC_OUT[valid_rays]
+path_directions = path_directions[valid_rays]
+segment_distances = REGION.ray_distances_per_region(IC_IN, path_directions)
+WEIGHTS = segment_distances / total_distances[valid_rays, None]
+
 NORMALISATION = -1 / (2 * PREM_IC_RHO * (PREM_IC_VP * 1e3) ** 2)
 BASE_TTC_FACTORY = partial(
     TravelTimeCalculator,
     ic_in=IC_IN,
     ic_out=IC_OUT,
     normalisation=NORMALISATION,
+    weights=WEIGHTS.T,
 )
 
 # Synthetic data computed based on absolute perturbations from PREM including shear components
 SYNTH_CALCULATOR = BASE_TTC_FACTORY(nested=False, shear=True, N=True)
-# Forward model takes nested parameters, excluding shear components
-FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True, shear=False, N=False)
+# Forward model takes nested parameters and includes L but excludes N
+FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True, shear=True, N=False)
 
-CFG_FILE = Path(__file__).parent.parent / "config.yaml"
 OUTPUT_DIR = (
     Path(__file__).parent.parent / "outputs" / datetime.now().strftime("%Y%m%d-%H%M%S")
 )
-
-
-def _gradient(x: np.ndarray) -> np.ndarray:
-    """Thin wrapper for the forward calculator gradient to swap axes for pints compatibility."""
-    return FORWARD_CALCULATOR.gradient(x).swapaxes(-2, -1)
 
 
 def _setup_likelihood(
@@ -57,12 +84,7 @@ def _setup_likelihood(
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
-    likelihood = GaussianLikelihood(
-        FORWARD_CALCULATOR,
-        synthetic_data,
-        inv_covar,
-        forward_fn_gradient=_gradient,
-    )
+    likelihood = GaussianLikelihood(FORWARD_CALCULATOR, synthetic_data, inv_covar)
     return likelihood
 
 
@@ -97,26 +119,25 @@ def dump_results(samples: np.ndarray, lnprob: np.ndarray, output_dir: Path) -> N
 
 
 def main() -> None:
-    """Main function for synthetic bulk IC experiment."""
-    logger.info("Starting synthetic bulk IC experiment")
-    cfg = SynthConfig.load(CFG_FILE)
+    """Main function for synthetic IMIC experiment."""
+    logger.info("Starting synthetic IMIC experiment")
 
     rng = np.random.default_rng(42)
 
     logger.info("Creating synthetic data...")
     synthetic_data = create_synthetic_data(
         SYNTH_CALCULATOR,
-        cfg.truth.as_array(),
-        cfg.data.noise_level,
+        CFG.truth.as_array().flatten(),
+        CFG.data.noise_level,
     )[0]
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
     likelihood = _setup_likelihood(synthetic_data)
-    prior = _setup_prior(cfg.priors)
+    prior = _setup_prior(CFG.priors)
 
     logger.info("Running MCMC sampling")
-    samples, lnprob = nuts(
-        prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
+    samples, lnprob = mcmc(
+        prior.n, likelihood, prior, rng, MCMCConfig(**CFG.sampling.model_dump())
     )
 
     logger.info("MCMC sampling completed")
@@ -124,7 +145,7 @@ def main() -> None:
     logger.info("Saving samples to disk")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
     dump_results(samples, lnprob, OUTPUT_DIR)
-    cfg.dump(OUTPUT_DIR / "config.yaml")
+    CFG.dump(OUTPUT_DIR / "config.yaml")
 
 
 if __name__ == "__main__":
