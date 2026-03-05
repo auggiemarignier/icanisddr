@@ -17,7 +17,6 @@ import pandas as pd
 
 from expconfig import ExpConfig
 from icprem import PREM_IC_RHO, PREM_IC_VP
-from raytracer import Ball, CompositeRegion, SphericalShell
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
@@ -34,16 +33,7 @@ logger = logging.getLogger(__name__)
 CFG = ExpConfig.load(Path(__file__).parent.parent / "config.yaml")
 DATA_FILE = Path(__file__).parent.parent / "data" / "brett2024_ic_traveltimes.parquet"
 
-REGION = CompositeRegion(
-    [
-        Ball(radius=CFG.geometry.regions[0].radius),
-        SphericalShell(
-            radius_inner=CFG.geometry.regions[1].radius_inner,
-            radius_outer=CFG.geometry.regions[1].radius_outer,
-        ),
-    ],
-    labels=[r.label for r in CFG.geometry.regions],
-)
+REGION = CFG.geometry.to_composite_region()
 
 
 OUTPUT_DIR = (
