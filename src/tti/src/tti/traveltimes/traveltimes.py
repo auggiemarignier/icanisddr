@@ -225,6 +225,17 @@ class TravelTimeCalculator:
         """Number of paths."""
         return self._npaths
 
+    def update_weights(self, weights: np.ndarray | None) -> None:
+        """Update the weights for each segment along each path.
+
+        Parameters
+        ----------
+        weights : ndarray, shape (nsegments, npaths), optional
+            Weights for each segment along each path (default is None, which gives equal weights).
+        """
+        self.weights = weights
+        self._weights_cache.clear()  # Clear cache since weights have changed
+
     def _resolve_weights(self, n_cells: int) -> np.ndarray:
         """Resolve weights to a shape of (n_cells, n_paths) if they are not already."""
         key = (n_cells, self.npaths)
