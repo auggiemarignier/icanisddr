@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from raytracer.regions import _ray_sphere_intersection
 
-from raytracer import Ball, CompositeRegion, Hemisphere, SphericalShell
+from raytracer import Ball, BallInShell, CompositeRegion, Hemisphere, SphericalShell
 
 
 class TestRaySphereIntersections:
@@ -301,3 +301,25 @@ class TestCompositeRegion:
         distances = self.composite.ray_distances(origins, directions)
         expected_distances = self.ball.ray_distances(origins, directions)
         np.testing.assert_allclose(distances, expected_distances)
+
+
+class TestBallInShell:
+    """Test suite for a CompositeRegion of a Ball inside a SphericalShell."""
+
+    geometry = BallInShell(radius_inner=1.0, radius_outer=2.0)
+
+    def test_labels(self) -> None:
+        """Test that the labels are correctly assigned."""
+        assert self.geometry.labels == ["ball", "shell"]
+
+    def test_ball_radius_matches_shell_inner_radius(self) -> None:
+        """Test that the radius of the ball is the inner radius of the shell."""
+        assert self.geometry.ball.radius == self.geometry.shell.radius_inner
+
+    def test_inner_radius_property(self) -> None:
+        """Test that the inner_radius property returns the correct value."""
+        assert self.geometry.radius_inner == self.geometry.shell.radius_inner
+
+    def test_outer_radius_property(self) -> None:
+        """Test that the outer_radius property returns the correct value."""
+        assert self.geometry.radius_outer == self.geometry.shell.radius_outer
