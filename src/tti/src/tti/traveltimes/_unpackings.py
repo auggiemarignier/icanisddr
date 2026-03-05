@@ -9,15 +9,7 @@ from collections.abc import Callable
 
 import numpy as np
 
-type seven_arrays = tuple[
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-]
+from ._types import seven_arrays
 
 
 def _unpack_nested_model_vector(m: np.ndarray) -> seven_arrays:
