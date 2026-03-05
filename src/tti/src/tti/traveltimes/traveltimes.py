@@ -132,8 +132,6 @@ class TravelTimeCalculator:
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
 
         self.weights = weights
-        # To avoid repeatedly validating and broadcasting weights for different numbers of cells, we cache the resolved weights for each (n_cells, n_paths) combination.
-        self._weights_cache: dict[tuple[int, int], np.ndarray] = {}
 
         self._unpacking_function = _unpackings[nested][(shear, N)]
         self._gradient_D_function = _gradient_D_functions[nested][(shear, N)]
@@ -234,25 +232,12 @@ class TravelTimeCalculator:
             Weights for each segment along each path (default is None, which gives equal weights).
         """
         self.weights = weights
-        self._weights_cache.clear()  # Clear cache since weights have changed
 
     def _resolve_weights(self, n_cells: int) -> np.ndarray:
         """Resolve weights to a shape of (n_cells, n_paths) if they are not already."""
-        key = (n_cells, self.npaths)
-        w = self._weights_cache.get(key)
-        if w is not None:
-            return w
-
-        provided_weights = self.weights
-        if provided_weights is None:
-            w = np.full(key, 1.0 / n_cells)
-        elif provided_weights.shape == key:
-            w = provided_weights
-        else:
-            raise ValueError("Weights must be either None or shape (n_cells, n_paths)")
-
-        self._weights_cache[key] = w
-        return w
+        if self.weights is not None:
+            return np.broadcast_to(self.weights, (n_cells, self.npaths))
+        return np.full((n_cells, self.npaths), 1.0 / n_cells)
 
 
 def _validate_paths(ic_in: np.ndarray, ic_out: np.ndarray) -> None:
