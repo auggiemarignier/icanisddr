@@ -118,6 +118,39 @@ class HemisphereConfig(RegionConfig):
         )
 
 
+class BallInShellConfig(RegionConfig):
+    """Configuration for a ball embedded within a spherical shell.
+
+    Parameters
+    ----------
+    radius_inner : float
+        Radius of the inner ball (km).
+    radius_outer : float
+        Outer radius of the shell (km).
+    label : str, optional
+        Label for this region.
+    """
+
+    type: Literal["ball_in_shell"] = "ball_in_shell"
+    radius_inner: float = Field(gt=0, description="Inner ball radius in km")
+    radius_outer: float = Field(gt=0, description="Outer shell radius in km")
+
+    def to_region(self):
+        """Create a BallInShell region from this configuration.
+
+        Returns
+        -------
+        BallInShell
+            The configured BallInShell region.
+        """
+        from raytracer import BallInShell
+
+        return BallInShell(
+            radius_inner=self.radius_inner,
+            radius_outer=self.radius_outer,
+        )
+
+
 class GeometryConfig(BaseModel):
     """Configuration for a composite region.
 
@@ -130,7 +163,9 @@ class GeometryConfig(BaseModel):
         List of region configurations that make up the composite region.
     """
 
-    regions: list[BallConfig | SphericalShellConfig | HemisphereConfig]
+    regions: list[
+        BallConfig | SphericalShellConfig | HemisphereConfig | BallInShellConfig
+    ]
 
     def to_composite_region(self):
         """Create a CompositeRegion from this configuration.
