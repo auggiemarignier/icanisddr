@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 
 from tti.traveltimes.paths import (
-    _spherical_to_cartesian,
     calculate_path_direction_vector,
+    spherical_to_cartesian,
 )
 
 
@@ -13,15 +13,15 @@ def test__spherical_to_cartesian() -> None:
     """Test conversion from spherical to cartesian coordinates."""
 
     lon, lat, r = 0.0, 0.0, 1.0
-    x, y, z = _spherical_to_cartesian(lon, lat, r)
+    x, y, z = spherical_to_cartesian(lon, lat, r)
     np.testing.assert_allclose([x, y, z], [1.0, 0.0, 0.0], atol=1e-12)
 
     lon, lat, r = 90.0, 0.0, 1.0
-    x, y, z = _spherical_to_cartesian(lon, lat, r)
+    x, y, z = spherical_to_cartesian(lon, lat, r)
     np.testing.assert_allclose([x, y, z], [0.0, 1.0, 0.0], atol=1e-12)
 
     lon, lat, r = 0.0, 90.0, 1.0
-    x, y, z = _spherical_to_cartesian(lon, lat, r)
+    x, y, z = spherical_to_cartesian(lon, lat, r)
     np.testing.assert_allclose([x, y, z], [0.0, 0.0, 1.0], atol=1e-12)
 
 
@@ -30,7 +30,7 @@ def test__spherical_to_cartesian_batch() -> None:
 
     # Batch of 3 coordinates
     coords_spherical = np.array([[0.0, 0.0, 1.0], [90.0, 0.0, 1.0], [0.0, 90.0, 1.0]])
-    coords_cartesian = _spherical_to_cartesian(
+    coords_cartesian = spherical_to_cartesian(
         coords_spherical[:, 0], coords_spherical[:, 1], coords_spherical[:, 2]
     )
     expected = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
@@ -38,7 +38,7 @@ def test__spherical_to_cartesian_batch() -> None:
 
     # Single coordinate as 1-element arrays
     lon, lat, r = np.array([0.0]), np.array([0.0]), np.array([1.0])
-    coords = _spherical_to_cartesian(lon, lat, r)
+    coords = spherical_to_cartesian(lon, lat, r)
     expected = np.array([[1.0, 0.0, 0.0]])
     np.testing.assert_allclose(coords, expected, atol=1e-12)
 
