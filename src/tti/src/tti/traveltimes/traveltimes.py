@@ -250,30 +250,31 @@ def _validate_paths(ic_in: np.ndarray, ic_out: np.ndarray) -> None:
 
     # Check bounds for longitude, latitude, and radius
     if not np.all(
-        (ic_in[:, 0] >= -180)
-        & (ic_in[:, 0] <= 180)
-        & (ic_out[:, 0] >= -180)
-        & (ic_out[:, 0] <= 180)
+        (ic_in[..., 0] >= -180)
+        & (ic_in[..., 0] <= 180)
+        & (ic_out[..., 0] >= -180)
+        & (ic_out[..., 0] <= 180)
     ):
         raise ValueError("Longitude must be in [-180, 180] degrees.")
 
     if not np.all(
-        (ic_in[:, 1] >= -90)
-        & (ic_in[:, 1] <= 90)
-        & (ic_out[:, 1] >= -90)
-        & (ic_out[:, 1] <= 90)
+        (ic_in[..., 1] >= -90)
+        & (ic_in[..., 1] <= 90)
+        & (ic_out[..., 1] >= -90)
+        & (ic_out[..., 1] <= 90)
     ):
         raise ValueError("Latitude must be in [-90, 90] degrees.")
 
-    if not np.all((ic_in[:, 2] > 0) & (ic_out[:, 2] > 0)):
+    if not np.all((ic_in[..., 2] > 0) & (ic_out[..., 2] > 0)):
         raise ValueError("Radius must be greater than 0 km.")
 
     # Ensure in and out coordinates are different for each path
     same_mask = np.all(ic_in == ic_out, axis=-1)
     if np.any(same_mask):
-        idx = np.where(same_mask)[0][0]
+        # Use a flat index so this works for any leading dimensions
+        idx_flat = int(np.flatnonzero(same_mask)[0])
         raise ValueError(
-            f"In and out coordinates must be different for each path (path {idx})"
+            f"In and out coordinates must be different for each path (path {idx_flat})"
         )
 
 
