@@ -65,7 +65,7 @@ BASE_TTC_FACTORY = partial(
     ic_in=IC_IN,
     ic_out=IC_OUT,
     normalisation=NORMALISATION,
-    weights=initial_weights.T,
+    weights=initial_weights.T[np.newaxis],
 )
 
 # Synthetic data computed based on absolute perturbations from PREM including shear components
@@ -91,9 +91,11 @@ def forward(params: np.ndarray) -> np.ndarray:
     """
     tti_params = params[:, :-1]
     imic_radius = params[:, -1]
-    region = BallInShell(imic_radius, IC_RADIUS)
-    weights = _calculate_weights(region)
-    FORWARD_CALCULATOR.update_weights(weights.T)
+    batch_weights = np.stack(
+        [_calculate_weights(BallInShell(r, IC_RADIUS)).T for r in imic_radius],
+        axis=0,
+    )  # shape (batch_size, n_cells, npaths)
+    FORWARD_CALCULATOR.update_weights(batch_weights)
     return FORWARD_CALCULATOR(tti_params)
 
 
