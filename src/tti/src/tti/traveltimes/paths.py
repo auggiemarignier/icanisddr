@@ -27,13 +27,13 @@ def calculate_path_direction_vector(
     n : ndarray, shape (..., 3)
         Path direction unit vector.
     """
-    ic_in_xyz = _spherical_to_cartesian(ic_in[..., 0], ic_in[..., 1], ic_in[..., 2])
-    ic_out_xyz = _spherical_to_cartesian(ic_out[..., 0], ic_out[..., 1], ic_out[..., 2])
+    ic_in_xyz = spherical_to_cartesian(ic_in[..., 0], ic_in[..., 1], ic_in[..., 2])
+    ic_out_xyz = spherical_to_cartesian(ic_out[..., 0], ic_out[..., 1], ic_out[..., 2])
     path_vector = ic_out_xyz - ic_in_xyz
     return path_vector / np.linalg.norm(path_vector, axis=-1, keepdims=True)
 
 
-def _spherical_to_cartesian(
+def spherical_to_cartesian(
     lon: float | np.ndarray, lat: float | np.ndarray, r: float | np.ndarray
 ) -> np.ndarray:
     """

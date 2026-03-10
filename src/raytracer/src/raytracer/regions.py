@@ -237,7 +237,6 @@ class CompositeRegion(Region):
         Labels for each region.
     """
 
-    # TODO: Rename to CompositeRegion
     # TODO: Something to validate that the regions form a complete sphere with no gaps or overlaps
 
     def __init__(self, regions: list[Region], labels: list[str] | None = None):
@@ -302,6 +301,33 @@ class CompositeRegion(Region):
         distances = self.ray_distances_per_region(origin, direction)
 
         return distances.sum(axis=1)
+
+
+class BallInShell(CompositeRegion):
+    """A composite region consisting of a ball inside a spherical shell.
+
+    Parameters
+    ----------
+    radius_inner : float
+        Inner radius of the shell (also the radius of the ball).
+    radius_outer : float
+        Outer radius of the shell.
+    """
+
+    def __init__(self, radius_inner: float, radius_outer: float):
+        self.ball = Ball(radius_inner)
+        self.shell = SphericalShell(radius_inner, radius_outer)
+        super().__init__(regions=[self.ball, self.shell], labels=["ball", "shell"])
+
+    @property
+    def radius_inner(self) -> float:
+        """Inner radius of the shell (read-only)."""
+        return self.shell.radius_inner
+
+    @property
+    def radius_outer(self) -> float:
+        """Outer radius of the shell (read-only)."""
+        return self.shell.radius_outer
 
 
 def _ray_sphere_intersection(

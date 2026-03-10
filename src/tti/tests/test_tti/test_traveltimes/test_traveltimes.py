@@ -494,6 +494,40 @@ class TestTravelTimeCalculator:
         assert dt.shape == (batch_size, calculator.npaths)
         np.testing.assert_allclose(dt, expected, atol=1e-12)
 
+    @pytest.mark.parametrize(
+        "nsegments,batch_size",
+        [(1, 1), (4, 1), (4, 2)],
+        ids=["single_segment", "multiple_segments", "multiple_segments_batch"],
+    )
+    def test_weight_update(
+        self,
+        nsegments: int,
+        batch_size: int,
+        calculator: TravelTimeCalculator,
+    ) -> None:
+        """Test that the weights can be updated after initialisation and are applied in the traveltime calculation."""
+
+        # Create an example model vector
+        lam, mu = 12.0, 5.0
+        a = lam + 2 * mu
+        m = np.stack(
+            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+        )
+
+        # calculator initialised with no weights, so weighting will default to 1.0/nsegments
+        before_update_traveltime = calculator(m)
+
+        # Update weights to be 2.0/nsegments for all paths
+        new_weights = np.full((batch_size, nsegments, calculator.npaths), 2.0 / nsegments)
+        calculator.update_weights(new_weights)
+
+        after_update_traveltime = calculator(m)
+
+        # Traveltime after weight update should be double the traveltime before update
+        np.testing.assert_allclose(
+            after_update_traveltime, 2 * before_update_traveltime, atol=1e-12
+        )
+
 
 class TestTravelTimeCalculatorGradient:
     """Test the gradient method of the TravelTimeCalculator class."""
@@ -537,7 +571,8 @@ class TestTravelTimeCalculatorGradient:
         assert grad.shape == (batch_size, 7 * nsegments, calculator.npaths)
 
         expected = np.stack(
-            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)], axis=-2
+            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)],
+            axis=-2,
         )
         np.testing.assert_allclose(grad, expected, atol=1e-6)
 
@@ -569,7 +604,8 @@ class TestTravelTimeCalculatorGradient:
         assert grad.shape == (batch_size, 7 * nsegments, calculator.npaths)
 
         expected = np.stack(
-            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)], axis=-2
+            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)],
+            axis=-2,
         )
         np.testing.assert_allclose(grad, expected, atol=1e-6)
 
@@ -596,7 +632,7 @@ class TestTravelTimeCalculatorGradient:
             shear=True,
             N=True,
             normalisation=2.0,
-            weights=rng.random((nsegments, npaths)),
+            weights=rng.random((1, nsegments, npaths)),
         )
 
         m = np.stack(
@@ -607,7 +643,8 @@ class TestTravelTimeCalculatorGradient:
         assert grad.shape == (batch_size, 7 * nsegments, calculator.npaths)
 
         expected = np.stack(
-            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)], axis=-2
+            [self.finite_diff(m, idx, calculator) for idx in range(7 * nsegments)],
+            axis=-2,
         )
         np.testing.assert_allclose(grad, expected, atol=1e-4)
 
@@ -664,22 +701,26 @@ class TestTravelTimeCalculatorGradient:
 
     def test_gradient_nested(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
         """Test that the gradient is calculated without error when nested is True."""
-        calculator = TravelTimeCalculator(
-            *valid_paths, nested=True, shear=True, N=True
-        )
+        calculator = TravelTimeCalculator(*valid_paths, nested=True, shear=True, N=True)
 
-        m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 14) i.e. 1 batch, 2 cells, 7 params per cell
+        m = np.array(
+            [[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]]
+        )  # shape (1, 14) i.e. 1 batch, 2 cells, 7 params per cell
 
         grad = calculator.gradient(m)
         assert grad.shape == (1, 7 * 2, calculator.npaths)  # summed over cells
 
-    def test_gradient_nested_no_N(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
+    def test_gradient_nested_no_N(
+        self, valid_paths: tuple[np.ndarray, np.ndarray]
+    ) -> None:
         """Test that the gradient is calculated without error when nested is True and N is not included."""
         calculator = TravelTimeCalculator(
             *valid_paths, nested=True, shear=True, N=False
         )
 
-        m = np.array([[1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 12) i.e. 1 batch, 2 cells, 6 params per cell
+        m = np.array(
+            [[1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]]
+        )  # shape (1, 12) i.e. 1 batch, 2 cells, 6 params per cell
 
         grad = calculator.gradient(m)
         assert grad.shape == (1, 6 * 2, calculator.npaths)  # summed over cells
@@ -692,7 +733,9 @@ class TestTravelTimeCalculatorGradient:
             *valid_paths, nested=True, shear=False, N=False
         )
 
-        m = np.array([[1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0]])  # shape (1, 10) i.e. 1 batch, 2 cells, 5 params per cell
+        m = np.array(
+            [[1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0]]
+        )  # shape (1, 10) i.e. 1 batch, 2 cells, 5 params per cell
 
         grad = calculator.gradient(m)
         assert grad.shape == (1, 5 * 2, calculator.npaths)  # summed over cells

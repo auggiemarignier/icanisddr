@@ -1,0 +1,72 @@
+sampling:
+  nwalkers: 400
+  nsteps: 3000
+  burn_in: 250
+  thin: 15
+  progress: true
+  parallel: true
+  vectorise: false
+priors:
+  components:
+    - type: gaussian
+      mean: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      inv_covar:
+        - [8.85308507e-24, 0.00000000e+00, 0.00000000e+00]
+        - [0.00000000e+00, 8.85308507e-24, 0.00000000e+00]
+        - [0.00000000e+00, 0.00000000e+00, 1.38949022e-23]
+        - [8.85308507e-24, 0.00000000e+00, 0.00000000e+00]
+        - [0.00000000e+00, 8.85308507e-24, 0.00000000e+00]
+        - [0.00000000e+00, 0.00000000e+00, 1.38949022e-23]
+      indices: [0, 1, 2, 5, 6, 7]
+    - type: wrapped_uniform
+      lower_bounds: [-180.0, -180.0]
+      upper_bounds: [180.0, 180.0]
+      indices: [3, 8]
+    - type: uniform
+      lower_bounds: [0.0, 0.0]
+      upper_bounds: [90.0, 90.0]
+      indices: [4, 9]
+    - type: wrapped_uniform
+      lower_bounds: 0.0
+      upper_bounds: 1221.5
+      indices: [10]
+training:
+  batch_size: 24
+  epochs: 10
+  verbose: true
+flow:
+    flow_type: "RQSpline"
+    flow_model_config:
+      n_layers: 8
+      n_bins: 8
+      hidden_size: [64, 64]
+      spline_range: [-10.0, 10.0]
+    standardize: true
+    learning_rate: 0.001
+    momentum: 0.9
+hypotheses:
+  - name: Completely transverse isotropic
+    indices: [5, 11]
+    nu: [0.0, 0.0]
+  - name: Completely isotropic
+    indices: [1, 2, 3, 7, 8, 9]
+    nu: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+truth:
+  A: [23.962579175289264e09, 0.0]
+  C: [152.32156972264292e09, 0.0]
+  F: [-114.81921286676437e09, 0.0]
+  L: [0.0, 0.0]
+  N: [0.0, 0.0]
+  eta1: [0.0, 0.0]
+  eta2: [0.0, 0.0]
+geometry:
+  regions:
+    - type: ball
+      radius: 400.0
+      label: IC
+    - type: shell
+      radius_inner: 400.0
+      radius_outer: 1221.5
+      label: OC
+data:
+  noise_level: 0.2

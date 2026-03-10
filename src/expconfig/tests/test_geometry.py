@@ -4,6 +4,7 @@ import numpy as np
 
 from expconfig.geometry import (
     BallConfig,
+    BallInShellConfig,
     GeometryConfig,
     HemisphereConfig,
     SphericalShellConfig,
@@ -60,6 +61,23 @@ def test_hemisphere_config():
     region = config.to_region()
     assert region.radius == 1221.5
     np.testing.assert_array_equal(region.normal, [0.0, 0.0, 1.0])
+
+
+def test_ball_in_shell_config() -> None:
+    """Test BallInShellConfig creation and conversion."""
+    config = BallInShellConfig(
+        radius_inner=650.0,
+        radius_outer=1221.5,
+    )
+
+    assert config.type == "ball_in_shell"
+    assert config.radius_inner == 650.0
+    assert config.radius_outer == 1221.5
+
+    # Convert to region
+    region = config.to_region()
+    assert region.radius_inner == 650.0
+    assert region.radius_outer == 1221.5
 
 
 def test_geometry_config():

@@ -21,6 +21,7 @@ from expconfig.synthetic import (
     create_synthetic_data,
 )
 from icprem import PREM_IC_RHO, PREM_IC_VP
+from raytracer import BallInShell, CompositeRegion
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
@@ -36,19 +37,27 @@ logger = logging.getLogger(__name__)
 
 CFG = SynthConfig.load(Path(__file__).parent.parent / "config.yaml")
 
-REGION = CFG.geometry.to_composite_region()
+region = CFG.geometry.to_composite_region()
+IC_RADIUS = region.regions[1].radius_outer
 
 IC_IN, IC_OUT = create_paths(source_spacing=30.0)
-path_directions = calculate_path_direction_vector(IC_IN, IC_OUT)
-total_distances = REGION.ray_distances(IC_IN, path_directions)
+PATH_DIRECTIONS = calculate_path_direction_vector(IC_IN, IC_OUT)
+total_distances = region.ray_distances(IC_IN, PATH_DIRECTIONS)
 
 # Not sure why some rays have zero total distance.  Discard for now
 valid_rays = total_distances > 0
 IC_IN = IC_IN[valid_rays]
 IC_OUT = IC_OUT[valid_rays]
-path_directions = path_directions[valid_rays]
-segment_distances = REGION.ray_distances_per_region(IC_IN, path_directions)
-WEIGHTS = segment_distances / total_distances[valid_rays, None]
+PATH_DIRECTIONS = PATH_DIRECTIONS[valid_rays]
+TOTAL_DISTANCES = total_distances[valid_rays, None]  # additional axis for broadcasting
+
+
+def _calculate_weights(region: CompositeRegion) -> np.ndarray:
+    segment_distances = region.ray_distances_per_region(IC_IN, PATH_DIRECTIONS)
+    return segment_distances / TOTAL_DISTANCES
+
+
+initial_weights = _calculate_weights(region)
 
 NORMALISATION = -1 / (2 * PREM_IC_RHO * (PREM_IC_VP * 1e3) ** 2)
 BASE_TTC_FACTORY = partial(
@@ -56,13 +65,39 @@ BASE_TTC_FACTORY = partial(
     ic_in=IC_IN,
     ic_out=IC_OUT,
     normalisation=NORMALISATION,
-    weights=WEIGHTS.T,
+    weights=initial_weights.T[np.newaxis],
 )
 
 # Synthetic data computed based on absolute perturbations from PREM including shear components
 SYNTH_CALCULATOR = BASE_TTC_FACTORY(nested=False, shear=True, N=True)
-# Forward model takes nested parameters and includes L but excludes N
-FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True, shear=True, N=False)
+# Forward model takes nested parameters and excludes both shear components.
+FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True)
+
+
+def forward(params: np.ndarray) -> np.ndarray:
+    """Forward model for synthetic IMIC experiment.
+
+    Parameters
+    ----------
+    params : np.ndarray
+        Model parameters. Shape (n_samples, n_parameters).
+        Parameters are sorted as [A_1, C_1, F_1, eta1_1, eta2_1, A_2, C_2, F_2, eta1_2, eta2_2, r],
+        where A, C, F, eta1, eta2 are the usual TTI parameters for each region (IMIC first, then OIC), and r is the radius of IMIC.
+
+    Returns
+    -------
+    np.ndarray
+        Predicted travel times. Shape (n_samples, n_rays).
+    """
+    tti_params = params[:, :-1]
+    imic_radius = params[:, -1]
+    batch_weights = np.stack(
+        [_calculate_weights(BallInShell(r, IC_RADIUS)).T for r in imic_radius],
+        axis=0,
+    )  # shape (batch_size, n_cells, npaths)
+    FORWARD_CALCULATOR.update_weights(batch_weights)
+    return FORWARD_CALCULATOR(tti_params)
+
 
 OUTPUT_DIR = (
     Path(__file__).parent.parent / "outputs" / datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -74,7 +109,7 @@ def _setup_likelihood(
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
     inv_covar = np.array([1 / synthetic_data.std() ** 2])
-    likelihood = GaussianLikelihood(FORWARD_CALCULATOR, synthetic_data, inv_covar)
+    likelihood = GaussianLikelihood(forward, synthetic_data, inv_covar)
     return likelihood
 
 
