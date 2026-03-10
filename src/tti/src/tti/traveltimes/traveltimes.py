@@ -240,21 +240,7 @@ class TravelTimeCalculator:
         weights : ndarray, shape (batch_size, n_cells, npaths), optional
             Weights for each segment along each path (default is None, which gives equal weights).
             A batch_size of 1 broadcasts the same weights across all batches.
-
-        Raises
-        ------
-        ValueError
-            If weights is not None and does not have 3 dimensions.
         """
-        if weights is not None:
-            if weights.ndim != 3:
-                raise ValueError(
-                    f"weights must have shape (batch_size, n_cells, npaths), got shape {weights.shape}"
-                )
-            if weights.shape[2] != self.npaths:
-                raise ValueError(
-                    f"weights last dimension must equal npaths={self.npaths}, got shape {weights.shape}"
-                )
         self.weights = weights
 
     def _resolve_weights(self, batch: int, n_cells: int) -> np.ndarray:
@@ -270,21 +256,8 @@ class TravelTimeCalculator:
         Returns
         -------
         ndarray, shape (batch_size, n_cells, npaths)
-
-        Raises
-        ------
-        ValueError
-            If self.weights does not have shape (batch_size, n_cells, npaths) or (1, n_cells, npaths).
         """
         if self.weights is not None:
-            if self.weights.shape[1] != n_cells:
-                raise ValueError(
-                    f"weights middle dimension must equal n_cells={n_cells}, got shape {self.weights.shape}"
-                )
-            if self.weights.shape[0] not in (1, batch):
-                raise ValueError(
-                    f"weights batch dimension must be 1 or {batch}, got shape {self.weights.shape}"
-                )
             return np.broadcast_to(self.weights, (batch, n_cells, self.npaths))
         return np.full((batch, n_cells, self.npaths), 1.0 / n_cells)
 
