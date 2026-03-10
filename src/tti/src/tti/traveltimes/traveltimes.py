@@ -109,7 +109,7 @@ class TravelTimeCalculator:
         reference_love : ndarray, shape (5,), optional
             Reference Love parameters [A, C, F, L, N].
             Default is None, in which case 0 is used.
-        weights : ndarray, shape (nsegments, npaths), optional
+        weights : ndarray, shape (batch_size, n_cells, npaths), optional
             Weights for each segment along each path (default is None, which gives equal weights).
         nested : bool, optional
             Whether model parameters are nested (default is True).
@@ -131,6 +131,15 @@ class TravelTimeCalculator:
         self.ic_out = ic_out
         self.path_directions = calculate_path_direction_vector(ic_in, ic_out)
 
+        if weights is not None:
+            if weights.ndim != 3:
+                raise ValueError(
+                    f"weights must have shape (batch_size, n_cells, npaths), got shape {weights.shape}"
+                )
+            if weights.shape[2] != self._npaths:
+                raise ValueError(
+                    f"weights last dimension must equal npaths={self._npaths}, got shape {weights.shape}"
+                )
         self.weights = weights
 
         self._unpacking_function = _unpackings[nested][(shear, N)]
@@ -174,9 +183,9 @@ class TravelTimeCalculator:
         )  # shape (batch, cells, npaths)
 
         batch, cells, npaths = dt.shape
-        weights = self._resolve_weights(cells)
+        weights = self._resolve_weights(batch, cells)
 
-        return np.sum(weights[None, ...] * dt, axis=-2)
+        return np.sum(weights * dt, axis=-2)
 
     def gradient(self, m: np.ndarray) -> np.ndarray:
         """Calculate the gradient of the traveltime with respect to the Love parameters and rotation angles.
@@ -208,10 +217,10 @@ class TravelTimeCalculator:
         dt[..., -2:, :] *= np.pi / 180.0
 
         batch, cells, nparams, npaths = dt.shape
-        weights = self._resolve_weights(cells)
+        weights = self._resolve_weights(batch, cells)
         # Apply weights per cell and path
         dt_weighted = (
-            weights[None, :, None, :] * dt
+            weights[:, :, None, :] * dt
         )  # shape (batch, cells, nparams, npaths)
         # Flatten over cells and nparams to get shape (batch, 7n, npaths)
         dt_weighted = dt_weighted.reshape(batch, cells * nparams, npaths)
@@ -228,16 +237,29 @@ class TravelTimeCalculator:
 
         Parameters
         ----------
-        weights : ndarray, shape (nsegments, npaths), optional
+        weights : ndarray, shape (batch_size, n_cells, npaths), optional
             Weights for each segment along each path (default is None, which gives equal weights).
+            A batch_size of 1 broadcasts the same weights across all batches.
         """
         self.weights = weights
 
-    def _resolve_weights(self, n_cells: int) -> np.ndarray:
-        """Resolve weights to a shape of (n_cells, n_paths) if they are not already."""
+    def _resolve_weights(self, batch: int, n_cells: int) -> np.ndarray:
+        """Resolve weights to a shape of (batch_size, n_cells, npaths).
+
+        Parameters
+        ----------
+        batch : int
+            Batch size.
+        n_cells : int
+            Number of cells.
+
+        Returns
+        -------
+        ndarray, shape (batch_size, n_cells, npaths)
+        """
         if self.weights is not None:
-            return np.broadcast_to(self.weights, (n_cells, self.npaths))
-        return np.full((n_cells, self.npaths), 1.0 / n_cells)
+            return np.broadcast_to(self.weights, (batch, n_cells, self.npaths))
+        return np.full((batch, n_cells, self.npaths), 1.0 / n_cells)
 
 
 def _validate_paths(ic_in: np.ndarray, ic_out: np.ndarray) -> None:

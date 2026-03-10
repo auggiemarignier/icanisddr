@@ -518,7 +518,7 @@ class TestTravelTimeCalculator:
         before_update_traveltime = calculator(m)
 
         # Update weights to be 2.0/nsegments for all paths
-        new_weights = np.full((nsegments, calculator.npaths), 2.0 / nsegments)
+        new_weights = np.full((batch_size, nsegments, calculator.npaths), 2.0 / nsegments)
         calculator.update_weights(new_weights)
 
         after_update_traveltime = calculator(m)
@@ -632,7 +632,7 @@ class TestTravelTimeCalculatorGradient:
             shear=True,
             N=True,
             normalisation=2.0,
-            weights=rng.random((nsegments, npaths)),
+            weights=rng.random((1, nsegments, npaths)),
         )
 
         m = np.stack(
