@@ -177,6 +177,19 @@ class TravelTimeCalculator:
         A, C, F, L, N, eta1, eta2 = _model_vector_to_parameters(
             m, self._unpacking_function, self.reference_love
         )
+        return self._call_core(A, C, F, L, N, eta1, eta2)
+
+    def _call_core(
+        self,
+        A: np.ndarray,
+        C: np.ndarray,
+        F: np.ndarray,
+        L: np.ndarray,
+        N: np.ndarray,
+        eta1: np.ndarray,
+        eta2: np.ndarray,
+    ) -> np.ndarray:
+        """Core calculation function that takes the individual parameters directly."""
         D = ttitv(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime_voigt(
             self.path_directions, D, normalisation=self.normalisation
@@ -207,6 +220,19 @@ class TravelTimeCalculator:
             m, self._unpacking_function, self.reference_love
         )
 
+        return self._gradient_core(A, C, F, L, N, eta1, eta2)
+
+    def _gradient_core(
+        self,
+        A: np.ndarray,
+        C: np.ndarray,
+        F: np.ndarray,
+        L: np.ndarray,
+        N: np.ndarray,
+        eta1: np.ndarray,
+        eta2: np.ndarray,
+    ) -> np.ndarray:
+        """Core gradient function that takes the individual parameters directly."""
         dD = self._gradient_D_function(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime_voigt(
             self.path_directions, dD, normalisation=self.normalisation
