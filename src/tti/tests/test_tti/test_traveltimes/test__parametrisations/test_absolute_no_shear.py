@@ -46,6 +46,19 @@ def test__jacobian_to_dm(grad_lv: np.ndarray) -> None:
     np.testing.assert_allclose(result, expected)
 
 
+def test__jacobian_to_dm_finite_differences(
+    grad_lv: np.ndarray, m: np.ndarray, numeric_apply_from_unpack
+) -> None:
+    """Finite-difference check that `_jacobian_to_dm` matches numeric chain-rule for no-shear case."""
+    analytic = _jacobian_to_dm(grad_lv)
+
+    numeric = numeric_apply_from_unpack(
+        _unpack_model_vector_no_shear, m, grad_lv, eps=1e-6
+    )
+
+    np.testing.assert_allclose(analytic, numeric, rtol=1e-6, atol=1e-8)
+
+
 class TestAbsoluteNoShearLoveDegreeAnglesParametriser:
     """Testing the Parametriser.
 

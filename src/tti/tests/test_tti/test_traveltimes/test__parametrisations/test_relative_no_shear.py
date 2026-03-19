@@ -1,5 +1,7 @@
 """Test the relative parametrisation functions."""
 
+from functools import partial
+
 import numpy as np
 import pytest
 
@@ -11,23 +13,20 @@ from tti.traveltimes._parametrisations.relative_no_shear import (
 
 
 @pytest.fixture
-def m() -> np.ndarray:
+def m(lv, ref: np.ndarray) -> np.ndarray:
     """Fixture for a relative model vector m containing fractional perturbations and angles in degrees."""
-    return np.array(
+    # Build m as (B, M, 5) then flatten to (B, 5M)
+    B, M = lv.A.shape
+    return np.stack(
         [
-            [[0.1, -0.2, 0.3, 10.0, 20.0], [0.1, -0.2, 0.3, 10.0, 20.0]],
-            [[0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0]],
-        ]
-    )
-
-
-@pytest.fixture
-def grad(rng: np.random.Generator) -> np.ndarray:
-    """Fixture for a random gradient array with respect to the Love parameters and angles."""
-    batch_size = rng.integers(1, 5)
-    n_cells = rng.integers(1, 5)
-    n_tt = rng.integers(1, 5)
-    return rng.normal(size=(batch_size, n_cells, 7, n_tt))
+            (lv.A - ref[0]) / ref[0],
+            (lv.C - ref[1]) / ref[1],
+            (lv.F - ref[2]) / ref[2],
+            lv.eta1,
+            lv.eta2,
+        ],
+        axis=-1,
+    ).reshape(B, M * 5)
 
 
 @pytest.fixture
@@ -36,26 +35,40 @@ def ref() -> np.ndarray:
     return np.array([100.0, 200.0, 300.0, 0.0, 0.0])
 
 
-def test_unpack_relative_model_vector(m: np.ndarray, ref: np.ndarray):
-    """Test the unpacking of the relative model vector."""
+def test_unpack_relative_model_vector(lv, m: np.ndarray, ref: np.ndarray) -> None:
+    """Test unpacking of a relative model vector constructed from LoveValues."""
+
     A, C, F, L, N, eta1, eta2 = _unpack_relative_model_vector(m, ref)
-    np.testing.assert_allclose(A, np.array([[110.0, 110.0], [100.0, 100.0]]))
-    np.testing.assert_allclose(C, np.array([[160.0, 160.0], [200.0, 200.0]]))
-    np.testing.assert_allclose(F, np.array([[390.0, 390.0], [300.0, 300.0]]))
-    np.testing.assert_allclose(L, np.array([[0.0, 0.0], [0.0, 0.0]]))
-    np.testing.assert_allclose(N, np.array([[0.0, 0.0], [0.0, 0.0]]))
-    np.testing.assert_allclose(eta1, np.radians(np.array([[10.0, 10.0], [0.0, 0.0]])))
-    np.testing.assert_allclose(eta2, np.radians(np.array([[20.0, 20.0], [0.0, 0.0]])))
+
+    np.testing.assert_allclose(A, lv.A)
+    np.testing.assert_allclose(C, lv.C)
+    np.testing.assert_allclose(F, lv.F)
+    np.testing.assert_allclose(L, np.zeros_like(lv.L))
+    np.testing.assert_allclose(N, np.zeros_like(lv.N))
+    np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+    np.testing.assert_allclose(eta2, np.radians(lv.eta2))
 
 
-def test_jacobian_to_dm(grad: np.ndarray, ref: np.ndarray) -> None:
+def test_jacobian_to_dm(grad_lv: np.ndarray, ref: np.ndarray) -> None:
     """Test the Jacobian conversion from dt_dparams to dt_dm."""
-    grad_dm = _jacobian_to_dm(grad, ref)
+    grad_dm = _jacobian_to_dm(grad_lv, ref)
     jac = np.concatenate([ref, np.array([np.pi / 180.0, np.pi / 180.0])])
-    expected = grad * jac[None, None, :, None]
+    expected = grad_lv * jac[None, None, :, None]
     expected = np.delete(expected, [3, 4], axis=2)  # remove dL and dN
 
     np.testing.assert_allclose(grad_dm, expected)
+
+
+def test_jacobian_to_dm_finite_differences(
+    m: np.ndarray, ref: np.ndarray, grad_lv: np.ndarray, numeric_apply_from_unpack
+) -> None:
+    """Finite-difference check that `_jacobian_to_dm` matches numeric chain-rule for relative no-shear parametrisation."""
+    unpack_with_ref = partial(_unpack_relative_model_vector, ref=ref)
+
+    analytic = _jacobian_to_dm(grad_lv, ref)
+    numeric = numeric_apply_from_unpack(unpack_with_ref, m, grad_lv, eps=1e-6)
+
+    np.testing.assert_allclose(analytic, numeric, rtol=1e-6, atol=1e-8)
 
 
 class TestRelativeNoShearLoveDegreeAngles:
@@ -82,13 +95,13 @@ class TestRelativeNoShearLoveDegreeAngles:
         )
 
     def test_apply_jacobian_delegation(
-        self, assert_delegates_to_jacobian, grad: np.ndarray
+        self, assert_delegates_to_jacobian, grad_lv: np.ndarray
     ):
         """Test that apply_jacobian delegates to the Jacobian conversion function."""
 
         assert_delegates_to_jacobian(
             "tti.traveltimes._parametrisations.relative_no_shear._jacobian_to_dm",
             self.parametriser,
-            grad,
+            grad_lv,
             expected_args=(self.parametriser.reference_model,),
         )

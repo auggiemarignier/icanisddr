@@ -47,6 +47,21 @@ def test__jacobian_to_dm(grad_lv: np.ndarray) -> None:
     np.testing.assert_allclose(result, expected)
 
 
+def test__jacobian_to_dm_finite_differences(
+    grad_lv: np.ndarray, m: np.ndarray, numeric_apply_from_unpack
+) -> None:
+    """Test that `_jacobian_to_dm` matches the finite-difference chain-rule.
+
+    Uses the shared `numeric_apply_from_unpack` fixture to compute the numeric
+    dt/dm and compares it to the analytic `_jacobian_to_dm` result.
+    """
+    grad_dm = _jacobian_to_dm(grad_lv)
+
+    grad_fd = numeric_apply_from_unpack(_unpack_model_vector, m, grad_lv, eps=1e-6)
+
+    np.testing.assert_allclose(grad_dm, grad_fd, rtol=1e-6, atol=1e-8)
+
+
 class TestAbsoluteLoveDegreeAnglesParametriser:
     """Testing the Parametriser.
 

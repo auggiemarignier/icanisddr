@@ -43,8 +43,8 @@ def _unpack_relative_model_vector(m: np.ndarray, ref: np.ndarray) -> seven_array
         ref[0] * (1 + mT[..., 0]),
         ref[1] * (1 + mT[..., 1]),
         ref[2] * (1 + mT[..., 2]),
-        ref[3],
-        ref[4],
+        np.zeros_like(mT[..., 0]),
+        np.zeros_like(mT[..., 0]),
         np.radians(mT[..., 3]),
         np.radians(mT[..., 4]),
     )

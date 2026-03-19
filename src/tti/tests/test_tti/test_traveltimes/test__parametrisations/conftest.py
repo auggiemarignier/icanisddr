@@ -166,3 +166,75 @@ def grad_lv(rng: np.random.Generator, lv: LoveValues) -> np.ndarray:
     B, M = lv.A.shape
     T = rng.integers(1, 5)  # number of travel time measurements
     return rng.normal(size=(B, M, 7, T))
+
+
+@pytest.fixture
+def numeric_apply_from_unpack():
+    """Return a helper that applies finite-difference chain-rule using an unpacking fn.
+
+    Usage:
+        apply_fd = numeric_apply_from_unpack()
+        apply_fd(unpack_fn, m, grad_lv, N=7, eps=1e-6) -> dt_dm (shape like grad_lv)
+
+    The unpacking function should accept `m` with shape (B, M*N) and return a 7-tuple of arrays each shaped (B, M) in the same ordering as the analytic
+    `apply_jacobian` expects: (A, C, F, L, N, eta1, eta2).
+    """
+
+    def _fn(
+        unpack_fn, m: np.ndarray, grad_lv: np.ndarray, eps: float = 1e-6
+    ) -> np.ndarray:
+        B, M, _, T = (
+            grad_lv.shape
+        )  # grad_lv shape is (B batch, M segments, 7 love parameters, T traveltimes)
+
+        m = m.astype(float, copy=True)
+        batch_size, n_flat_params = m.shape
+        if batch_size != B:
+            raise ValueError(
+                f"Batch size of m ({batch_size}) does not match batch size of grad_lv ({B}). Adjust the test fixture or this function as needed."
+            )
+        N = n_flat_params // M  # number of parameters per segment
+        if N != 7 and N != 5:
+            raise ValueError(
+                f"Expected 5 or 7 parameters per segment for nested relative, got {N}. Adjust the test fixture or this function as needed."
+            )
+
+        def _stack_unpacked_parameters(m_in):
+            parts = unpack_fn(m_in)
+            return np.stack(parts, axis=-1)  # shape (B, M, 7)
+
+        dt_dm_result = np.zeros((B, M, N, T))
+
+        # iterate over each model element and compute local dp/dm via central FD
+        for batch_index in range(B):
+            for segment_index in range(M):
+                for param_index in range(N):
+                    flat_param_index = segment_index * N + param_index
+
+                    m_plus = m.copy()
+                    m_minus = m.copy()
+                    m_plus[batch_index, flat_param_index] += eps
+                    m_minus[batch_index, flat_param_index] -= eps
+
+                    lv_plus = _stack_unpacked_parameters(m_plus)
+                    lv_minus = _stack_unpacked_parameters(m_minus)
+
+                    # dlv_dmi: shape (B, M, 7) -> partials of each lv param w.r.t this model param
+                    dlv_dmi = (lv_plus - lv_minus) / (2.0 * eps)
+
+                    # dlv_dmi for this batch/segment: shape (7,)
+                    dlv_wrt_model = dlv_dmi[batch_index, segment_index, :]
+
+                    # grad w.r.t parameters for this batch/segment: shape (7, T)
+                    grad_wrt_lv = grad_lv[batch_index, segment_index, :, :]
+
+                    # Chain rule: sum over parameters to get dt/dm for this model param: shape (T,)
+                    dt_wrt_model_param = dlv_wrt_model @ grad_wrt_lv
+
+                    dt_dm_result[batch_index, segment_index, param_index, :] = (
+                        dt_wrt_model_param
+                    )
+
+        return dt_dm_result
+
+    return _fn
