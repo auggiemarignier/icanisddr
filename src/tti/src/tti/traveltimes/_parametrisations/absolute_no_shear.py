@@ -18,8 +18,8 @@ TRANSFORMATION = np.array(
 )
 
 
-def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
-    r"""Unpack model vector into individual Love parameters, with L and N fixed at 0.
+def _transform_model_vector(m: np.ndarray) -> np.ndarray:
+    r"""Transform model vector into individual Love parameters, with L and N fixed at 0.
 
     Note:
         There is NO checking of the input shape here for performance reasons.
@@ -33,36 +33,12 @@ def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
 
     Returns
     -------
-    A : ndarray, shape (B, M)
-        Elastic constant C11 = C22
-    C : ndarray, shape (B, M)
-        Elastic constant C33
-    F : ndarray, shape (B, M)
-        Elastic constant C13 = C23
-    L : ndarray, shape (B, M)
-        Elastic constant C44 = C55
-        Fixed at 0.
-    N : ndarray, shape (B, M)
-        Elastic constant C66
-        Fixed at 0.
-    eta1 : ndarray, shape (B, M)
-        Tilt angle in radians.
-    eta2 : ndarray, shape (B, M)
-        Azimuthal angle in radians.
+    arr: ndarray, shape (B, 7, M)
+        Array containing the Love parameters and angles in radians, ordered along axis 1 as [A, C, F, L, N, eta1, eta2].
     """
     batch_size = m.shape[0]
     mT = m.reshape(batch_size, 5, -1)
-    lv = TRANSFORMATION @ mT
-    A, C, F, L, N, eta1, eta2 = (
-        lv[:, 0, :],
-        lv[:, 1, :],
-        lv[:, 2, :],
-        lv[:, 3, :],
-        lv[:, 4, :],
-        lv[:, 5, :],
-        lv[:, 6, :],
-    )
-    return A, C, F, L, N, eta1, eta2
+    return TRANSFORMATION @ mT
 
 
 def _jacobian_to_dm(grad: np.ndarray) -> np.ndarray:
@@ -92,7 +68,17 @@ class AbsoluteNoShearLoveDegreeAngles(Parametriser):
     n_model_params_per_segment = 5
 
     def to_parameters(self, m: np.ndarray) -> seven_arrays:
-        return _unpack_model_vector_no_shear(m)
+        lv = _transform_model_vector(m)
+        A, C, F, L, N, eta1, eta2 = (
+            lv[:, 0, :],
+            lv[:, 1, :],
+            lv[:, 2, :],
+            lv[:, 3, :],
+            lv[:, 4, :],
+            lv[:, 5, :],
+            lv[:, 6, :],
+        )
+        return A, C, F, L, N, eta1, eta2
 
     def apply_jacobian(self, grad: np.ndarray) -> np.ndarray:
         return _jacobian_to_dm(grad)

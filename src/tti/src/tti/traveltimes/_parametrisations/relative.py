@@ -19,8 +19,8 @@ def _build_transformation_matrix(ref: np.ndarray) -> np.ndarray:
     return T
 
 
-def _unpack_relative_model_vector(m: np.ndarray, ref: np.ndarray) -> seven_arrays:
-    """Unpack the model vector for the relative parametrisation.
+def _transform_model_vector(m: np.ndarray, ref: np.ndarray) -> np.ndarray:
+    """Transform the model vector for the relative parametrisation.
 
     Parameters
     ----------
@@ -35,20 +35,8 @@ def _unpack_relative_model_vector(m: np.ndarray, ref: np.ndarray) -> seven_array
 
     Returns
     -------
-    A : ndarray, shape (B, M)
-        Elastic constant C11 = C22
-    C : ndarray, shape (B, M)
-        Elastic constant C33
-    F : ndarray, shape (B, M)
-        Elastic constant C13 = C23
-    L : ndarray, shape (B, M)
-        Elastic constant C44 = C55
-    N : ndarray, shape (B, M)
-        Elastic constant C66
-    eta1 : ndarray, shape (B, M)
-        Tilt angle in radians.
-    eta2 : ndarray, shape (B, M)
-        Azimuthal angle in radians.
+    arr: ndarray, shape (B, 7, M)
+        Array containing the Love parameters and angles in radians, ordered along axis 1 as [A, C, F, L, N, eta1, eta2].
     """
     transformation = _build_transformation_matrix(ref)
 
@@ -58,17 +46,7 @@ def _unpack_relative_model_vector(m: np.ndarray, ref: np.ndarray) -> seven_array
     ref = np.concatenate(
         [ref, np.array([0.0, 0.0])]
     )  # add dummy values for angles for easy matrix operations
-    lv = transformation @ mT + ref[None, :, None]
-    A, C, F, L, N, eta1, eta2 = (
-        lv[:, 0, :],
-        lv[:, 1, :],
-        lv[:, 2, :],
-        lv[:, 3, :],
-        lv[:, 4, :],
-        lv[:, 5, :],
-        lv[:, 6, :],
-    )
-    return A, C, F, L, N, eta1, eta2
+    return transformation @ mT + ref[None, :, None]
 
 
 def _jacobian_to_dm(grad: np.ndarray, ref: np.ndarray) -> np.ndarray:
@@ -108,7 +86,17 @@ class RelativeLoveDegreeAngles(Parametriser):
         self._reference_model = reference_model
 
     def to_parameters(self, m: np.ndarray) -> seven_arrays:
-        return _unpack_relative_model_vector(m, self.reference_model)
+        lv = _transform_model_vector(m, self.reference_model)
+        A, C, F, L, N, eta1, eta2 = (
+            lv[:, 0, :],
+            lv[:, 1, :],
+            lv[:, 2, :],
+            lv[:, 3, :],
+            lv[:, 4, :],
+            lv[:, 5, :],
+            lv[:, 6, :],
+        )
+        return A, C, F, L, N, eta1, eta2
 
     def apply_jacobian(self, grad: np.ndarray) -> np.ndarray:
         return _jacobian_to_dm(grad, self.reference_model)

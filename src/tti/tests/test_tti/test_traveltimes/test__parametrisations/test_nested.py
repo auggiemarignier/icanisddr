@@ -6,7 +6,7 @@ import pytest
 from tti.traveltimes._parametrisations.nested import (
     NestedLoveDegreeAngles,
     _jacobian_to_dm,
-    _unpack_nested_model_vector,
+    _transform_model_vector,
 )
 
 
@@ -27,14 +27,15 @@ def m(lv) -> np.ndarray:
     return m_nested
 
 
-def test__unpack_nested_model_vector(lv, m: np.ndarray) -> None:
-    """Test unpacking of nested model vector into Love parameters.
+def test__transform_model_vector(lv, m: np.ndarray) -> None:
+    """Test transformation of nested model vector into Love parameters.
 
-    Tests that the nested unpacking correctly reconstructs Love parameters
+    Tests that the nested transformation correctly reconstructs Love parameters
     from their nested differences representation and angles in radians.
     """
 
-    A, C, F, L, N, eta1, eta2 = _unpack_nested_model_vector(m)
+    arr = _transform_model_vector(m)
+    A, C, F, L, N, eta1, eta2 = arr.swapaxes(0, 1)  # swap to (7, B, M)
 
     np.testing.assert_allclose(A, lv.A)
     np.testing.assert_allclose(C, lv.C)
@@ -46,13 +47,12 @@ def test__unpack_nested_model_vector(lv, m: np.ndarray) -> None:
 
 
 def test__jacobian_to_dm_finite_differences(
-    m: np.ndarray, grad_lv: np.ndarray, numeric_apply_from_unpack
+    m: np.ndarray, grad_lv: np.ndarray, numeric_apply_from_transform
 ) -> None:
     """Finite-difference check that `_jacobian_to_dm` matches numeric chain-rule for nested parametrisation."""
     analytic = _jacobian_to_dm(grad_lv)
-
-    numeric = numeric_apply_from_unpack(
-        _unpack_nested_model_vector, m, grad_lv, eps=1e-6
+    numeric = numeric_apply_from_transform(
+        _transform_model_vector, m, grad_lv, eps=1e-6
     )
 
     np.testing.assert_allclose(analytic, numeric, rtol=1e-6, atol=1e-8)
@@ -70,10 +70,10 @@ class TestNestedLoveDegreeAnglesParametriser:
         """Test that the number of model parameters per segment is correct."""
         assert self.parametriser.n_model_params_per_segment == 7
 
-    def test_to_parameters(self, m: np.ndarray, assert_delegates_to_unpack) -> None:
+    def test_to_parameters(self, m: np.ndarray, assert_delegates_to_transform) -> None:
         """Test that to_parameters delegates to the unpacking function."""
-        assert_delegates_to_unpack(
-            "tti.traveltimes._parametrisations.nested._unpack_nested_model_vector",
+        assert_delegates_to_transform(
+            "tti.traveltimes._parametrisations.nested._transform_model_vector",
             self.parametriser,
             m,
         )

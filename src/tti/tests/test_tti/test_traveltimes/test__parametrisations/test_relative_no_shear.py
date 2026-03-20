@@ -8,7 +8,7 @@ import pytest
 from tti.traveltimes._parametrisations.relative_no_shear import (
     RelativeNoShearLoveDegreeAngles,
     _jacobian_to_dm,
-    _unpack_relative_model_vector,
+    _transform_model_vector,
 )
 
 
@@ -35,10 +35,11 @@ def ref() -> np.ndarray:
     return np.array([100.0, 200.0, 300.0, 0.0, 0.0])
 
 
-def test_unpack_relative_model_vector(lv, m: np.ndarray, ref: np.ndarray) -> None:
-    """Test unpacking of a relative model vector constructed from LoveValues."""
+def test__transform_model_vector(lv, m: np.ndarray, ref: np.ndarray) -> None:
+    """Test transformation of a relative model vector constructed from LoveValues."""
 
-    A, C, F, L, N, eta1, eta2 = _unpack_relative_model_vector(m, ref)
+    arr = _transform_model_vector(m, ref)
+    A, C, F, L, N, eta1, eta2 = arr.swapaxes(0, 1)  # swap to (7, B, M)
 
     np.testing.assert_allclose(A, lv.A)
     np.testing.assert_allclose(C, lv.C)
@@ -49,7 +50,7 @@ def test_unpack_relative_model_vector(lv, m: np.ndarray, ref: np.ndarray) -> Non
     np.testing.assert_allclose(eta2, np.radians(lv.eta2))
 
 
-def test_jacobian_to_dm(grad_lv: np.ndarray, ref: np.ndarray) -> None:
+def test__jacobian_to_dm(grad_lv: np.ndarray, ref: np.ndarray) -> None:
     """Test the Jacobian conversion from dt_dparams to dt_dm."""
     grad_dm = _jacobian_to_dm(grad_lv, ref)
     jac = np.concatenate([ref, np.array([np.pi / 180.0, np.pi / 180.0])])
@@ -60,13 +61,13 @@ def test_jacobian_to_dm(grad_lv: np.ndarray, ref: np.ndarray) -> None:
 
 
 def test_jacobian_to_dm_finite_differences(
-    m: np.ndarray, ref: np.ndarray, grad_lv: np.ndarray, numeric_apply_from_unpack
+    m: np.ndarray, ref: np.ndarray, grad_lv: np.ndarray, numeric_apply_from_transform
 ) -> None:
     """Finite-difference check that `_jacobian_to_dm` matches numeric chain-rule for relative no-shear parametrisation."""
-    unpack_with_ref = partial(_unpack_relative_model_vector, ref=ref)
+    unpack_with_ref = partial(_transform_model_vector, ref=ref)
 
     analytic = _jacobian_to_dm(grad_lv, ref)
-    numeric = numeric_apply_from_unpack(unpack_with_ref, m, grad_lv, eps=1e-6)
+    numeric = numeric_apply_from_transform(unpack_with_ref, m, grad_lv, eps=1e-6)
 
     np.testing.assert_allclose(analytic, numeric, rtol=1e-6, atol=1e-8)
 
@@ -84,11 +85,13 @@ class TestRelativeNoShearLoveDegreeAngles:
         """Test that the number of model parameters per segment is correct."""
         assert self.parametriser.n_model_params_per_segment == 5
 
-    def test_to_parameters_delegation(self, assert_delegates_to_unpack, m: np.ndarray):
+    def test_to_parameters_delegation(
+        self, assert_delegates_to_transform, m: np.ndarray
+    ):
         """Test that to_parameters delegates to the unpacking function."""
 
-        assert_delegates_to_unpack(
-            "tti.traveltimes._parametrisations.relative_no_shear._unpack_relative_model_vector",
+        assert_delegates_to_transform(
+            "tti.traveltimes._parametrisations.relative_no_shear._transform_model_vector",
             self.parametriser,
             m,
             expected_args=(self.parametriser.reference_model,),
