@@ -6,6 +6,19 @@ from .._types import seven_arrays
 from . import Parametriser
 
 
+def _build_transformation_matrix(ref: np.ndarray) -> np.ndarray:
+    """Build the transformation matrix for the relative parametrisation."""
+    T = np.zeros((7, 7))
+    T[0, 0] = ref[0]  # A_ref
+    T[1, 1] = ref[1]  # C_ref
+    T[2, 2] = ref[2]  # F_ref
+    T[3, 3] = ref[3]  # L_ref
+    T[4, 4] = ref[4]  # N_ref
+    T[5, 5] = np.pi / 180.0  # radians
+    T[6, 6] = np.pi / 180.0  # radians
+    return T
+
+
 def _unpack_relative_model_vector(m: np.ndarray, ref: np.ndarray) -> seven_arrays:
     """Unpack the model vector for the relative parametrisation.
 
@@ -37,17 +50,25 @@ def _unpack_relative_model_vector(m: np.ndarray, ref: np.ndarray) -> seven_array
     eta2 : ndarray, shape (B, M)
         Azimuthal angle in radians.
     """
+    transformation = _build_transformation_matrix(ref)
+
     batch_size = m.shape[0]
-    mT = m.reshape(batch_size, -1, 7).copy()
-    return (
-        ref[0] * (1 + mT[..., 0]),
-        ref[1] * (1 + mT[..., 1]),
-        ref[2] * (1 + mT[..., 2]),
-        ref[3] * (1 + mT[..., 3]),
-        ref[4] * (1 + mT[..., 4]),
-        np.radians(mT[..., 5]),
-        np.radians(mT[..., 6]),
+    mT = m.reshape(batch_size, 7, -1)
+
+    ref = np.concatenate(
+        [ref, np.array([0.0, 0.0])]
+    )  # add dummy values for angles for easy matrix operations
+    lv = transformation @ mT + ref[None, :, None]
+    A, C, F, L, N, eta1, eta2 = (
+        lv[:, 0, :],
+        lv[:, 1, :],
+        lv[:, 2, :],
+        lv[:, 3, :],
+        lv[:, 4, :],
+        lv[:, 5, :],
+        lv[:, 6, :],
     )
+    return A, C, F, L, N, eta1, eta2
 
 
 def _jacobian_to_dm(grad: np.ndarray, ref: np.ndarray) -> np.ndarray:
@@ -70,25 +91,8 @@ def _jacobian_to_dm(grad: np.ndarray, ref: np.ndarray) -> np.ndarray:
     grad_dm : ndarray, shape (..., 7, T)
         Gradient of travel times (T) with respect to the input model vector.
     """
-    dA = grad[..., 0, :] * ref[0]  # chain rule
-    dC = grad[..., 1, :] * ref[1]  # chain rule
-    dF = grad[..., 2, :] * ref[2]  # chain rule
-    dL = grad[..., 3, :] * ref[3]  # chain rule
-    dN = grad[..., 4, :] * ref[4]  # chain rule
-    deta1 = grad[..., 5, :] * np.pi / 180.0  # chain rule back to degrees
-    deta2 = grad[..., 6, :] * np.pi / 180.0  # chain rule back to degrees
-    return np.stack(
-        [
-            dA,
-            dC,
-            dF,
-            dL,
-            dN,
-            deta1,
-            deta2,
-        ],
-        axis=-2,
-    )
+    transformation = _build_transformation_matrix(ref)
+    return transformation.T @ grad
 
 
 class RelativeLoveDegreeAngles(Parametriser):

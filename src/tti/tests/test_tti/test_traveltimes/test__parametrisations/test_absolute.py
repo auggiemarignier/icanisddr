@@ -13,9 +13,11 @@ from tti.traveltimes._parametrisations.absolute import (
 @pytest.fixture
 def m(lv) -> np.ndarray:
     """Fixture for model vector m corresponding to the Love parameters and angles in degrees."""
-    # Build m as (B, M, 7) then flatten to (B, 7M)
+    # Build m as (B, 7, M) then flatten to (B, 7*M) so reshape(batch, 7, -1)
+    # will reconstruct the (B, 7, M) ordering used by unpackers that expect
+    # param-major flattening.
     B, M = lv.A.shape
-    m = np.stack([lv.A, lv.C, lv.F, lv.L, lv.N, lv.eta1, lv.eta2], axis=-1).reshape(
+    m = np.stack([lv.A, lv.C, lv.F, lv.L, lv.N, lv.eta1, lv.eta2], axis=1).reshape(
         B, 7 * M
     )
     return m

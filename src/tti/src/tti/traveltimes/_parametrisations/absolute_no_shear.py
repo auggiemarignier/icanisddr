@@ -5,6 +5,18 @@ import numpy as np
 from .._types import seven_arrays
 from . import Parametriser
 
+TRANSFORMATION = np.array(
+    [
+        [1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, np.pi / 180.0, 0],
+        [0, 0, 0, 0, np.pi / 180.0],
+    ]
+)
+
 
 def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
     r"""Unpack model vector into individual Love parameters, with L and N fixed at 0.
@@ -39,17 +51,18 @@ def _unpack_model_vector_no_shear(m: np.ndarray) -> seven_arrays:
         Azimuthal angle in radians.
     """
     batch_size = m.shape[0]
-    mT = m.reshape(batch_size, -1, 5).copy()
-    zeros = np.zeros_like(mT[..., 0])
-    return (
-        mT[..., 0],
-        mT[..., 1],
-        mT[..., 2],
-        zeros,
-        zeros,
-        np.radians(mT[..., 3]),
-        np.radians(mT[..., 4]),
+    mT = m.reshape(batch_size, 5, -1)
+    lv = TRANSFORMATION @ mT
+    A, C, F, L, N, eta1, eta2 = (
+        lv[:, 0, :],
+        lv[:, 1, :],
+        lv[:, 2, :],
+        lv[:, 3, :],
+        lv[:, 4, :],
+        lv[:, 5, :],
+        lv[:, 6, :],
     )
+    return A, C, F, L, N, eta1, eta2
 
 
 def _jacobian_to_dm(grad: np.ndarray) -> np.ndarray:
@@ -70,23 +83,7 @@ def _jacobian_to_dm(grad: np.ndarray) -> np.ndarray:
     grad_dm : ndarray, shape (..., 5, T)
         Gradient of travel times (T) with respect to the input model vector.
     """
-    dA = grad[..., 0, :]
-    dC = grad[..., 1, :]
-    dF = grad[..., 2, :]
-    _ = grad[..., 3, :]  # dL, should be zero
-    _ = grad[..., 4, :]  # dN, should be zero
-    deta1 = grad[..., 5, :] * np.pi / 180.0  # chain rule back to degrees
-    deta2 = grad[..., 6, :] * np.pi / 180.0  # chain rule back to degrees
-    return np.stack(
-        [
-            dA,
-            dC,
-            dF,
-            deta1,
-            deta2,
-        ],
-        axis=-2,
-    )
+    return TRANSFORMATION.T @ grad
 
 
 class AbsoluteNoShearLoveDegreeAngles(Parametriser):

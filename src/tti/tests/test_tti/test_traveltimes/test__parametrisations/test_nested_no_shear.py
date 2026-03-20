@@ -16,9 +16,10 @@ def m(lv) -> np.ndarray:
     dC = lv.C - lv.A
     dF = lv.F - lv.A
 
-    # Build m as (B, M, 5) then flatten to (B, 5M)
+    # Build m as (B, 5, M) then flatten to (B, 5*M) so reshape(batch, 5, -1)
+    # will reconstruct the (B, 5, M) ordering (param-major).
     B, M = lv.A.shape
-    m_nested = np.stack([lv.A, dC, dF, lv.eta1, lv.eta2], axis=-1).reshape(B, 5 * M)
+    m_nested = np.stack([lv.A, dC, dF, lv.eta1, lv.eta2], axis=1).reshape(B, 5 * M)
     return m_nested
 
 
@@ -58,6 +59,19 @@ def test__jacobian_to_dm(grad_lv: np.ndarray) -> None:
     )  # dA
     np.testing.assert_allclose(result[..., 1, :], grad_lv[..., 1, :])  # dC
     np.testing.assert_allclose(result[..., 2, :], grad_lv[..., 2, :])  # dF
+
+
+def test__jacobian_to_dm_finite_differences(
+    m: np.ndarray, grad_lv: np.ndarray, numeric_apply_from_unpack
+) -> None:
+    """Finite-difference check that `_jacobian_to_dm` matches numeric chain-rule for nested no-shear parametrisation."""
+    analytic = _jacobian_to_dm(grad_lv)
+
+    numeric = numeric_apply_from_unpack(
+        _unpack_nested_model_vector_no_shear, m, grad_lv, eps=1e-6
+    )
+
+    np.testing.assert_allclose(analytic, numeric, rtol=1e-6, atol=1e-8)
 
 
 class TestNestedNoShearLoveDegreeAnglesParametriser:

@@ -5,6 +5,18 @@ import numpy as np
 from .._types import seven_arrays
 from . import Parametriser
 
+TRANSFORMATION = np.array(
+    [
+        [1, 0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, np.pi / 180.0, 0],
+        [0, 0, 0, 0, 0, 0, np.pi / 180.0],
+    ]
+)
+
 
 def _unpack_model_vector(m: np.ndarray) -> seven_arrays:
     r"""Unpack model vector into individual Love parameters.
@@ -37,16 +49,18 @@ def _unpack_model_vector(m: np.ndarray) -> seven_arrays:
         Azimuthal angle in radians.
     """
     batch_size = m.shape[0]
-    mT = m.reshape(batch_size, -1, 7).copy()
-    return (
-        mT[..., 0],
-        mT[..., 1],
-        mT[..., 2],
-        mT[..., 3],
-        mT[..., 4],
-        np.radians(mT[..., 5]),
-        np.radians(mT[..., 6]),
+    mT = m.reshape(batch_size, 7, -1)
+    lv = TRANSFORMATION @ mT
+    A, C, F, L, N, eta1, eta2 = (
+        lv[:, 0, :],
+        lv[:, 1, :],
+        lv[:, 2, :],
+        lv[:, 3, :],
+        lv[:, 4, :],
+        lv[:, 5, :],
+        lv[:, 6, :],
     )
+    return A, C, F, L, N, eta1, eta2
 
 
 def _jacobian_to_dm(grad: np.ndarray) -> np.ndarray:
@@ -67,25 +81,7 @@ def _jacobian_to_dm(grad: np.ndarray) -> np.ndarray:
     grad_dm : ndarray, shape (..., 7, T)
         Gradient of travel times (T) with respect to the input model vector.
     """
-    dA = grad[..., 0, :]
-    dC = grad[..., 1, :]
-    dF = grad[..., 2, :]
-    dL = grad[..., 3, :]
-    dN = grad[..., 4, :]
-    deta1 = grad[..., 5, :] * np.pi / 180.0  # chain rule back to degrees
-    deta2 = grad[..., 6, :] * np.pi / 180.0  # chain rule back to degrees
-    return np.stack(
-        [
-            dA,
-            dC,
-            dF,
-            dL,
-            dN,
-            deta1,
-            deta2,
-        ],
-        axis=-2,
-    )
+    return TRANSFORMATION.T @ grad
 
 
 class AbsoluteLoveDegreeAngles(Parametriser):

@@ -209,7 +209,10 @@ def numeric_apply_from_unpack():
         for batch_index in range(B):
             for segment_index in range(M):
                 for param_index in range(N):
-                    flat_param_index = segment_index * N + param_index
+                    # The test fixtures flatten `m` as (B, N, M) -> (B, N*M)
+                    # (params major), so the flat index for parameter `param_index`
+                    # and segment `segment_index` is `param_index * M + segment_index`.
+                    flat_param_index = param_index * M + segment_index
 
                     m_plus = m.copy()
                     m_minus = m.copy()

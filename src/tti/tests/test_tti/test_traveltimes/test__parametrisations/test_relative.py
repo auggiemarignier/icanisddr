@@ -15,7 +15,7 @@ from tti.traveltimes._parametrisations.relative import (
 @pytest.fixture
 def m(lv, ref: np.ndarray) -> np.ndarray:
     """Fixture for a relative model vector m containing fractional perturbations and angles in degrees."""
-    # Build m as (B, M, 7) then flatten to (B, 7M)
+    # Build m as (B, 7, M) then flatten to (B, 7*M) (param-major ordering)
     B, M = lv.A.shape
     return np.stack(
         [
@@ -27,8 +27,8 @@ def m(lv, ref: np.ndarray) -> np.ndarray:
             lv.eta1,
             lv.eta2,
         ],
-        axis=-1,
-    ).reshape(B, M * 7)
+        axis=1,
+    ).reshape(B, 7 * M)
 
 
 @pytest.fixture
