@@ -26,7 +26,7 @@ class RelativeLoveDegreeAngles(LinearParametriser):
 
     def __init__(self, reference_model: np.ndarray | None = None) -> None:
         if reference_model is None:
-            reference_model = np.zeros(5)
+            reference_model = np.ones(5)
         elif len(reference_model) != 5:
             raise ValueError("Reference model must have 5 values for A, C, F, L, N.")
         self._reference_model = reference_model
