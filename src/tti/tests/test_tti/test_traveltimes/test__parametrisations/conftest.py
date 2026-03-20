@@ -1,130 +1,12 @@
 """Common configuration for parametrisation tests."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
-from unittest import mock
 
 import numpy as np
 import pytest
 
 from tti.traveltimes._parametrisations import Parametriser
-
-
-def _compare_potential_arrays(
-    actual: np.ndarray | Any, expected: np.ndarray | Any
-) -> None:
-    """Helper function to compare arrays that may be numpy arrays or scalars."""
-    if isinstance(expected, np.ndarray):
-        np.testing.assert_allclose(actual, expected)
-    else:
-        assert actual == expected
-
-
-def _compare_called_args_to_expected(
-    called_args: tuple,
-    expected_args: tuple | None,
-    called_kwargs: dict,
-    expected_kwargs: dict | None,
-) -> None:
-    """Helper function to compare called args/kwargs to expected args/kwargs."""
-    if expected_args is None:
-        expected_args = ()
-    if expected_kwargs is None:
-        expected_kwargs = {}
-
-    for idx, expected in enumerate(expected_args):
-        _compare_potential_arrays(called_args[idx], expected)
-
-    for k, expected in expected_kwargs.items():
-        assert k in called_kwargs
-        _compare_potential_arrays(called_kwargs[k], expected)
-
-
-@pytest.fixture
-def assert_delegates_to_transform(monkeypatch):
-    """Fixture returning a callable to assert `to_parameters` delegation.
-
-    `to_parameters` is called with a single model vector argument.
-    Any extra arguments of the dependency function (e.g. reference model) should be instance attributes only passed internally.
-    This fixture passes m to the dependency function and then checks that the transform function was called with the same m and any expected extra args/kwargs.
-    Usage:
-        def test(..., assert_delegates_to_transform):
-            assert_delegates_to_transform(fn_to_mock, parametriser, m, *args, **kwargs)
-    """
-
-    def _fn(
-        fn_to_be_mocked: str,
-        parametriser: Parametriser,
-        m: np.ndarray,
-        expected_args=None,
-        expected_kwargs=None,
-    ) -> None:
-        sentinel = np.arange(7)[
-            None, :, None
-        ]  # shape (1, 7, 1) to match expected output shape of transform function
-        fake_transform = mock.MagicMock(return_value=sentinel)
-        monkeypatch.setattr(fn_to_be_mocked, fake_transform)
-
-        A, C, F, L, N, eta1, eta2 = parametriser.to_parameters(m)
-
-        # Compare call args robustly (numpy arrays need elementwise checks).
-        called_args, called_kwargs = fake_transform.call_args
-
-        # The first positional argument should be m.
-        assert called_args[0] is m
-
-        # remaining positional args should match expected_args
-        # These would have been copied on instantiation of the parametriser, so we can't check identity, but we can check value.
-        _compare_called_args_to_expected(
-            called_args[1:], expected_args, called_kwargs, expected_kwargs
-        )
-
-        np.testing.assert_allclose(A, sentinel[:, 0, :])
-        np.testing.assert_allclose(C, sentinel[:, 1, :])
-        np.testing.assert_allclose(F, sentinel[:, 2, :])
-        np.testing.assert_allclose(L, sentinel[:, 3, :])
-        np.testing.assert_allclose(N, sentinel[:, 4, :])
-        np.testing.assert_allclose(eta1, sentinel[:, 5, :])
-        np.testing.assert_allclose(eta2, sentinel[:, 6, :])
-
-    return _fn
-
-
-@pytest.fixture
-def assert_delegates_to_jacobian(monkeypatch):
-    """Fixture returning a callable to assert `apply_jacobian` delegation.
-
-    For functions with signature ``f(grad, *args, **kwargs)`` the fixture
-    forwards any extra positional/keyword args and asserts the mock was
-    called with the same arguments.
-    """
-
-    def _fn(
-        fn_to_be_mocked: str,
-        parametriser: Parametriser,
-        grad_lv: np.ndarray,
-        expected_args=None,
-        expected_kwargs=None,
-    ) -> None:
-        sentinel = object()
-        fake_apply_jac = mock.MagicMock(return_value=sentinel)
-        monkeypatch.setattr(fn_to_be_mocked, fake_apply_jac)
-
-        result = parametriser.apply_jacobian(grad_lv)
-
-        called = fake_apply_jac.call_args
-        called_args, called_kwargs = called
-
-        # The first positional argument should be grad_lv.
-        assert called_args[0] is grad_lv
-
-        _compare_called_args_to_expected(
-            called_args[1:], expected_args, called_kwargs, expected_kwargs
-        )
-
-        assert result is sentinel
-
-    return _fn
 
 
 @dataclass
@@ -171,7 +53,7 @@ def grad_lv(rng: np.random.Generator, lv: LoveValues) -> np.ndarray:
 
 
 @pytest.fixture
-def numeric_apply_from_transform():
+def numeric_apply_from_transform() -> Callable:
     """Return a helper that applies finite-difference chain-rule using an transform fn.
 
     Usage:
@@ -203,6 +85,10 @@ def numeric_apply_from_transform():
 
         dt_dm_result = np.zeros((B, M, N, T))
 
+        def _stack_unpacked_parameters(m_in):
+            parts = transform_fn(m_in)
+            return np.stack(parts, axis=1)  # shape (B, 7, M)
+
         # iterate over each model element and compute local dp/dm via central FD
         for batch_index in range(B):
             for segment_index in range(M):
@@ -217,8 +103,8 @@ def numeric_apply_from_transform():
                     m_plus[batch_index, flat_param_index] += eps
                     m_minus[batch_index, flat_param_index] -= eps
 
-                    lv_plus = transform_fn(m_plus)
-                    lv_minus = transform_fn(m_minus)  # (B, 7, M)
+                    lv_plus = _stack_unpacked_parameters(m_plus)
+                    lv_minus = _stack_unpacked_parameters(m_minus)  # (B, 7, M)
 
                     # dlv_dmi: shape (B, 7, M) -> partials of each lv param w.r.t this model param
                     dlv_dmi = (lv_plus - lv_minus) / (2.0 * eps)
@@ -237,5 +123,53 @@ def numeric_apply_from_transform():
                     )
 
         return dt_dm_result
+
+    return _fn
+
+
+@pytest.fixture
+def assert_jacobian_matches_finite_difference(
+    numeric_apply_from_transform: Callable,
+) -> Callable:
+    """Fixture returning a callable to assert that the Jacobian matches a finite-difference approximation."""
+
+    def _fn(parametriser: Parametriser, grad_lv: np.ndarray, m: np.ndarray) -> None:
+        grad_dm = parametriser.apply_jacobian(grad_lv)
+        grad_fd = numeric_apply_from_transform(
+            parametriser.to_parameters, m, grad_lv, eps=1e-6
+        )
+        np.testing.assert_allclose(grad_dm, grad_fd, rtol=1e-6, atol=1e-8)
+
+    return _fn
+
+
+@pytest.fixture
+def assert_parametriser_matches_love_values() -> Callable:
+    """Fixture returning a callable to assert that the parametriser's to_parameters output matches the original Love values.
+
+    The returned callable accepts an `include_shear: bool = True` argument. When
+    `include_shear` is False the shear parameters `L` and `N` are compared to
+    zeros instead of `lv` values (useful for no-shear parametrisers).
+    """
+
+    def _fn(
+        parametriser: Parametriser,
+        m: np.ndarray,
+        lv: LoveValues,
+        include_shear: bool = True,
+    ) -> None:
+        A, C, F, L, N, eta1, eta2 = parametriser.to_parameters(m)
+
+        np.testing.assert_allclose(A, lv.A)
+        np.testing.assert_allclose(C, lv.C)
+        np.testing.assert_allclose(F, lv.F)
+        if include_shear:
+            np.testing.assert_allclose(L, lv.L)
+            np.testing.assert_allclose(N, lv.N)
+        else:
+            np.testing.assert_allclose(L, np.zeros_like(lv.L))
+            np.testing.assert_allclose(N, np.zeros_like(lv.N))
+        np.testing.assert_allclose(eta1, np.radians(lv.eta1))
+        np.testing.assert_allclose(eta2, np.radians(lv.eta2))
 
     return _fn
