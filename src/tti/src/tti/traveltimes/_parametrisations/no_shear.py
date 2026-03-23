@@ -1,4 +1,4 @@
-"""Parametrisation of a model with no shear Love parameters, and angles in degrees."""
+"""Parametrisation of a model with no shear Love parameters, and angles in radians."""
 
 import numpy as np
 
@@ -11,15 +11,15 @@ TRANSFORMATION = np.array(
         [0, 0, 1, 0, 0],
         [0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0],
-        [0, 0, 0, np.pi / 180.0, 0],
-        [0, 0, 0, 0, np.pi / 180.0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1],
     ],
     dtype=float,
 )
 
 
-class NoShearLoveDegreeAngles(LinearParametriser):
-    """Parametriser for Love parameters without shear and angles in degrees."""
+class NoShearLoveRadianAngles(LinearParametriser):
+    """Parametriser for Love parameters without shear and angles in radians."""
 
     n_model_params_per_segment = 5
     transformation = TRANSFORMATION

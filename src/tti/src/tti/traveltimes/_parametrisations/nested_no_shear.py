@@ -1,11 +1,12 @@
 """Model vector is nested differences of Love parameters without shear and angles in degrees."""
 
-from ._abc import LinearParametriser, undo_double_degree_conversion
+from ._abc import LinearParametriser
 from .nested import TRANSFORMATION as NESTED_TRANSFORMATION
 from .no_shear import TRANSFORMATION as NO_SHEAR_TRANSFORMATION
+from .radians import TRANSFORMATION as RADIANS_TRANSFORMATION
 
-TRANSFORMATION = undo_double_degree_conversion(
-    NESTED_TRANSFORMATION @ NO_SHEAR_TRANSFORMATION
+TRANSFORMATION = (
+    RADIANS_TRANSFORMATION @ NESTED_TRANSFORMATION @ NO_SHEAR_TRANSFORMATION
 )
 
 

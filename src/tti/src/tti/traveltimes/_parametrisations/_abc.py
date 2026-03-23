@@ -134,26 +134,3 @@ def _jacobian_to_dm(
         Gradient of travel times (T) with respect to the input model vector.
     """
     return transform_fn(grad)
-
-
-def undo_double_degree_conversion(transformation: np.ndarray) -> np.ndarray:
-    """Undo an extra degrees->radians conversion applied to the last two rows.
-
-    Some parametrisation combinations multiply transformation matrices which causes
-    the degrees->radians scaling (pi/180) for the angle rows to be applied twice.
-    This helper multiplies the last two rows by 180/pi to revert that extra scaling
-    and returns a new array.
-
-    Parameters
-    ----------
-    transformation : ndarray
-        Transformation matrix whose last two rows correspond to angles in radians.
-
-    Returns
-    -------
-    ndarray
-        A copy of `transformation` where the last two rows have been scaled by 180/pi.
-    """
-    t = transformation.copy()
-    t[-2:, :] *= 180.0 / np.pi
-    return t

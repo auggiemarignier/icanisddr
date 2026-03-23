@@ -8,7 +8,6 @@ import pytest
 from tti.traveltimes._parametrisations._abc import (
     _jacobian_to_dm,
     _transform_model_vector,
-    undo_double_degree_conversion,
 )
 
 
@@ -59,14 +58,3 @@ def test__transform_model_vector_arg_is_called(m: np.ndarray) -> None:
     transform = Mock(side_effect=lambda x: x)
     _transform_model_vector(m, N, transform)
     transform.assert_called()
-
-
-def test_undo_double_degree_conversion_basic() -> None:
-    """undo_double_degree_conversion should scale the last two rows by 180/pi."""
-    T = np.zeros((7, 7), dtype=float)
-    T[-2:, :] = np.pi / 180.0
-
-    out = undo_double_degree_conversion(T)
-
-    # After undo, the last two rows should be 1.0
-    assert np.allclose(out[-2:, :], 1.0)

@@ -2,7 +2,6 @@
 
 import numpy as np
 
-from ._abc import undo_double_degree_conversion
 from .no_shear import TRANSFORMATION as NO_SHEAR_TRANSFORMATION
 from .relative import RelativeLoveDegreeAngles
 
@@ -14,9 +13,7 @@ class RelativeNoShearLoveDegreeAngles(RelativeLoveDegreeAngles):
 
     def __init__(self, reference_model: np.ndarray | None = None) -> None:
         super().__init__(reference_model=reference_model)
-        self.transformation = undo_double_degree_conversion(
-            self.transformation @ NO_SHEAR_TRANSFORMATION
-        )
+        self.transformation = self.transformation @ NO_SHEAR_TRANSFORMATION
 
     def _normalise_reference(self, reference_model: np.ndarray | None) -> np.ndarray:
         if reference_model is None:

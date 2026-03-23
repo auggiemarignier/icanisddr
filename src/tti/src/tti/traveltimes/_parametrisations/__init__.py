@@ -1,17 +1,17 @@
 """Parametrisations for travel time calculations."""
 
 from ._abc import Parametriser
-from .absolute import AbsoluteLoveDegreeAngles
-from .absolute_no_shear import AbsoluteNoShearLoveDegreeAngles
-from .nested import NestedLoveDegreeAngles
+from .nested import NestedLoveRadianAngles
 from .nested_no_shear import NestedNoShearLoveDegreeAngles
+from .radians import Radians
+from .radians_no_shear import RadiansNoShearLoveDegreeAngles
 from .relative import RelativeLoveDegreeAngles
 from .relative_no_shear import RelativeNoShearLoveDegreeAngles
 
 __all__ = [
-    "AbsoluteLoveDegreeAngles",
-    "AbsoluteNoShearLoveDegreeAngles",
-    "NestedLoveDegreeAngles",
+    "Radians",
+    "RadiansNoShearLoveDegreeAngles",
+    "NestedLoveRadianAngles",
     "NestedNoShearLoveDegreeAngles",
     "Parametriser",
     "RelativeLoveDegreeAngles",

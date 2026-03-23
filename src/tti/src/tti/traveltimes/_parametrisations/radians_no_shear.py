@@ -1,15 +1,13 @@
 """Model vector is absolute Love parameters without shear and angles in degrees."""
 
-from ._abc import LinearParametriser, undo_double_degree_conversion
-from .absolute import TRANSFORMATION as ABSOLUTE_TRANSFORMATION
+from ._abc import LinearParametriser
 from .no_shear import TRANSFORMATION as NO_SHEAR_TRANSFORMATION
+from .radians import TRANSFORMATION as RADIANS_TRANSFORMATION
 
-TRANSFORMATION = undo_double_degree_conversion(
-    ABSOLUTE_TRANSFORMATION @ NO_SHEAR_TRANSFORMATION
-)
+TRANSFORMATION = RADIANS_TRANSFORMATION @ NO_SHEAR_TRANSFORMATION
 
 
-class AbsoluteNoShearLoveDegreeAngles(LinearParametriser):
+class RadiansNoShearLoveDegreeAngles(LinearParametriser):
     """Parametriser for absolute Love parameters (no shear) and angles in degrees."""
 
     n_model_params_per_segment = 5

@@ -1,4 +1,4 @@
-"""Model vector is absolute Love parameters."""
+"""Model vector is absolute Love parameters and angles in degrees."""
 
 import numpy as np
 
@@ -18,7 +18,7 @@ TRANSFORMATION = np.array(
 )
 
 
-class AbsoluteLoveDegreeAngles(LinearParametriser):
+class Radians(LinearParametriser):
     """Parametriser for absolute Love parameters and angles in degrees."""
 
     n_model_params_per_segment = 7

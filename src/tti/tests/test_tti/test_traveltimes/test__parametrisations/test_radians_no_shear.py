@@ -1,34 +1,33 @@
-"""Tests for absolute parametrisation."""
+"""Tests for absolute without shear parametrisation."""
 
 import numpy as np
 import pytest
 
 from tti.traveltimes._parametrisations._abc import Parametriser
-from tti.traveltimes._parametrisations.absolute import AbsoluteLoveDegreeAngles
+from tti.traveltimes._parametrisations.radians_no_shear import (
+    RadiansNoShearLoveDegreeAngles,
+)
 
 
 @pytest.fixture
 def m(lv) -> np.ndarray:
     """Fixture for model vector m corresponding to the Love parameters and angles in degrees."""
-    # Build m as (B, 7, M) then flatten to (B, 7*M) so reshape(batch, 7, -1)
-    # will reconstruct the (B, 7, M) ordering used by unpackers that expect
-    # param-major flattening.
+    # Build m as (B, 5, M) then flatten to (B, 5*M) so reshape(batch, 5, -1)
+    # will reconstruct the (B, 5, M) ordering (param-major).
     B, M = lv.A.shape
-    m = np.stack([lv.A, lv.C, lv.F, lv.L, lv.N, lv.eta1, lv.eta2], axis=1).reshape(
-        B, 7 * M
-    )
+    m = np.stack([lv.A, lv.C, lv.F, lv.eta1, lv.eta2], axis=1).reshape(B, 5 * M)
     return m
 
 
 @pytest.fixture
-def parametriser() -> AbsoluteLoveDegreeAngles:
-    """Fixture for the AbsoluteLoveDegreeAngles parametriser."""
-    return AbsoluteLoveDegreeAngles()
+def parametriser() -> RadiansNoShearLoveDegreeAngles:
+    """Fixture for the AbsoluteNoShearLoveDegreeAngles parametriser."""
+    return RadiansNoShearLoveDegreeAngles()
 
 
 def test_num_model_params_per_segment(parametriser: Parametriser) -> None:
     """Test that the number of model parameters per segment is correct."""
-    assert parametriser.n_model_params_per_segment == 7
+    assert parametriser.n_model_params_per_segment == 5
 
 
 def test_to_parameters(
@@ -38,7 +37,7 @@ def test_to_parameters(
     assert_parametriser_matches_love_values,
 ) -> None:
     """Test that the to_parameters method correctly transforms the model vector and unpacks the parameters."""
-    assert_parametriser_matches_love_values(parametriser, m, lv, include_shear=True)
+    assert_parametriser_matches_love_values(parametriser, m, lv, include_shear=False)
 
 
 def test_apply_jacobian(

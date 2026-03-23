@@ -2,7 +2,6 @@
 
 import numpy as np
 
-from ._abc import undo_double_degree_conversion
 from .nested import TRANSFORMATION as NESTED_TRANSFORMATION
 from .no_shear import TRANSFORMATION as NO_SHEAR_TRANSFORMATION
 from .relative import RelativeLoveDegreeAngles
@@ -15,10 +14,8 @@ class NestedRelativeNoShearLoveDegreeAngles(RelativeLoveDegreeAngles):
 
     def __init__(self, reference_model: np.ndarray | None = None) -> None:
         super().__init__(reference_model=reference_model)
-        self.transformation = undo_double_degree_conversion(
-            undo_double_degree_conversion(
-                self.transformation @ NESTED_TRANSFORMATION @ NO_SHEAR_TRANSFORMATION
-            )
+        self.transformation = (
+            self.transformation @ NESTED_TRANSFORMATION @ NO_SHEAR_TRANSFORMATION
         )
 
     def _normalise_reference(self, reference_model: np.ndarray | None) -> np.ndarray:

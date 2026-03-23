@@ -1,33 +1,34 @@
-"""Tests for absolute without shear parametrisation."""
+"""Tests for absolute parametrisation."""
 
 import numpy as np
 import pytest
 
 from tti.traveltimes._parametrisations._abc import Parametriser
-from tti.traveltimes._parametrisations.absolute_no_shear import (
-    AbsoluteNoShearLoveDegreeAngles,
-)
+from tti.traveltimes._parametrisations.radians import Radians
 
 
 @pytest.fixture
 def m(lv) -> np.ndarray:
     """Fixture for model vector m corresponding to the Love parameters and angles in degrees."""
-    # Build m as (B, 5, M) then flatten to (B, 5*M) so reshape(batch, 5, -1)
-    # will reconstruct the (B, 5, M) ordering (param-major).
+    # Build m as (B, 7, M) then flatten to (B, 7*M) so reshape(batch, 7, -1)
+    # will reconstruct the (B, 7, M) ordering used by unpackers that expect
+    # param-major flattening.
     B, M = lv.A.shape
-    m = np.stack([lv.A, lv.C, lv.F, lv.eta1, lv.eta2], axis=1).reshape(B, 5 * M)
+    m = np.stack([lv.A, lv.C, lv.F, lv.L, lv.N, lv.eta1, lv.eta2], axis=1).reshape(
+        B, 7 * M
+    )
     return m
 
 
 @pytest.fixture
-def parametriser() -> AbsoluteNoShearLoveDegreeAngles:
-    """Fixture for the AbsoluteNoShearLoveDegreeAngles parametriser."""
-    return AbsoluteNoShearLoveDegreeAngles()
+def parametriser() -> Radians:
+    """Fixture for the AbsoluteLoveDegreeAngles parametriser."""
+    return Radians()
 
 
 def test_num_model_params_per_segment(parametriser: Parametriser) -> None:
     """Test that the number of model parameters per segment is correct."""
-    assert parametriser.n_model_params_per_segment == 5
+    assert parametriser.n_model_params_per_segment == 7
 
 
 def test_to_parameters(
@@ -37,7 +38,7 @@ def test_to_parameters(
     assert_parametriser_matches_love_values,
 ) -> None:
     """Test that the to_parameters method correctly transforms the model vector and unpacks the parameters."""
-    assert_parametriser_matches_love_values(parametriser, m, lv, include_shear=False)
+    assert_parametriser_matches_love_values(parametriser, m, lv, include_shear=True)
 
 
 def test_apply_jacobian(
