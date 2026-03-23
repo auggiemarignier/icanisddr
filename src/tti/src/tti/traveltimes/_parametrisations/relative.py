@@ -18,7 +18,7 @@ def build_relative_transformation_matrix(ref: np.ndarray) -> np.ndarray:
     -------
     np.ndarray
         Transformation matrix for the relative parametrisation (7, 7).
-        The first 5 rows scale the Love parameters and angles by the reference model values, and the last 2 rows are identity for the angles.
+        The first 5 rows scale the Love parameters by the reference model values, and the last 2 rows remain identity, leaving the angles unchanged.
     """
     T = np.eye(7, 7)
     T[0, 0] = ref[0]  # A_ref
