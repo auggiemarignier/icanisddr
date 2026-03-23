@@ -1,4 +1,4 @@
-"""Model vector is nested differences of Love parameters and angles in radians."""
+"""Model vector is nested differences of Love parameters and angles in degrees."""
 
 import numpy as np
 
