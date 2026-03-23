@@ -4,6 +4,15 @@ import numpy as np
 import pytest
 
 from tti.traveltimes._parametrisations._abc import Parametriser
+from tti.traveltimes._parametrisations.no_shear import (
+    TRANSFORMATION as NO_SHEAR_TRANSFORMATION,
+)
+from tti.traveltimes._parametrisations.radians import (
+    TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION,
+)
+from tti.traveltimes._parametrisations.relative import (
+    build_relative_transformation_matrix,
+)
 from tti.traveltimes._parametrisations.relative_no_shear import (
     RelativeNoShearLoveDegreeAngles,
 )
@@ -70,3 +79,18 @@ def test_apply_jacobian(
     Uses a finite-difference approximation to check that the Jacobian is applied correctly.
     """
     assert_jacobian_matches_finite_difference(parametriser, grad_lv, m)
+
+
+def test_relative_no_shear_composed_transformation() -> None:
+    """Test that the RelativeNoShearLoveDegreeAngles class uses the correct composed transformation matrix."""
+    ref3 = np.array([1.0, 2.0, 3.0])
+    # The RelativeNoShear class expands the 3-element ref into 5 by appending zeros
+    ref5 = np.concatenate([ref3, np.zeros(2)])
+    expected = (
+        DEGREES_TO_RADIANS_TRANSFORMATION
+        @ build_relative_transformation_matrix(ref5)
+        @ NO_SHEAR_TRANSFORMATION
+    )
+
+    p = RelativeNoShearLoveDegreeAngles(reference_model=ref3)
+    assert np.allclose(p.transformation, expected)

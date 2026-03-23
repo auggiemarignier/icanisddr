@@ -2,13 +2,25 @@
 
 import numpy as np
 
+from ._abc import RelativeLinearParametriser, _validate_reference
 from .nested import TRANSFORMATION as NESTED_TRANSFORMATION
-from .relative import RelativeLoveDegreeAngles
+from .radians import TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION
+from .relative import build_relative_transformation_matrix
 
 
-class NestedRelativeLoveDegreeAngles(RelativeLoveDegreeAngles):
+class NestedRelativeLoveDegreeAngles(RelativeLinearParametriser):
     """Nested relative parametrisation for Love parameters and angles in degrees."""
 
-    def __init__(self, reference_model: np.ndarray | None = None) -> None:
-        super().__init__(reference_model=reference_model)
-        self.transformation = self.transformation @ NESTED_TRANSFORMATION
+    n_model_params_per_segment = 7
+
+    @staticmethod
+    def build_transformation_matrix(ref: np.ndarray) -> np.ndarray:
+        return (
+            DEGREES_TO_RADIANS_TRANSFORMATION
+            @ build_relative_transformation_matrix(ref)
+            @ NESTED_TRANSFORMATION
+        )
+
+    def _normalise_reference(self, reference_model: np.ndarray | None) -> np.ndarray:
+        reference_model = _validate_reference(reference_model)
+        return reference_model

@@ -2,13 +2,24 @@
 
 import numpy as np
 
-from .._types import seven_arrays
-from ._abc import LinearParametriser
-from .radians import TRANSFORMATION as RADIANS_TRANSFORMATION
+from ._abc import RelativeLinearParametriser, _validate_reference
+from .radians import TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION
 
 
-def _build_transformation_matrix(ref: np.ndarray) -> np.ndarray:
-    """Build the transformation matrix for the relative parametrisation."""
+def build_relative_transformation_matrix(ref: np.ndarray) -> np.ndarray:
+    """Build the transformation matrix for the relative parametrisation.
+
+    Parameters
+    ----------
+    ref : np.ndarray
+        Reference model values for A, C, F, L, N.
+
+    Returns
+    -------
+    np.ndarray
+        Transformation matrix for the relative parametrisation (7, 7).
+        The first 5 rows scale the Love parameters and angles by the reference model values, and the last 2 rows are identity for the angles.
+    """
     T = np.eye(7, 7)
     T[0, 0] = ref[0]  # A_ref
     T[1, 1] = ref[1]  # C_ref
@@ -18,62 +29,17 @@ def _build_transformation_matrix(ref: np.ndarray) -> np.ndarray:
     return T
 
 
-class RelativeLoveDegreeAngles(LinearParametriser):
-    """Parametriser for relative Love parameters and angles in radians."""
+class RelativeLoveDegreeAngles(RelativeLinearParametriser):
+    """Parametriser for relative Love parameters and angles in degrees."""
 
     n_model_params_per_segment = 7
 
-    def __init__(self, reference_model: np.ndarray | None = None) -> None:
-        self._reference_model = self._normalise_reference(reference_model)
-        self.transformation = RADIANS_TRANSFORMATION @ _build_transformation_matrix(
-            self._reference_model
+    @staticmethod
+    def build_transformation_matrix(ref: np.ndarray) -> np.ndarray:
+        return DEGREES_TO_RADIANS_TRANSFORMATION @ build_relative_transformation_matrix(
+            ref
         )
-
-    def to_parameters(self, m: np.ndarray) -> seven_arrays:
-        A, C, F, L, N, eta1, eta2 = super().to_parameters(m)
-        return (
-            A + self.ref_A,
-            C + self.ref_C,
-            F + self.ref_F,
-            L + self.ref_L,
-            N + self.ref_N,
-            eta1,
-            eta2,
-        )
-
-    @property
-    def reference_model(self) -> np.ndarray:
-        """Reference model values for A, C, F, L, N."""
-        return self._reference_model
-
-    @property
-    def ref_A(self) -> float:
-        """Reference model value for A."""
-        return self.reference_model[0]
-
-    @property
-    def ref_C(self) -> float:
-        """Reference model value for C."""
-        return self.reference_model[1]
-
-    @property
-    def ref_F(self) -> float:
-        """Reference model value for F."""
-        return self.reference_model[2]
-
-    @property
-    def ref_L(self) -> float:
-        """Reference model value for L."""
-        return self.reference_model[3]
-
-    @property
-    def ref_N(self) -> float:
-        """Reference model value for N."""
-        return self.reference_model[4]
 
     def _normalise_reference(self, reference_model: np.ndarray | None) -> np.ndarray:
-        if reference_model is None:
-            reference_model = np.zeros(5)
-        elif len(reference_model) != 5:
-            raise ValueError("Reference model must have 5 values for A, C, F, L, N.")
+        reference_model = _validate_reference(reference_model)
         return reference_model

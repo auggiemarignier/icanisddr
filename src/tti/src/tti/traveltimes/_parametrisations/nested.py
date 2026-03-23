@@ -3,7 +3,7 @@
 import numpy as np
 
 from ._abc import LinearParametriser
-from .radians import TRANSFORMATION as RADIANS_TRANSFORMATION
+from .radians import TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION
 
 TRANSFORMATION = np.array(
     [
@@ -23,4 +23,4 @@ class NestedLoveRadianAngles(LinearParametriser):
     """Parametriser for nested differences of Love parameters and angles in radians."""
 
     n_model_params_per_segment = 7
-    transformation = RADIANS_TRANSFORMATION @ TRANSFORMATION
+    transformation = DEGREES_TO_RADIANS_TRANSFORMATION @ TRANSFORMATION
