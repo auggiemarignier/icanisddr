@@ -125,7 +125,7 @@ class RelativeParametriser(LinearParametriser):
         -------
         np.ndarray
             Transformation matrix for the relative parametrisation (7, 7).
-            The first 5 rows scale the Love parameters and angles by the reference model values, and the last 2 rows are identity for the angles.
+            The first 5 rows scale the Love parameters by the reference model values; the last 2 rows act as an identity mapping for the angles (which are not scaled by the reference model).
         """
         ...
 
@@ -191,11 +191,11 @@ def _transform_model_vector(
 
     Parameters
     ----------
-    m : ndarray, shape (B, M * n)
+    m : ndarray, shape (B, n * M)
         Model parameters: [A, C, F, L, N, eta1, eta2]
-        M is the number of model segments (e.g. number of pixels).
         B is the batch size (at least 1).
         n is the number of parameters per segment.
+        M is the number of model segments (e.g. number of pixels).
     n : int
         Number of parameters per segment (e.g. 7 for absolute Love parameters and angles).
     transform_fn : Callable[[ndarray], ndarray]

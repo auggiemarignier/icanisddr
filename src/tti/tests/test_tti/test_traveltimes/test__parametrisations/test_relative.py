@@ -112,7 +112,7 @@ def test_relative_invalid_reference_length_raises() -> None:
 
 
 def test_relative_none_uses_one_reference() -> None:
-    """Passing None as reference_model should use a one reference and build the composed transformation accordingly."""
+    """Passing None as reference_model should use an all-ones reference and build the composed transformation accordingly."""
     p = RelativeFractionalDegreesParametriser(reference_model=None)
     expected = DEGREES_TO_RADIANS_TRANSFORMATION @ build_relative_transformation_matrix(
         np.ones(5)
@@ -121,6 +121,6 @@ def test_relative_none_uses_one_reference() -> None:
 
 
 def test_reference_model_property_none_returns_ones() -> None:
-    """When constructed with `reference_model=None`, the `reference_model` property should be a one vector of length 5."""
+    """When constructed with `reference_model=None`, the `reference_model` property should be an all-ones vector of length 5."""
     p = RelativeFractionalDegreesParametriser(reference_model=None)
     assert np.allclose(p.reference_model, np.ones(5))

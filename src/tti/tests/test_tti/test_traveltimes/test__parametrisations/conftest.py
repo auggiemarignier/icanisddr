@@ -54,13 +54,13 @@ def grad_lv(rng: np.random.Generator, lv: LoveValues) -> np.ndarray:
 
 @pytest.fixture
 def numeric_apply_from_transform() -> Callable:
-    """Return a helper that applies finite-difference chain-rule using an transform fn.
+    """Return a helper that applies finite-difference chain-rule using a transform fn.
 
     Usage:
         apply_fd = numeric_apply_from_transform()
-        apply_fd(transform_fn, m, grad_lv, N=7, eps=1e-6) -> dt_dm (shape like grad_lv)
+        apply_fd(transform_fn, m, grad_lv, eps=1e-6) -> dt_dm (shape like grad_lv)
 
-    The transform function should accept `m` with shape (B, M*N) and return a 7-tuple of arrays each shaped (B, M) in the same ordering as the analytic
+    The transform function should accept `m` with shape (B, N*M) and return a 7-tuple of arrays each shaped (B, M) in the same ordering as the analytic
     `apply_jacobian` expects: (A, C, F, L, N, eta1, eta2).
     """
 

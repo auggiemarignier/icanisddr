@@ -101,7 +101,7 @@ def test_relative_no_shear_invalid_reference_length_raises() -> None:
 
 
 def test_relative_no_shear_none_uses_one_reference() -> None:
-    """Passing None as reference_model should use a one reference and build the composed transformation accordingly for no-shear variant."""
+    """Passing None as reference_model should use an all-ones reference and build the composed transformation accordingly for no-shear variant."""
     p = RelativeFractionalNoShearParametriser(reference_model=None)
     expected = (
         DEGREES_TO_RADIANS_TRANSFORMATION
@@ -112,6 +112,6 @@ def test_relative_no_shear_none_uses_one_reference() -> None:
 
 
 def test_reference_model_property_none_returns_ones_no_shear() -> None:
-    """When constructed with `reference_model=None`, the `reference_model` property should be a one vector of length 5 for no-shear variant."""
+    """When constructed with `reference_model=None`, the `reference_model` property should be an all-ones vector of length 5 for no-shear variant."""
     p = RelativeFractionalNoShearParametriser(reference_model=None)
     assert np.allclose(p.reference_model, np.ones(5))
