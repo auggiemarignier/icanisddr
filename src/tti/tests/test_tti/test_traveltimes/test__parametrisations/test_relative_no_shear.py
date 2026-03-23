@@ -76,7 +76,7 @@ def test_apply_jacobian(
 
 
 def test_relative_no_shear_composed_transformation(ref: np.ndarray) -> None:
-    """Test that the RelativeNoShearLoveDegreeAngles class uses the correct composed transformation matrix."""
+    """Test that the RelativeFractionalNoShearParametriser class uses the correct composed transformation matrix."""
     expected = (
         DEGREES_TO_RADIANS_TRANSFORMATION
         @ build_relative_transformation_matrix(ref)
