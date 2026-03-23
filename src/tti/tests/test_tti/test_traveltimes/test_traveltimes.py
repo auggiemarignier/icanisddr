@@ -417,7 +417,7 @@ class TestTravelTimeCalculator:
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
         m = np.stack(
-            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+            [np.repeat(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
         )
 
         expected = lam + 2 * mu
@@ -447,16 +447,17 @@ class TestTravelTimeCalculator:
         mu = 5.0
 
         # determine perturbations that would yield isotropic medium when added to reference
-        dA = (lam + 2 * mu) - reference_love[0]
-        dC = (lam + 2 * mu) - reference_love[1]
-        dF = lam - reference_love[2]
-        dL = mu - reference_love[3]
-        dN = mu - reference_love[4]
+        dA = (lam + 2 * mu) / reference_love[0] - 1
+        dC = (lam + 2 * mu) / reference_love[1] - 1
+        dF = lam / reference_love[2] - 1
+        dL = mu / reference_love[3] - 1
+        dN = mu / reference_love[4] - 1
 
         nsegments = 3
         batch_size = 2
         m = np.stack(
-            [np.tile(np.array([dA, dC, dF, dL, dN, 0.0, 0.0]), nsegments)] * batch_size
+            [np.repeat(np.array([dA, dC, dF, dL, dN, 0.0, 0.0]), nsegments)]
+            * batch_size
         )
 
         dt = calculator(m)
@@ -488,7 +489,7 @@ class TestTravelTimeCalculator:
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
         m = np.stack(
-            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+            [np.repeat(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
         )
 
         expected = n * (lam + 2 * mu)
@@ -514,7 +515,7 @@ class TestTravelTimeCalculator:
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
         m = np.stack(
-            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+            [np.repeat(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
         )
 
         # calculator initialised with no weights, so weighting will default to 1.0/nsegments
@@ -569,7 +570,7 @@ class TestTravelTimeCalculatorGradient:
         """
 
         m = np.stack(
-            [np.tile(rng.random(size=7), nsegments)] * batch_size
+            [np.repeat(rng.random(size=7), nsegments)] * batch_size
         )  # random model parameters
 
         grad = calculator.gradient(m)
@@ -600,7 +601,7 @@ class TestTravelTimeCalculatorGradient:
         calculator = TravelTimeCalculator(*valid_paths, normalisation=2.0)
 
         m = np.stack(
-            [np.tile(rng.random(size=7), nsegments)] * batch_size
+            [np.repeat(rng.random(size=7), nsegments)] * batch_size
         )  # random model parameters
 
         grad = calculator.gradient(m)
@@ -636,7 +637,7 @@ class TestTravelTimeCalculatorGradient:
         )
 
         m = np.stack(
-            [np.tile(rng.random(size=7), nsegments)] * batch_size
+            [np.repeat(rng.random(size=7), nsegments)] * batch_size
         )  # random model parameters
 
         grad = calculator.gradient(m)

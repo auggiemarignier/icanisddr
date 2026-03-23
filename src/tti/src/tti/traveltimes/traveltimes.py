@@ -218,7 +218,9 @@ class TravelTimeCalculator:
             weights[:, :, None, :] * dt
         )  # shape (batch, cells, nparams, npaths)
         # Flatten over cells and nparams to get correct shape
-        dt_weighted = dt_weighted.reshape(batch, cells * nparams, npaths)
+        dt_weighted = dt_weighted.transpose(0, 2, 1, 3).reshape(
+            batch, nparams * cells, npaths
+        )
 
         return dt_weighted
 
