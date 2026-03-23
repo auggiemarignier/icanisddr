@@ -1,4 +1,4 @@
-"""Parameters are fractional perturbations from a reference model for the Love parameters, and angles in radians."""
+"""Parameters are fractional perturbations from a reference model for the Love parameters, and angles in degrees."""
 
 import numpy as np
 
