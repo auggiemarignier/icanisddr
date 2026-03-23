@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from tti.traveltimes._parametrisations.relative import RelativeLoveDegreeAngles
+from .relative import RelativeLoveDegreeAngles
 
 
 def _build_transformation_matrix(ref: np.ndarray) -> np.ndarray:

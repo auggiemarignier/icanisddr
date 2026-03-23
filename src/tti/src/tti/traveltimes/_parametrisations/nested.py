@@ -13,7 +13,8 @@ TRANSFORMATION = np.array(
         [0, 0, 0, 1, 1, 0, 0],
         [0, 0, 0, 0, 0, np.pi / 180.0, 0],
         [0, 0, 0, 0, 0, 0, np.pi / 180.0],
-    ]
+    ],
+    dtype=float,
 )
 
 
