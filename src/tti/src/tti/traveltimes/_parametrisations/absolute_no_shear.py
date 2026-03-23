@@ -1,20 +1,11 @@
 """Model vector is absolute Love parameters without shear and angles in degrees."""
 
-import numpy as np
+from ._abc import LinearParametriser, undo_double_degree_conversion
+from .absolute import TRANSFORMATION as ABSOLUTE_TRANSFORMATION
+from .no_shear import TRANSFORMATION as NO_SHEAR_TRANSFORMATION
 
-from ._abc import LinearParametriser
-
-TRANSFORMATION = np.array(
-    [
-        [1, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0],
-        [0, 0, 1, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, np.pi / 180.0, 0],
-        [0, 0, 0, 0, np.pi / 180.0],
-    ],
-    dtype=float,
+TRANSFORMATION = undo_double_degree_conversion(
+    ABSOLUTE_TRANSFORMATION @ NO_SHEAR_TRANSFORMATION
 )
 
 

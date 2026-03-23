@@ -25,14 +25,7 @@ class RelativeLoveDegreeAngles(LinearParametriser):
     n_model_params_per_segment = 7
 
     def __init__(self, reference_model: np.ndarray | None = None) -> None:
-        if reference_model is None:
-            reference_model = np.ones(5)
-        elif len(reference_model) != 5:
-            raise ValueError("Reference model must have 5 values for A, C, F, L, N.")
-        self._reference_model = reference_model
-        self._useful_reference_model = np.concatenate(
-            [reference_model, np.zeros(2)]
-        )  # for angles
+        self._reference_model = self._normalise_reference(reference_model)
         self.transformation = _build_transformation_matrix(self._reference_model)
 
     def to_parameters(self, m: np.ndarray) -> seven_arrays:
@@ -76,3 +69,10 @@ class RelativeLoveDegreeAngles(LinearParametriser):
     def ref_N(self) -> float:
         """Reference model value for N."""
         return self.reference_model[4]
+
+    def _normalise_reference(self, reference_model: np.ndarray | None) -> np.ndarray:
+        if reference_model is None:
+            reference_model = np.zeros(5)
+        elif len(reference_model) != 5:
+            raise ValueError("Reference model must have 5 values for A, C, F, L, N.")
+        return reference_model
