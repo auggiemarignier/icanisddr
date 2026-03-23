@@ -34,8 +34,8 @@ class RelativeLoveDegreeAngles(RelativeLinearParametriser):
 
     n_model_params_per_segment = 7
 
-    @staticmethod
-    def build_transformation_matrix(ref: np.ndarray) -> np.ndarray:
+    @classmethod
+    def build_transformation_matrix(cls, ref: np.ndarray) -> np.ndarray:
         return DEGREES_TO_RADIANS_TRANSFORMATION @ build_relative_transformation_matrix(
             ref
         )

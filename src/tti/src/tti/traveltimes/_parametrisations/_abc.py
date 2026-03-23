@@ -102,9 +102,9 @@ class RelativeLinearParametriser(LinearParametriser):
             eta2,
         )
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def build_transformation_matrix(ref: np.ndarray) -> np.ndarray:
+    def build_transformation_matrix(cls, ref: np.ndarray) -> np.ndarray:
         """Build the transformation matrix for the relative parametrisation.
 
         Parameters
