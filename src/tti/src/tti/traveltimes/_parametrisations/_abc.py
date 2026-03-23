@@ -87,20 +87,29 @@ class RelativeParametriser(LinearParametriser):
     """A linear parametriser that applies a fixed transformation matrix to the input model vector, where the first 5 parameters are fractional perturbations from a reference model."""
 
     def __init__(self, reference_model: np.ndarray | None = None) -> None:
-        self._reference_model = self._normalise_reference(reference_model)
+        self._reference_model = self._validate_reference_model(reference_model)
+        self._useful_reference_model = np.concatenate(
+            [self.reference_model, np.zeros(2)]
+        )  # Pad with zeros for the angles so we can easily add the reference model to the transformed model vector in to_parameters.
         self.transformation = self.build_transformation_matrix(self._reference_model)
 
     def to_parameters(self, m: np.ndarray) -> seven_arrays:
-        A, C, F, L, N, eta1, eta2 = super().to_parameters(m)
-        return (
-            A + self.ref_A,
-            C + self.ref_C,
-            F + self.ref_F,
-            L + self.ref_L,
-            N + self.ref_N,
-            eta1,
-            eta2,
+        lv = (
+            _transform_model_vector(
+                m, self.n_model_params_per_segment, lambda x: self.transformation @ x
+            )
+            + self._useful_reference_model[None, :, None]
         )
+        A, C, F, L, N, eta1, eta2 = (
+            lv[:, 0, :],
+            lv[:, 1, :],
+            lv[:, 2, :],
+            lv[:, 3, :],
+            lv[:, 4, :],
+            lv[:, 5, :],
+            lv[:, 6, :],
+        )
+        return A, C, F, L, N, eta1, eta2
 
     @classmethod
     @abstractmethod
@@ -120,21 +129,26 @@ class RelativeParametriser(LinearParametriser):
         """
         ...
 
-    @abstractmethod
-    def _normalise_reference(self, reference_model: np.ndarray | None) -> np.ndarray:
-        """Normalise and validate the reference model to ensure it has the correct shape and values for unpacking.
+    def _validate_reference_model(
+        self, reference_model: np.ndarray | None
+    ) -> np.ndarray:
+        """Validate the reference model to ensure it has the correct shape and values for unpacking.
 
         Parameters
         ----------
         reference_model : np.ndarray | None
-            Reference model values for Love parameters. If None, defaults to zeros.
+            Reference model values for A, C, F, L, N. If None, defaults to ones.
 
-        Returns
-        -------
-        np.ndarray
-            Normalised reference model with shape (5,), where the first 5 values are for A, C, F, L, N.
+        Raises
+        ------
+        ValueError
+            If the reference model does not have 5 values for A, C, F, L, N.
         """
-        ...
+        if reference_model is None:
+            reference_model = np.ones(5)
+        elif len(reference_model) != 5:
+            raise ValueError("Reference model must have 5 values for A, C, F, L, N.")
+        return reference_model
 
     @property
     def reference_model(self) -> np.ndarray:
@@ -224,43 +238,3 @@ def _jacobian_to_dm(
         as returned by ``transform_fn``.
     """
     return transform_fn(grad)
-
-
-def _validate_reference(reference_model: np.ndarray | None) -> np.ndarray:
-    """Validate the reference model to ensure it has the correct shape and values for unpacking.
-
-    Parameters
-    ----------
-    reference_model : np.ndarray | None
-        Reference model values for A, C, F, L, N. If None, defaults to ones.
-
-    Raises
-    ------
-    ValueError
-        If the reference model does not have 5 values for A, C, F, L, N.
-    """
-    if reference_model is None:
-        reference_model = np.ones(5)
-    elif len(reference_model) != 5:
-        raise ValueError("Reference model must have 5 values for A, C, F, L, N.")
-    return reference_model
-
-
-def _validate_reference_no_shear(reference_model: np.ndarray | None) -> np.ndarray:
-    """Validate the reference model for no shear parametrisation to ensure it has the correct shape and values for unpacking.
-
-    Parameters
-    ----------
-    reference_model : np.ndarray | None
-        Reference model values for A, C, F. If None, defaults to ones.
-
-    Raises
-    ------
-    ValueError
-        If the reference model does not have 3 values for A, C, F.
-    """
-    if reference_model is None:
-        reference_model = np.ones(3)
-    elif len(reference_model) != 3:
-        raise ValueError("Reference model must have 3 values for A, C, F.")
-    return reference_model

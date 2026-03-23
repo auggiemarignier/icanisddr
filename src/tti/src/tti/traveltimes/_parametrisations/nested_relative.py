@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from ._abc import RelativeParametriser, _validate_reference
+from ._abc import RelativeParametriser
 from .nested import TRANSFORMATION as NESTED_TRANSFORMATION
 from .radians import TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION
 from .relative import build_relative_transformation_matrix
@@ -20,7 +20,3 @@ class NestedRelativeFractionalParametriser(RelativeParametriser):
             @ build_relative_transformation_matrix(ref)
             @ NESTED_TRANSFORMATION
         )
-
-    def _normalise_reference(self, reference_model: np.ndarray | None) -> np.ndarray:
-        reference_model = _validate_reference(reference_model)
-        return reference_model

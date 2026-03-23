@@ -35,7 +35,7 @@ def m(lv, ref: np.ndarray) -> np.ndarray:
 @pytest.fixture
 def ref() -> np.ndarray:
     """Fixture for a reference model vector."""
-    return np.array([100.0, 200.0, 300.0])
+    return np.array([100.0, 200.0, 300.0, 400.0, 500.0])
 
 
 @pytest.fixture

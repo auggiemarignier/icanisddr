@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from ._abc import RelativeParametriser, _validate_reference
+from ._abc import RelativeParametriser
 from .radians import TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION
 
 
@@ -39,7 +39,3 @@ class RelativeFractionalDegreesParametriser(RelativeParametriser):
         return DEGREES_TO_RADIANS_TRANSFORMATION @ build_relative_transformation_matrix(
             ref
         )
-
-    def _normalise_reference(self, reference_model: np.ndarray | None) -> np.ndarray:
-        reference_model = _validate_reference(reference_model)
-        return reference_model

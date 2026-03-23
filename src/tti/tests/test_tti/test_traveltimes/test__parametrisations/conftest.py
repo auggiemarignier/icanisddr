@@ -149,7 +149,7 @@ def assert_parametriser_matches_love_values() -> Callable:
 
     The returned callable accepts an `include_shear: bool = True` argument. When
     `include_shear` is False the shear parameters `L` and `N` are compared to
-    zeros instead of `lv` values (useful for no-shear parametrisers).
+    the parametriser reference shear values when available, otherwise zeros (useful for no-shear parametrisers).
     """
 
     def _fn(
@@ -167,8 +167,11 @@ def assert_parametriser_matches_love_values() -> Callable:
             np.testing.assert_allclose(L, lv.L)
             np.testing.assert_allclose(N, lv.N)
         else:
-            np.testing.assert_allclose(L, np.zeros_like(lv.L))
-            np.testing.assert_allclose(N, np.zeros_like(lv.N))
+            reference_model = getattr(parametriser, "reference_model", None)
+            ref_L = 0.0 if reference_model is None else reference_model[3]
+            ref_N = 0.0 if reference_model is None else reference_model[4]
+            np.testing.assert_allclose(L, np.full_like(lv.L, ref_L))
+            np.testing.assert_allclose(N, np.full_like(lv.N, ref_N))
         np.testing.assert_allclose(eta1, np.radians(lv.eta1))
         np.testing.assert_allclose(eta2, np.radians(lv.eta2))
 

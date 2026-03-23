@@ -38,13 +38,7 @@ def m(lv, ref: np.ndarray) -> np.ndarray:
 @pytest.fixture
 def ref() -> np.ndarray:
     """Fixture for a reference model vector."""
-    return np.array(
-        [
-            100.0,
-            200.0,
-            300.0,
-        ]
-    )
+    return np.array([100.0, 200.0, 300.0, 400.0, 500.0])
 
 
 @pytest.fixture
@@ -81,18 +75,15 @@ def test_apply_jacobian(
     assert_jacobian_matches_finite_difference(parametriser, grad_lv, m)
 
 
-def test_relative_no_shear_composed_transformation() -> None:
+def test_relative_no_shear_composed_transformation(ref: np.ndarray) -> None:
     """Test that the RelativeNoShearLoveDegreeAngles class uses the correct composed transformation matrix."""
-    ref3 = np.array([1.0, 2.0, 3.0])
-    # The RelativeNoShear class expands the 3-element ref into 5 by appending zeros
-    ref5 = np.concatenate([ref3, np.zeros(2)])
     expected = (
         DEGREES_TO_RADIANS_TRANSFORMATION
-        @ build_relative_transformation_matrix(ref5)
+        @ build_relative_transformation_matrix(ref)
         @ NO_SHEAR_TRANSFORMATION
     )
 
-    p = RelativeFractionalNoShearParametriser(reference_model=ref3)
+    p = RelativeFractionalNoShearParametriser(reference_model=ref)
     assert np.allclose(p.transformation, expected)
 
 
@@ -105,22 +96,22 @@ def test_relative_no_shear_invalid_reference_length_raises() -> None:
     # too long
     with pytest.raises(ValueError):
         RelativeFractionalNoShearParametriser(
-            reference_model=np.array([1.0, 2.0, 3.0, 4.0])
+            reference_model=np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
         )
 
 
-def test_relative_no_shear_none_uses_zero_reference() -> None:
-    """Passing None as reference_model should use a zero reference and build the composed transformation accordingly for no-shear variant."""
+def test_relative_no_shear_none_uses_one_reference() -> None:
+    """Passing None as reference_model should use a one reference and build the composed transformation accordingly for no-shear variant."""
     p = RelativeFractionalNoShearParametriser(reference_model=None)
     expected = (
         DEGREES_TO_RADIANS_TRANSFORMATION
-        @ build_relative_transformation_matrix(np.zeros(5))
+        @ build_relative_transformation_matrix(np.ones(5))
         @ NO_SHEAR_TRANSFORMATION
     )
     assert np.allclose(p.transformation, expected)
 
 
-def test_reference_model_property_none_returns_zeros_no_shear() -> None:
-    """When constructed with `reference_model=None`, the `reference_model` property should be a zero vector of length 5 for no-shear variant."""
+def test_reference_model_property_none_returns_ones_no_shear() -> None:
+    """When constructed with `reference_model=None`, the `reference_model` property should be a one vector of length 5 for no-shear variant."""
     p = RelativeFractionalNoShearParametriser(reference_model=None)
-    assert np.allclose(p.reference_model, np.zeros(5))
+    assert np.allclose(p.reference_model, np.ones(5))
