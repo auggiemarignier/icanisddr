@@ -232,7 +232,7 @@ def _validate_reference(reference_model: np.ndarray | None) -> np.ndarray:
     Parameters
     ----------
     reference_model : np.ndarray | None
-        Reference model values for A, C, F, L, N. If None, defaults to zeros.
+        Reference model values for A, C, F, L, N. If None, defaults to ones.
 
     Raises
     ------
@@ -240,7 +240,7 @@ def _validate_reference(reference_model: np.ndarray | None) -> np.ndarray:
         If the reference model does not have 5 values for A, C, F, L, N.
     """
     if reference_model is None:
-        reference_model = np.zeros(5)
+        reference_model = np.ones(5)
     elif len(reference_model) != 5:
         raise ValueError("Reference model must have 5 values for A, C, F, L, N.")
     return reference_model
@@ -252,7 +252,7 @@ def _validate_reference_no_shear(reference_model: np.ndarray | None) -> np.ndarr
     Parameters
     ----------
     reference_model : np.ndarray | None
-        Reference model values for A, C, F. If None, defaults to zeros.
+        Reference model values for A, C, F. If None, defaults to ones.
 
     Raises
     ------
@@ -260,7 +260,7 @@ def _validate_reference_no_shear(reference_model: np.ndarray | None) -> np.ndarr
         If the reference model does not have 3 values for A, C, F.
     """
     if reference_model is None:
-        reference_model = np.zeros(3)
+        reference_model = np.ones(3)
     elif len(reference_model) != 3:
         raise ValueError("Reference model must have 3 values for A, C, F.")
     return reference_model
