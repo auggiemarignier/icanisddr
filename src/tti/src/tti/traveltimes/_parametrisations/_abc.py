@@ -200,22 +200,28 @@ def _transform_model_vector(
 def _jacobian_to_dm(
     grad: np.ndarray, transform_fn: Callable[[np.ndarray], np.ndarray]
 ) -> np.ndarray:
-    """Convert from dt_dparams to dt_dm.
+    """Convert from dt_dparams to dt_dm by applying a supplied Jacobian transform.
 
-    Chain rule to scale the angle derivatives to be wrt angles in degrees.
-    The gradients with respect to the Love parameters (A, C, F, L, N) are unchanged.
+    This helper does not implement any specific parameter or angle scaling itself;
+    it simply applies ``transform_fn`` to the input gradient tensor. Any chain-rule
+    operations (for example, unit conversions or linear reparameterisations) must
+    be implemented inside ``transform_fn``.
 
     Parameters
     ----------
     grad : ndarray, shape (..., 7, T)
-        Gradient of travel times (T) with respect to the Love parameters and angles.
-        Gradient is expected to be ordered as [dA, dC, dF, dL, dN, deta1, deta2].
-        deta1 and deta2 are with respect to the angles in radians.
+        Gradient of travel times (T) with respect to the parametrised model
+        components. By convention this may be ordered as
+        ``[dA, dC, dF, dL, dN, deta1, deta2]``, but no ordering is enforced here.
+    transform_fn : Callable[[ndarray], ndarray]
+        Function that maps ``grad`` to the gradient with respect to the input
+        model vector.
 
     Returns
     -------
-    grad_dm : ndarray, shape (..., 7, T)
-        Gradient of travel times (T) with respect to the input model vector.
+    grad_dm : ndarray
+        Gradient of travel times (T) with respect to the input model vector,
+        as returned by ``transform_fn``.
     """
     return transform_fn(grad)
 
