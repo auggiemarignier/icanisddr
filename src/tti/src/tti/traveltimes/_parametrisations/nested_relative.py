@@ -2,14 +2,14 @@
 
 import numpy as np
 
-from ._abc import RelativeLinearParametriser, _validate_reference
+from ._abc import RelativeParametriser, _validate_reference
 from .nested import TRANSFORMATION as NESTED_TRANSFORMATION
 from .radians import TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION
 from .relative import build_relative_transformation_matrix
 
 
-class NestedRelativeLoveDegreeAngles(RelativeLinearParametriser):
-    """Nested relative parametrisation for Love parameters and angles in degrees."""
+class NestedRelativeFractionalParametriser(RelativeParametriser):
+    """Nested relative parametriser for Love parameters and angles in degrees."""
 
     n_model_params_per_segment = 7
 

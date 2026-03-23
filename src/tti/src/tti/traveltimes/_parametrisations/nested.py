@@ -19,8 +19,8 @@ TRANSFORMATION = np.array(
 )
 
 
-class NestedLoveRadianAngles(LinearParametriser):
-    """Parametriser for nested differences of Love parameters and angles in radians."""
+class NestedDegreesParametriser(LinearParametriser):
+    """Parametriser for nested differences of Love parameters and angles in degrees."""
 
     n_model_params_per_segment = 7
     transformation = DEGREES_TO_RADIANS_TRANSFORMATION @ TRANSFORMATION

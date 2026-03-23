@@ -8,7 +8,7 @@ import numpy as np
 from .._types import seven_arrays
 
 
-class Parametriser(ABC):
+class BaseParametriser(ABC):
     """Abstract base class for parametrisation functions that transform input parameters into a form suitable for travel time calculations."""
 
     n_model_params_per_segment: int
@@ -59,7 +59,7 @@ class Parametriser(ABC):
         ...
 
 
-class LinearParametriser(Parametriser):
+class LinearParametriser(BaseParametriser):
     """A simple linear parametriser that applies a fixed transformation matrix to the input model vector."""
 
     transformation: np.ndarray
@@ -83,7 +83,7 @@ class LinearParametriser(Parametriser):
         return _jacobian_to_dm(grad, lambda x: self.transformation.T @ x)
 
 
-class RelativeLinearParametriser(LinearParametriser):
+class RelativeParametriser(LinearParametriser):
     """A linear parametriser that applies a fixed transformation matrix to the input model vector, where the first 5 parameters are fractional perturbations from a reference model."""
 
     def __init__(self, reference_model: np.ndarray | None = None) -> None:

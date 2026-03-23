@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from ._abc import RelativeLinearParametriser, _validate_reference
+from ._abc import RelativeParametriser, _validate_reference
 from .radians import TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION
 
 
@@ -29,7 +29,7 @@ def build_relative_transformation_matrix(ref: np.ndarray) -> np.ndarray:
     return T
 
 
-class RelativeLoveDegreeAngles(RelativeLinearParametriser):
+class RelativeFractionalDegreesParametriser(RelativeParametriser):
     """Parametriser for relative Love parameters and angles in degrees."""
 
     n_model_params_per_segment = 7

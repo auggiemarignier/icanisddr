@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from tti.traveltimes._parametrisations._abc import Parametriser
-from tti.traveltimes._parametrisations.nested import NestedLoveRadianAngles
+from tti.traveltimes._parametrisations._abc import BaseParametriser as Parametriser
+from tti.traveltimes._parametrisations.nested import NestedDegreesParametriser
 
 
 @pytest.fixture
@@ -25,9 +25,9 @@ def m(lv) -> np.ndarray:
 
 
 @pytest.fixture
-def parametriser() -> NestedLoveRadianAngles:
-    """Fixture for the NestedLoveDegreeAngles parametriser."""
-    return NestedLoveRadianAngles()
+def parametriser() -> NestedDegreesParametriser:
+    """Fixture for the NestedDegreesParametriser parametriser."""
+    return NestedDegreesParametriser()
 
 
 def test_num_model_params_per_segment(parametriser: Parametriser) -> None:

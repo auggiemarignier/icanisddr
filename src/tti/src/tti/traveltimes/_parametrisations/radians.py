@@ -18,7 +18,7 @@ TRANSFORMATION = np.array(
 )
 
 
-class Radians(LinearParametriser):
+class AbsoluteDegreesParametriser(LinearParametriser):
     """Parametriser for absolute Love parameters and angles in degrees."""
 
     n_model_params_per_segment = 7

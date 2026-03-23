@@ -18,7 +18,7 @@ TRANSFORMATION = np.array(
 )
 
 
-class NoShearLoveRadianAngles(LinearParametriser):
+class NoShearRadianParametriser(LinearParametriser):
     """Parametriser for Love parameters without shear and angles in radians."""
 
     n_model_params_per_segment = 5

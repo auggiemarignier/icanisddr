@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import numpy as np
 import pytest
 
-from tti.traveltimes._parametrisations import Parametriser
+from tti.traveltimes._parametrisations import BaseParametriser as Parametriser
 
 
 @dataclass

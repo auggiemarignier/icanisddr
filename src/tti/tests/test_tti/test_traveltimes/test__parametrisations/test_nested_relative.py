@@ -3,9 +3,9 @@
 import numpy as np
 import pytest
 
-from tti.traveltimes._parametrisations._abc import Parametriser
+from tti.traveltimes._parametrisations._abc import BaseParametriser as Parametriser
 from tti.traveltimes._parametrisations.nested_relative import (
-    NestedRelativeLoveDegreeAngles,
+    NestedRelativeFractionalParametriser,
 )
 
 
@@ -44,9 +44,9 @@ def ref() -> np.ndarray:
 
 
 @pytest.fixture
-def parametriser(ref: np.ndarray) -> NestedRelativeLoveDegreeAngles:
-    """Fixture for the NestedRelativeLoveDegreeAngles parametriser."""
-    return NestedRelativeLoveDegreeAngles(reference_model=ref)
+def parametriser(ref: np.ndarray) -> NestedRelativeFractionalParametriser:
+    """Fixture for the NestedRelativeFractionalParametriser parametriser."""
+    return NestedRelativeFractionalParametriser(reference_model=ref)
 
 
 def test_num_model_params_per_segment(parametriser: Parametriser) -> None:

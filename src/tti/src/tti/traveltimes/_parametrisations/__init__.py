@@ -1,19 +1,25 @@
 """Parametrisations for travel time calculations."""
 
-from ._abc import Parametriser
-from .nested import NestedLoveRadianAngles
-from .nested_no_shear import NestedNoShearLoveDegreeAngles
-from .radians import Radians
-from .radians_no_shear import RadiansNoShearLoveDegreeAngles
-from .relative import RelativeLoveDegreeAngles
-from .relative_no_shear import RelativeNoShearLoveDegreeAngles
+from ._abc import BaseParametriser, LinearParametriser, RelativeParametriser
+from .nested import NestedDegreesParametriser
+from .nested_no_shear import NestedNoShearDegreesParametriser
+from .nested_relative import NestedRelativeFractionalParametriser
+from .nested_relative_no_shear import NestedRelativeFractionalNoShearParametriser
+from .radians import AbsoluteDegreesParametriser
+from .radians_no_shear import AbsoluteDegreesNoShearParametriser
+from .relative import RelativeFractionalDegreesParametriser
+from .relative_no_shear import RelativeFractionalNoShearParametriser
 
 __all__ = [
-    "Radians",
-    "RadiansNoShearLoveDegreeAngles",
-    "NestedLoveRadianAngles",
-    "NestedNoShearLoveDegreeAngles",
-    "Parametriser",
-    "RelativeLoveDegreeAngles",
-    "RelativeNoShearLoveDegreeAngles",
+    "AbsoluteDegreesParametriser",
+    "AbsoluteDegreesNoShearParametriser",
+    "NestedDegreesParametriser",
+    "NestedNoShearDegreesParametriser",
+    "BaseParametriser",
+    "LinearParametriser",
+    "RelativeParametriser",
+    "RelativeFractionalDegreesParametriser",
+    "RelativeFractionalNoShearParametriser",
+    "NestedRelativeFractionalParametriser",
+    "NestedRelativeFractionalNoShearParametriser",
 ]

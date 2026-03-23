@@ -5,7 +5,7 @@ from .no_shear import TRANSFORMATION as NO_SHEAR_TRANSFORMATION
 from .radians import TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION
 
 
-class RadiansNoShearLoveDegreeAngles(LinearParametriser):
+class AbsoluteDegreesNoShearParametriser(LinearParametriser):
     """Parametriser for absolute Love parameters (no shear) and angles in degrees."""
 
     n_model_params_per_segment = 5

@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from tti.traveltimes._parametrisations._abc import Parametriser
-from tti.traveltimes._parametrisations.radians import Radians
+from tti.traveltimes._parametrisations._abc import BaseParametriser as Parametriser
+from tti.traveltimes._parametrisations.radians import AbsoluteDegreesParametriser
 
 
 @pytest.fixture
@@ -21,9 +21,9 @@ def m(lv) -> np.ndarray:
 
 
 @pytest.fixture
-def parametriser() -> Radians:
-    """Fixture for the AbsoluteLoveDegreeAngles parametriser."""
-    return Radians()
+def parametriser() -> AbsoluteDegreesParametriser:
+    """Fixture for the AbsoluteDegreesParametriser parametriser."""
+    return AbsoluteDegreesParametriser()
 
 
 def test_num_model_params_per_segment(parametriser: Parametriser) -> None:
