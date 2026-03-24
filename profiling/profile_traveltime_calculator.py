@@ -5,7 +5,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tti.forward import TravelTimeCalculator
+from tti.traveltimes import TravelTimeCalculator
 
 
 def generate_random_paths(num_paths: int) -> tuple[np.ndarray, np.ndarray]:

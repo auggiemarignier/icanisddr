@@ -25,6 +25,10 @@ from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
 from tti.traveltimes import TravelTimeCalculator
+from tti.traveltimes._parametrisations import (
+    AbsoluteDegreesParametriser,
+    NestedNoShearDegreesParametriser,
+)
 from tti.traveltimes.paths import calculate_path_direction_vector
 
 logging.basicConfig(
@@ -60,9 +64,9 @@ BASE_TTC_FACTORY = partial(
 )
 
 # Synthetic data computed based on absolute perturbations from PREM including shear components
-SYNTH_CALCULATOR = BASE_TTC_FACTORY(nested=False, shear=True, N=True)
-# Forward model takes nested parameters and includes L but excludes N
-FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True, shear=True, N=False)
+SYNTH_CALCULATOR = BASE_TTC_FACTORY(parametriser=AbsoluteDegreesParametriser())
+# Forward model takes nested parameters and excludes shear components.
+FORWARD_CALCULATOR = BASE_TTC_FACTORY(parametriser=NestedNoShearDegreesParametriser())
 
 OUTPUT_DIR = (
     Path(__file__).parent.parent / "outputs" / datetime.now().strftime("%Y%m%d-%H%M%S")

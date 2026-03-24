@@ -21,6 +21,7 @@ from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
 from tti.traveltimes import TravelTimeCalculator
+from tti.traveltimes._parametrisations import NestedNoShearDegreesParametriser
 from tti.traveltimes.paths import calculate_path_direction_vector
 
 logging.basicConfig(
@@ -97,9 +98,7 @@ def _setup_likelihood(
         ic_out[valid_rays],
         normalisation=normalisation,
         weights=weights.T,
-        nested=True,
-        shear=True,
-        N=False,
+        parametriser=NestedNoShearDegreesParametriser(),
     )
     inv_covar = 1 / sigma[valid_rays] ** 2
     likelihood = GaussianLikelihood(ttc, dt_over_t[valid_rays], inv_covar)
