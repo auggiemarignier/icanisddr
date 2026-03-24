@@ -149,6 +149,7 @@ class TravelTimeCalculator:
         ndarray, shape ([batch], npaths,)
             Relative traveltime perturbations for each path.
         """
+        m = np.atleast_2d(m)
         A, C, F, L, N, eta1, eta2 = self.parametriser.to_parameters(m)
         return self._call_core(A, C, F, L, N, eta1, eta2)
 
