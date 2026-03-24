@@ -6,8 +6,8 @@ from tti.elastic.voigt import gradient_D
 
 from ..elastic.voigt import n_outer_n
 from ..elastic.voigt import tilted_transverse_isotropic_tensor as ttitv
-from ._parametrisations import AbsoluteDegreesParametriser
-from ._parametrisations import BaseParametriser as Parametriser
+from .parametrisations import AbsoluteDegreesParametriser
+from .parametrisations import BaseParametriser as Parametriser
 from .paths import calculate_path_direction_vector
 
 

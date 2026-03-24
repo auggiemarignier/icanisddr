@@ -3,17 +3,17 @@
 import numpy as np
 import pytest
 
-from tti.traveltimes._parametrisations._abc import BaseParametriser as Parametriser
-from tti.traveltimes._parametrisations.no_shear import (
+from tti.traveltimes.parametrisations._abc import BaseParametriser as Parametriser
+from tti.traveltimes.parametrisations.no_shear import (
     TRANSFORMATION as NO_SHEAR_TRANSFORMATION,
 )
-from tti.traveltimes._parametrisations.radians import (
+from tti.traveltimes.parametrisations.radians import (
     TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION,
 )
-from tti.traveltimes._parametrisations.relative import (
+from tti.traveltimes.parametrisations.relative import (
     build_relative_transformation_matrix,
 )
-from tti.traveltimes._parametrisations.relative_no_shear import (
+from tti.traveltimes.parametrisations.relative_no_shear import (
     RelativeFractionalNoShearParametriser,
 )
 

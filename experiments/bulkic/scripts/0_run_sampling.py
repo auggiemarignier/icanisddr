@@ -19,7 +19,7 @@ from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, nuts
 from tti.traveltimes import TravelTimeCalculator
-from tti.traveltimes._parametrisations import (
+from tti.traveltimes.parametrisations import (
     AbsoluteDegreesParametriser,
     NestedNoShearDegreesParametriser,
 )

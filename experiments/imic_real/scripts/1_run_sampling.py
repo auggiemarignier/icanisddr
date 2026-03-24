@@ -21,7 +21,7 @@ from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
 from tti.traveltimes import TravelTimeCalculator
-from tti.traveltimes._parametrisations import NestedNoShearDegreesParametriser
+from tti.traveltimes.parametrisations import NestedNoShearDegreesParametriser
 from tti.traveltimes.paths import calculate_path_direction_vector
 
 logging.basicConfig(

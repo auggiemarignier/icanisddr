@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from tti.traveltimes._parametrisations._abc import BaseParametriser as Parametriser
-from tti.traveltimes._parametrisations.radians import AbsoluteDegreesParametriser
+from tti.traveltimes.parametrisations._abc import BaseParametriser as Parametriser
+from tti.traveltimes.parametrisations.radians import AbsoluteDegreesParametriser
 
 
 @pytest.fixture

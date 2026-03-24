@@ -3,11 +3,11 @@
 import numpy as np
 import pytest
 
-from tti.traveltimes._parametrisations._abc import BaseParametriser as Parametriser
-from tti.traveltimes._parametrisations.radians import (
+from tti.traveltimes.parametrisations._abc import BaseParametriser as Parametriser
+from tti.traveltimes.parametrisations.radians import (
     TRANSFORMATION as DEGREES_TO_RADIANS_TRANSFORMATION,
 )
-from tti.traveltimes._parametrisations.relative import (
+from tti.traveltimes.parametrisations.relative import (
     RelativeFractionalDegreesParametriser,
     build_relative_transformation_matrix,
 )

@@ -433,8 +433,10 @@ class TestTravelTimeCalculator:
     ) -> None:
         """Test that a relative parametriser with a reference model produces expected traveltimes."""
         ic_in, ic_out = valid_paths
-        reference_love = rng.uniform(low=1.0, high=10.0, size=5)  # strictly positive reference Love parameters
-        from tti.traveltimes._parametrisations.relative import (
+        reference_love = rng.uniform(
+            low=1.0, high=10.0, size=5
+        )  # strictly positive reference Love parameters
+        from tti.traveltimes.parametrisations.relative import (
             RelativeFractionalDegreesParametriser,
         )
 
@@ -677,7 +679,7 @@ class TestTravelTimeCalculatorGradient:
         self, valid_paths: tuple[np.ndarray, np.ndarray]
     ) -> None:
         """Test that the gradient is calculated without error when shear parameters are not included."""
-        from tti.traveltimes._parametrisations.radians_no_shear import (
+        from tti.traveltimes.parametrisations.radians_no_shear import (
             AbsoluteDegreesNoShearParametriser,
         )
 
@@ -692,7 +694,7 @@ class TestTravelTimeCalculatorGradient:
 
     def test_gradient_nested(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
         """Test that the gradient is calculated without error when nested is True."""
-        from tti.traveltimes._parametrisations.nested import (
+        from tti.traveltimes.parametrisations.nested import (
             NestedDegreesParametriser,
         )
 
@@ -711,7 +713,7 @@ class TestTravelTimeCalculatorGradient:
         self, valid_paths: tuple[np.ndarray, np.ndarray]
     ) -> None:
         """Test that the gradient is calculated without error when nested is True and shear is False."""
-        from tti.traveltimes._parametrisations.nested_no_shear import (
+        from tti.traveltimes.parametrisations.nested_no_shear import (
             NestedNoShearDegreesParametriser,
         )
 
