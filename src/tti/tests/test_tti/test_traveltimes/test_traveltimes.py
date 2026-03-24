@@ -426,7 +426,7 @@ class TestTravelTimeCalculator:
         assert dt.shape == (batch_size, calculator.npaths)
         np.testing.assert_allclose(dt, expected, atol=1e-12)
 
-    def test_traveltime_calclulator_with_reference_love(
+    def test_traveltime_calculator_with_reference_love(
         self,
         valid_paths: tuple[np.ndarray, np.ndarray],
         rng: np.random.Generator,
