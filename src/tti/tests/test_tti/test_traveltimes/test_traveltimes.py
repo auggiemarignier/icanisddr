@@ -363,7 +363,7 @@ def valid_paths() -> tuple[np.ndarray, np.ndarray]:
 def calculator(valid_paths: tuple[np.ndarray, np.ndarray]) -> TravelTimeCalculator:
     """Fixture for a TravelTimeCalculator instance with valid paths."""
     ic_in, ic_out = valid_paths
-    return TravelTimeCalculator(ic_in, ic_out, nested=False, shear=True, N=True)
+    return TravelTimeCalculator(ic_in, ic_out)
 
 
 class TestTravelTimeCalculator:
@@ -417,7 +417,7 @@ class TestTravelTimeCalculator:
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
         m = np.stack(
-            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+            [np.repeat(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
         )
 
         expected = lam + 2 * mu
@@ -426,32 +426,40 @@ class TestTravelTimeCalculator:
         assert dt.shape == (batch_size, calculator.npaths)
         np.testing.assert_allclose(dt, expected, atol=1e-12)
 
-    def test_traveltime_calclulator_with_reference_love(
+    def test_traveltime_calculator_with_reference_love(
         self,
-        calculator: TravelTimeCalculator,
+        valid_paths: tuple[np.ndarray, np.ndarray],
         rng: np.random.Generator,
     ) -> None:
-        """Test that the TravelTimeCalculator correctly adds reference Love parameters."""
-        reference_love = rng.random(size=5)  # random reference Love parameters
-        # In this test we reuse the shared `calculator` fixture and explicitly override
-        # its `reference_love` attribute instead of constructing a new instance with
-        # `reference_love=...` in __init__. This keeps the fixture usage simple while
-        # still exercising the behavior with non-zero reference Love parameters.
-        calculator.reference_love = reference_love  # override default zeros
+        """Test that a relative parametriser with a reference model produces expected traveltimes."""
+        ic_in, ic_out = valid_paths
+        reference_love = rng.uniform(
+            low=1.0, high=10.0, size=5
+        )  # strictly positive reference Love parameters
+        from tti.traveltimes.parametrisations.relative import (
+            RelativeFractionalDegreesParametriser,
+        )
+
+        parametriser = RelativeFractionalDegreesParametriser(
+            reference_model=reference_love
+        )
+        calculator = TravelTimeCalculator(ic_in, ic_out, parametriser=parametriser)
+
         lam = 12.0
         mu = 5.0
 
         # determine perturbations that would yield isotropic medium when added to reference
-        dA = (lam + 2 * mu) - reference_love[0]
-        dC = (lam + 2 * mu) - reference_love[1]
-        dF = lam - reference_love[2]
-        dL = mu - reference_love[3]
-        dN = mu - reference_love[4]
+        dA = (lam + 2 * mu) / reference_love[0] - 1
+        dC = (lam + 2 * mu) / reference_love[1] - 1
+        dF = lam / reference_love[2] - 1
+        dL = mu / reference_love[3] - 1
+        dN = mu / reference_love[4] - 1
 
         nsegments = 3
         batch_size = 2
         m = np.stack(
-            [np.tile(np.array([dA, dC, dF, dL, dN, 0.0, 0.0]), nsegments)] * batch_size
+            [np.repeat(np.array([dA, dC, dF, dL, dN, 0.0, 0.0]), nsegments)]
+            * batch_size
         )
 
         dt = calculator(m)
@@ -478,14 +486,12 @@ class TestTravelTimeCalculator:
         # Create calculator with explicit normalisation value
         n = 2.0
         ic_in, ic_out = valid_paths
-        calculator = TravelTimeCalculator(
-            ic_in, ic_out, nested=False, shear=True, N=True, normalisation=n
-        )
+        calculator = TravelTimeCalculator(ic_in, ic_out, normalisation=n)
 
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
         m = np.stack(
-            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+            [np.repeat(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
         )
 
         expected = n * (lam + 2 * mu)
@@ -511,14 +517,16 @@ class TestTravelTimeCalculator:
         lam, mu = 12.0, 5.0
         a = lam + 2 * mu
         m = np.stack(
-            [np.tile(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
+            [np.repeat(np.array([a, a, lam, mu, mu, 0.0, 0.0]), nsegments)] * batch_size
         )
 
         # calculator initialised with no weights, so weighting will default to 1.0/nsegments
         before_update_traveltime = calculator(m)
 
         # Update weights to be 2.0/nsegments for all paths
-        new_weights = np.full((batch_size, nsegments, calculator.npaths), 2.0 / nsegments)
+        new_weights = np.full(
+            (batch_size, nsegments, calculator.npaths), 2.0 / nsegments
+        )
         calculator.update_weights(new_weights)
 
         after_update_traveltime = calculator(m)
@@ -564,7 +572,7 @@ class TestTravelTimeCalculatorGradient:
         """
 
         m = np.stack(
-            [np.tile(rng.random(size=7), nsegments)] * batch_size
+            [np.repeat(rng.random(size=7), nsegments)] * batch_size
         )  # random model parameters
 
         grad = calculator.gradient(m)
@@ -592,12 +600,10 @@ class TestTravelTimeCalculatorGradient:
 
         Comparing with a finite difference approximation.
         """
-        calculator = TravelTimeCalculator(
-            *valid_paths, nested=False, shear=True, N=True, normalisation=2.0
-        )
+        calculator = TravelTimeCalculator(*valid_paths, normalisation=2.0)
 
         m = np.stack(
-            [np.tile(rng.random(size=7), nsegments)] * batch_size
+            [np.repeat(rng.random(size=7), nsegments)] * batch_size
         )  # random model parameters
 
         grad = calculator.gradient(m)
@@ -628,15 +634,12 @@ class TestTravelTimeCalculatorGradient:
         npaths = valid_paths[0].shape[0]
         calculator = TravelTimeCalculator(
             *valid_paths,
-            nested=False,
-            shear=True,
-            N=True,
             normalisation=2.0,
             weights=rng.random((1, nsegments, npaths)),
         )
 
         m = np.stack(
-            [np.tile(rng.random(size=7), nsegments)] * batch_size
+            [np.repeat(rng.random(size=7), nsegments)] * batch_size
         )  # random model parameters
 
         grad = calculator.gradient(m)
@@ -657,9 +660,6 @@ class TestTravelTimeCalculatorGradient:
         ttc = TravelTimeCalculator(
             ic_in=np.array([[45.0, 45.0, 1.0], [135.0, 45.0, 1.0]]),
             ic_out=np.array([[-135.0, -45.0, 1.0], [-45.0, -45.0, 1.0]]),
-            nested=False,
-            shear=True,
-            N=True,
         )
         n1 = ttc.path_directions[:, 0]
         n2 = ttc.path_directions[:, 1]
@@ -679,8 +679,12 @@ class TestTravelTimeCalculatorGradient:
         self, valid_paths: tuple[np.ndarray, np.ndarray]
     ) -> None:
         """Test that the gradient is calculated without error when shear parameters are not included."""
+        from tti.traveltimes.parametrisations.radians_no_shear import (
+            AbsoluteDegreesNoShearParametriser,
+        )
+
         calculator = TravelTimeCalculator(
-            *valid_paths, nested=False, shear=False, N=False
+            *valid_paths, parametriser=AbsoluteDegreesNoShearParametriser()
         )
 
         m = np.array([[1.0, 1.0, 1.0, 0.0, 0.0]])  # only A, C, F, eta1, eta2
@@ -688,20 +692,15 @@ class TestTravelTimeCalculatorGradient:
         grad = calculator.gradient(m)
         assert grad.shape == (1, 5, calculator.npaths)
 
-    def test_gradient_no_N(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
-        """Test that the gradient is calculated without error when N parameter is not included."""
-        calculator = TravelTimeCalculator(
-            *valid_paths, nested=False, shear=True, N=False
-        )
-
-        m = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]])  # only A, C, F, L, eta1, eta2
-
-        grad = calculator.gradient(m)
-        assert grad.shape == (1, 6, calculator.npaths)
-
     def test_gradient_nested(self, valid_paths: tuple[np.ndarray, np.ndarray]) -> None:
         """Test that the gradient is calculated without error when nested is True."""
-        calculator = TravelTimeCalculator(*valid_paths, nested=True, shear=True, N=True)
+        from tti.traveltimes.parametrisations.nested import (
+            NestedDegreesParametriser,
+        )
+
+        calculator = TravelTimeCalculator(
+            *valid_paths, parametriser=NestedDegreesParametriser()
+        )
 
         m = np.array(
             [[1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]]
@@ -710,27 +709,16 @@ class TestTravelTimeCalculatorGradient:
         grad = calculator.gradient(m)
         assert grad.shape == (1, 7 * 2, calculator.npaths)  # summed over cells
 
-    def test_gradient_nested_no_N(
-        self, valid_paths: tuple[np.ndarray, np.ndarray]
-    ) -> None:
-        """Test that the gradient is calculated without error when nested is True and N is not included."""
-        calculator = TravelTimeCalculator(
-            *valid_paths, nested=True, shear=True, N=False
-        )
-
-        m = np.array(
-            [[1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0]]
-        )  # shape (1, 12) i.e. 1 batch, 2 cells, 6 params per cell
-
-        grad = calculator.gradient(m)
-        assert grad.shape == (1, 6 * 2, calculator.npaths)  # summed over cells
-
     def test_gradient_nested_no_shear(
         self, valid_paths: tuple[np.ndarray, np.ndarray]
     ) -> None:
         """Test that the gradient is calculated without error when nested is True and shear is False."""
+        from tti.traveltimes.parametrisations.nested_no_shear import (
+            NestedNoShearDegreesParametriser,
+        )
+
         calculator = TravelTimeCalculator(
-            *valid_paths, nested=True, shear=False, N=False
+            *valid_paths, parametriser=NestedNoShearDegreesParametriser()
         )
 
         m = np.array(

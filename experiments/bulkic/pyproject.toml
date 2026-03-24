@@ -19,4 +19,5 @@ notebooks = [
     "cartopy>=0.25.0",
     "jupyter>=1.1.1",
     "matplotlib>=3.10.8",
+    "pykdtree>=1.4.3",
 ]

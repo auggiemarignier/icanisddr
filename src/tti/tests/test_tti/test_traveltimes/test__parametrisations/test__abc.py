@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from tti.traveltimes._parametrisations._abc import (
+from tti.traveltimes.parametrisations._abc import (
     _jacobian_to_dm,
     _transform_model_vector,
 )

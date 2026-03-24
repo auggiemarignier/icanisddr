@@ -1,14 +1,13 @@
 """Main traveltime calculation routines for TTI media."""
 
-from collections.abc import Callable
-
 import numpy as np
+
+from tti.elastic.voigt import gradient_D
 
 from ..elastic.voigt import n_outer_n
 from ..elastic.voigt import tilted_transverse_isotropic_tensor as ttitv
-from ._gradient_D import _gradient_D_functions
-from ._types import seven_arrays
-from ._unpackings import _unpackings
+from .parametrisations import AbsoluteDegreesParametriser
+from .parametrisations import BaseParametriser as Parametriser
 from .paths import calculate_path_direction_vector
 
 
@@ -91,11 +90,8 @@ class TravelTimeCalculator:
         self,
         ic_in: np.ndarray,
         ic_out: np.ndarray,
-        reference_love: np.ndarray | None = None,
         weights: np.ndarray | None = None,
-        nested: bool = True,
-        shear: bool = False,
-        N: bool = False,
+        parametriser: Parametriser | None = None,
         normalisation: float = 1.0,
     ) -> None:
         """Initialise calculator.
@@ -106,21 +102,10 @@ class TravelTimeCalculator:
             Where the path enters the inner core (longitude (deg), latitude (deg), radius (km)).
         ic_out : ndarray, shape (npaths, 3)
             Where the path exits the inner core (longitude (deg), latitude (deg), radius (km)).
-        reference_love : ndarray, shape (5,), optional
-            Reference Love parameters [A, C, F, L, N].
-            Default is None, in which case 0 is used.
         weights : ndarray, shape (batch_size, n_cells, npaths), optional
             Weights for each segment along each path (default is None, which gives equal weights).
-        nested : bool, optional
-            Whether model parameters are nested (default is True).
-            The nested model parameter order is:
-                [A, C-A, F-A+2N, L-N, N, eta1, eta2]
-            The non-nested model parameter order is:
-                [A, C, F, L, N, eta1, eta2]
-        shear : bool, optional
-            Whether the shear parameters L and N are included in the model (default is False).
-        N : bool, optional
-            Whether the N parameter is included in the model (default is False).
+        parametriser : Parametriser | None, optional
+            Parametriser for converting model parameters to the individual parameters (default is None, which uses the default parametriser).
         normalisation : float, optional
             Normalisation constant to apply to the relative traveltime perturbation (default is 1.0).
         """
@@ -142,17 +127,7 @@ class TravelTimeCalculator:
                 )
         self.weights = weights
 
-        self._unpacking_function = _unpackings[nested][(shear, N)]
-        self._gradient_D_function = _gradient_D_functions[nested][(shear, N)]
-
-        if reference_love is None:
-            self.reference_love = np.zeros(5)
-        else:
-            if reference_love.shape != (5,):
-                raise ValueError(
-                    "reference_love must have shape (5,) containing [A, C, F, L, N]"
-                )
-            self.reference_love = reference_love
+        self.parametriser = parametriser or AbsoluteDegreesParametriser()
 
         self.normalisation = normalisation
 
@@ -165,18 +140,19 @@ class TravelTimeCalculator:
 
         Parameters
         ----------
-        m : ndarray, shape ([batch], 7n,)
-            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times, potentially in a batch.
-            That is, [A₁, C₁, F₁, L₁, N₁, eta1₁, eta2₁, ..., Aₙ, Cₙ, Fₙ, Lₙ, Nₙ, eta1ₙ, eta2ₙ].
+        m : ndarray, shape ([batch], P*n,)
+            Model parameters for n subregions and P parameters per subregion (P depends on the parametriser),
+            flattened in param-major order, potentially in a batch.
+            That is, all segments for each parameter before moving to the next parameter:
+            [A₁, A₂, ..., Aₙ, C₁, C₂, ..., Cₙ, ..., eta2₁, eta2₂, ..., eta2ₙ].
 
         Returns
         -------
         ndarray, shape ([batch], npaths,)
             Relative traveltime perturbations for each path.
         """
-        A, C, F, L, N, eta1, eta2 = _model_vector_to_parameters(
-            m, self._unpacking_function, self.reference_love
-        )
+        m = np.atleast_2d(m)
+        A, C, F, L, N, eta1, eta2 = self.parametriser.to_parameters(m)
         return self._call_core(A, C, F, L, N, eta1, eta2)
 
     def _call_core(
@@ -207,18 +183,19 @@ class TravelTimeCalculator:
 
         Parameters
         ----------
-        m : ndarray, shape ([batch], 7n,)
-            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times, potentially in a batch.
-            That is, [A₁, C₁, F₁, L₁, N₁, eta1₁, eta2₁, ..., Aₙ, Cₙ, Fₙ, Lₙ, Nₙ, eta1ₙ, eta2ₙ].
+        m : ndarray, shape ([batch], P*n,)
+            Model parameters for n subregions and P parameters per subregion (P depends on the parametriser),
+            flattened in param-major order, potentially in a batch.
+            That is, all segments for each parameter before moving to the next parameter:
+            [A₁, A₂, ..., Aₙ, C₁, C₂, ..., Cₙ, ..., eta2₁, eta2₂, ..., eta2ₙ].
 
         Returns
         -------
-        ndarray, shape ([batch], 7n, npaths)
-            Gradients of the relative traveltimes.
+        ndarray, shape ([batch], P*n, npaths)
+            Gradients of the relative traveltimes, flattened in param-major order matching the input ``m``.
         """
-        A, C, F, L, N, eta1, eta2 = _model_vector_to_parameters(
-            m, self._unpacking_function, self.reference_love
-        )
+        m = np.atleast_2d(m)
+        A, C, F, L, N, eta1, eta2 = self.parametriser.to_parameters(m)
 
         return self._gradient_core(A, C, F, L, N, eta1, eta2)
 
@@ -233,14 +210,12 @@ class TravelTimeCalculator:
         eta2: np.ndarray,
     ) -> np.ndarray:
         """Core gradient function that takes the individual parameters directly."""
-        dD = self._gradient_D_function(A, C, F, L, N, eta1, eta2)
+        dD = gradient_D(A, C, F, L, N, eta1, eta2)
         dt = calculate_relative_traveltime_voigt(
             self.path_directions, dD, normalisation=self.normalisation
-        )  # shape (batch, cells, nparams, npaths)
+        )  # shape (batch, cells, 7, npaths)
 
-        # The gradient functions `gradient_D_wrt_eta1/eta2` return derivatives wrt radians
-        # Convert back to degrees (angles are stored in the last two parameter slots)
-        dt[..., -2:, :] *= np.pi / 180.0
+        dt = self.parametriser.apply_jacobian(dt)
 
         batch, cells, nparams, npaths = dt.shape
         weights = self._resolve_weights(batch, cells)
@@ -248,8 +223,10 @@ class TravelTimeCalculator:
         dt_weighted = (
             weights[:, :, None, :] * dt
         )  # shape (batch, cells, nparams, npaths)
-        # Flatten over cells and nparams to get shape (batch, 7n, npaths)
-        dt_weighted = dt_weighted.reshape(batch, cells * nparams, npaths)
+        # Flatten over cells and nparams to get correct shape
+        dt_weighted = dt_weighted.transpose(0, 2, 1, 3).reshape(
+            batch, nparams * cells, npaths
+        )
 
         return dt_weighted
 
@@ -324,32 +301,3 @@ def _validate_paths(ic_in: np.ndarray, ic_out: np.ndarray) -> None:
         raise ValueError(
             f"In and out coordinates must be different for each path (path {idx_flat})"
         )
-
-
-def _add_reference_love(
-    A: np.ndarray,
-    C: np.ndarray,
-    F: np.ndarray,
-    L: np.ndarray,
-    N: np.ndarray,
-    reference_love: np.ndarray,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Add reference Love parameters to the model parameters."""
-    A += reference_love[0]
-    C += reference_love[1]
-    F += reference_love[2]
-    L += reference_love[3]
-    N += reference_love[4]
-    return A, C, F, L, N
-
-
-def _model_vector_to_parameters(
-    m: np.ndarray,
-    unpacking_function: Callable[[np.ndarray], seven_arrays],
-    reference_love: np.ndarray,
-) -> seven_arrays:
-    """Convert a model vector to the individual parameters A, C, F, L, N, eta1, eta2."""
-    m = np.atleast_2d(m)
-    A, C, F, L, N, eta1, eta2 = unpacking_function(m)
-    A, C, F, L, N = _add_reference_love(A, C, F, L, N, reference_love)
-    return A, C, F, L, N, eta1, eta2

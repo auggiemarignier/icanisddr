@@ -22,6 +22,7 @@ from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, mcmc
 from tti.traveltimes import TravelTimeCalculator
+from tti.traveltimes.parametrisations import NestedNoShearDegreesParametriser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,7 +73,10 @@ def _setup_likelihood(
     logger.info("Setting up likelihood function")
     normalisation = -1 / (2 * PREM_IC_RHO * (PREM_IC_VP * 1e3) ** 2)
     ttc = TravelTimeCalculator(
-        ic_in, ic_out, normalisation=normalisation, nested=True, shear=True, N=False
+        ic_in,
+        ic_out,
+        normalisation=normalisation,
+        parametriser=NestedNoShearDegreesParametriser(),
     )
     inv_covar = 1 / sigma**2
     likelihood = GaussianLikelihood(ttc, dt_over_t, inv_covar)

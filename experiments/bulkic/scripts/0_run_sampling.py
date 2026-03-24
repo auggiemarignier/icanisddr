@@ -19,6 +19,10 @@ from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, nuts
 from tti.traveltimes import TravelTimeCalculator
+from tti.traveltimes.parametrisations import (
+    AbsoluteDegreesParametriser,
+    NestedNoShearDegreesParametriser,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,9 +41,9 @@ BASE_TTC_FACTORY = partial(
 )
 
 # Synthetic data computed based on absolute perturbations from PREM including shear components
-SYNTH_CALCULATOR = BASE_TTC_FACTORY(nested=False, shear=True, N=True)
+SYNTH_CALCULATOR = BASE_TTC_FACTORY(parametriser=AbsoluteDegreesParametriser())
 # Forward model takes nested parameters, excluding shear components
-FORWARD_CALCULATOR = BASE_TTC_FACTORY(nested=True, shear=False, N=False)
+FORWARD_CALCULATOR = BASE_TTC_FACTORY(parametriser=NestedNoShearDegreesParametriser())
 
 CFG_FILE = Path(__file__).parent.parent / "config.yaml"
 OUTPUT_DIR = (
