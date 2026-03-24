@@ -190,6 +190,7 @@ class TravelTimeCalculator:
         ndarray, shape ([batch], 7n, npaths)
             Gradients of the relative traveltimes.
         """
+        m = np.atleast_2d(m)
         A, C, F, L, N, eta1, eta2 = self.parametriser.to_parameters(m)
 
         return self._gradient_core(A, C, F, L, N, eta1, eta2)
