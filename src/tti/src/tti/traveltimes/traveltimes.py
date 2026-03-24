@@ -140,9 +140,11 @@ class TravelTimeCalculator:
 
         Parameters
         ----------
-        m : ndarray, shape ([batch], 7n,)
-            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times, potentially in a batch.
-            That is, [A₁, C₁, F₁, L₁, N₁, eta1₁, eta2₁, ..., Aₙ, Cₙ, Fₙ, Lₙ, Nₙ, eta1ₙ, eta2ₙ].
+        m : ndarray, shape ([batch], P*n,)
+            Model parameters for n subregions and P parameters per subregion (P depends on the parametriser),
+            flattened in param-major order, potentially in a batch.
+            That is, all segments for each parameter before moving to the next parameter:
+            [A₁, A₂, ..., Aₙ, C₁, C₂, ..., Cₙ, ..., eta2₁, eta2₂, ..., eta2ₙ].
 
         Returns
         -------
@@ -181,14 +183,16 @@ class TravelTimeCalculator:
 
         Parameters
         ----------
-        m : ndarray, shape ([batch], 7n,)
-            Model parameters for n subregions, flattened as [A, C, F, L, N, eta1, eta2] repeated n times, potentially in a batch.
-            That is, [A₁, C₁, F₁, L₁, N₁, eta1₁, eta2₁, ..., Aₙ, Cₙ, Fₙ, Lₙ, Nₙ, eta1ₙ, eta2ₙ].
+        m : ndarray, shape ([batch], P*n,)
+            Model parameters for n subregions and P parameters per subregion (P depends on the parametriser),
+            flattened in param-major order, potentially in a batch.
+            That is, all segments for each parameter before moving to the next parameter:
+            [A₁, A₂, ..., Aₙ, C₁, C₂, ..., Cₙ, ..., eta2₁, eta2₂, ..., eta2ₙ].
 
         Returns
         -------
-        ndarray, shape ([batch], 7n, npaths)
-            Gradients of the relative traveltimes.
+        ndarray, shape ([batch], P*n, npaths)
+            Gradients of the relative traveltimes, flattened in param-major order matching the input ``m``.
         """
         m = np.atleast_2d(m)
         A, C, F, L, N, eta1, eta2 = self.parametriser.to_parameters(m)
