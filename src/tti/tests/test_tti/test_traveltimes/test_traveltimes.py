@@ -433,7 +433,7 @@ class TestTravelTimeCalculator:
     ) -> None:
         """Test that a relative parametriser with a reference model produces expected traveltimes."""
         ic_in, ic_out = valid_paths
-        reference_love = rng.random(size=5)  # random reference Love parameters
+        reference_love = rng.uniform(low=1.0, high=10.0, size=5)  # strictly positive reference Love parameters
         from tti.traveltimes._parametrisations.relative import (
             RelativeFractionalDegreesParametriser,
         )
