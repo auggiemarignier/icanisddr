@@ -17,10 +17,9 @@ import numpy as np
 import pandas as pd
 
 from expconfig import ExpConfig
-from icprem import PREM_IC_RHO, PREM_IC_VP
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
-from sampling.sampling import MCMCConfig, mcmc
+from sampling.sampling import MCMCConfig, nuts
 from tti.traveltimes import TravelTimeCalculator
 from tti.traveltimes.parametrisations import NestedNoShearDegreesParametriser
 
@@ -71,7 +70,7 @@ def _setup_likelihood(
     sigma: np.ndarray,
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function")
-    normalisation = -1 / (2 * PREM_IC_RHO * (PREM_IC_VP * 1e3) ** 2)
+    normalisation = -0.5
     ttc = TravelTimeCalculator(
         ic_in,
         ic_out,
@@ -124,7 +123,7 @@ def main() -> None:
     likelihood = _setup_likelihood(ic_in, ic_out, dt_over_t, sigma)
 
     logger.info("Running MCMC sampling")
-    samples, lnprob = mcmc(
+    samples, lnprob = nuts(
         prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
 
