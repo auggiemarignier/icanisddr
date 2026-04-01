@@ -12,17 +12,13 @@ from expconfig.config import PriorsConfig
 from expconfig.synthetic import (
     SynthConfig,
     create_paths,
-    gaussian_noise_data_max,
+    gaussian_noise,
 )
-from icprem import PREM_IC_RHO, PREM_IC_VP
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
-from sampling.sampling import MCMCConfig, nuts
+from sampling.sampling import MCMCConfig, mcmc
 from tti.traveltimes import TravelTimeCalculator
-from tti.traveltimes.parametrisations import (
-    AbsoluteDegreesParametriser,
-    NestedNoShearDegreesParametriser,
-)
+from tti.traveltimes.parametrisations import NestedNoShearDegreesParametriser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,17 +32,13 @@ BASE_TTC_FACTORY = partial(
     TravelTimeCalculator,
     ic_in=IC_IN,
     ic_out=IC_OUT,
+    normalisation=-0.5,
 )
 
 # Synthetic data computed based on absolute perturbations from PREM including shear components
-SYNTH_CALCULATOR = BASE_TTC_FACTORY(
-    parametriser=AbsoluteDegreesParametriser(),
-    normalisation=-1 / (2 * PREM_IC_RHO * (PREM_IC_VP * 1e3) ** 2),
-)
+SYNTH_CALCULATOR = BASE_TTC_FACTORY()
 # Forward model takes nested parameters, excluding shear components
-FORWARD_CALCULATOR = BASE_TTC_FACTORY(
-    parametriser=NestedNoShearDegreesParametriser(), normalisation=-0.5
-)
+FORWARD_CALCULATOR = BASE_TTC_FACTORY(parametriser=NestedNoShearDegreesParametriser())
 
 CFG_FILE = Path(__file__).parent.parent / "config.yaml"
 OUTPUT_DIR = (
@@ -61,10 +53,10 @@ def _gradient(x: np.ndarray) -> np.ndarray:
 
 def _setup_likelihood(
     synthetic_data: np.ndarray,
-    sigma: float,
+    sigma: float | np.ndarray,
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
-    inv_covar = np.array([1 / sigma**2])
+    inv_covar = 1 / sigma**2
     likelihood = GaussianLikelihood(
         FORWARD_CALCULATOR,
         synthetic_data,
@@ -113,16 +105,16 @@ def main() -> None:
 
     logger.info("Creating synthetic data...")
     synthetic_data_clean = SYNTH_CALCULATOR(cfg.truth.as_array())[0]
-    noise = gaussian_noise_data_max(cfg.data.noise_level, rng, synthetic_data_clean)
+    noise = gaussian_noise(cfg.data.noise_level, rng, synthetic_data_clean)
     synthetic_data = synthetic_data_clean + noise
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
-    sigma = synthetic_data_clean.max() * cfg.data.noise_level
+    sigma = np.full_like(synthetic_data, cfg.data.noise_level)
     likelihood = _setup_likelihood(synthetic_data, sigma)
     prior = _setup_prior(cfg.priors)
 
     logger.info("Running MCMC sampling")
-    samples, lnprob = nuts(
+    samples, lnprob = mcmc(
         prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
 
