@@ -138,8 +138,44 @@ def gaussian_noise_data_max(
     return rng.normal(loc=0.0, scale=scale, size=data.shape)
 
 
+def gaussian_noise(
+    noise_level: float,
+    rng: np.random.Generator,
+    data: np.ndarray | None = None,
+    **kwargs: object,
+) -> np.ndarray:
+    """Create Gaussian noise with a noise level relative to the absolute value of the data.
+
+    Parameters
+    ----------
+    noise_level : float
+        Noise level for synthetic data, defined as the standard deviation of the noise relative to the absolute value of the data. For example, a noise_level of 0.1 means that the noise will have a standard deviation equal to 10% of the absolute value of the data.
+    rng : np.random.Generator
+        Random number generator to use for noise generation.
+    data : ndarray, shape (n,)
+        Data to which noise will be added. The absolute value of this data will be used to determine the scale of the noise. If all zeros, the noise level will be interpreted as an absolute scale rather than a relative scale.
+
+    Returns
+    -------
+    ndarray, shape (n,)
+        Gaussian noise to add to synthetic data.
+
+    Raises
+    ------
+    ValueError
+        If data is None, since this noise model requires data to determine the noise the number of noise samples. data is None by default to conform to the NoiseModel protocol, but this specific noise model requires data to function properly.
+    """
+    if data is None:
+        raise ValueError(
+            "Data must be provided for gaussian_noise to determine noise shape."
+        )
+    scale = noise_level
+    return rng.normal(loc=0.0, scale=scale, size=data.shape)
+
+
 noise_models: dict[str, NoiseModel] = {
     "gaussian_data_max": gaussian_noise_data_max,
+    "gaussian": gaussian_noise,
 }
 
 
