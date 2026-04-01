@@ -4,6 +4,7 @@ import logging
 import os
 import pickle
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -63,22 +64,25 @@ def _setup_data(
     return ic_in, ic_out, dt_over_t, sigma
 
 
+def _gradient(ttc: TravelTimeCalculator, x: np.ndarray) -> np.ndarray:
+    """Thin wrapper for the forward calculator gradient to swap axes for pints compatibility."""
+    return ttc.gradient(x).swapaxes(-2, -1)
+
+
 def _setup_likelihood(
-    ic_in: np.ndarray,
-    ic_out: np.ndarray,
+    ttc: TravelTimeCalculator,
     dt_over_t: np.ndarray,
     sigma: np.ndarray,
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function")
-    normalisation = -0.5
-    ttc = TravelTimeCalculator(
-        ic_in,
-        ic_out,
-        normalisation=normalisation,
-        parametriser=NestedNoShearDegreesParametriser(),
-    )
+    gradient = partial(_gradient, ttc)
     inv_covar = 1 / sigma**2
-    likelihood = GaussianLikelihood(ttc, dt_over_t, inv_covar)
+    likelihood = GaussianLikelihood(
+        ttc,
+        dt_over_t,
+        inv_covar,
+        forward_fn_gradient=gradient,
+    )
     return likelihood
 
 
@@ -117,12 +121,18 @@ def main() -> None:
     logger.info("Starting real data bulk IC experiment")
     cfg = ExpConfig.load(CFG_FILE)
 
-    rng = np.random.default_rng(42)
     ic_in, ic_out, dt_over_t, sigma = _setup_data(DATA_FILE)
+    ttc = TravelTimeCalculator(
+        ic_in=ic_in,
+        ic_out=ic_out,
+        normalisation=-0.5,
+        parametriser=NestedNoShearDegreesParametriser(),
+    )
     prior = _setup_prior(cfg.priors.model_dump())
-    likelihood = _setup_likelihood(ic_in, ic_out, dt_over_t, sigma)
+    likelihood = _setup_likelihood(ttc, dt_over_t, sigma)
 
     logger.info("Running MCMC sampling")
+    rng = np.random.default_rng(42)
     samples, lnprob = nuts(
         prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
