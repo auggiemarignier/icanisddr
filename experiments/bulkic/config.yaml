@@ -1,5 +1,5 @@
 sampling:
-  nwalkers: 8
+  nwalkers: 400
   nsteps: 1500
   burn_in: 0
   thin: 0
@@ -11,11 +11,11 @@ priors:
     - type: gaussian
       mean: [0.0, 0.0, 0.0]
       inv_covar:
-        - [25.0, 0.00000000e+00, 0.00000000e+00]
-        - [0.00000000e+00, 50.0, 0.00000000e+00]
-        - [0.00000000e+00, 0.00000000e+00, 50.0]
+        - [100.0, 0.0, 0.0]
+        - [0.0, 50.0, 0.0]
+        - [0.0, 0.0, 50.0]
       indices: [0, 1, 2]
-    - type: wrapped_uniform
+    - type: uniform
       lower_bounds: -180.0
       upper_bounds: 180.0
       indices: [3]
@@ -42,15 +42,15 @@ hypotheses:
     indices: [4]
     nu: [0.0]
   - name: fully_isotropic
-    indices: [1, 2, 3]
-    nu: [0.0, 0.0, 0.0]
+    indices: [1, 2]
+    nu: [0.0, 0.0]
 truth:
-  A: 23.962579175289264e09
-  C: 152.32156972264292e09
-  F: -114.81921286676437e09
+  A: 0.0143
+  C: 0.0909
+  F: -0.0858
   L: 0.0
   N: 0.0
   eta1: 0.0
   eta2: 0.0
 data:
-  noise_level: 0.2
+  noise_level: 0.009
