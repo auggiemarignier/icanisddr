@@ -16,7 +16,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY src ./src
 
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --all-packages
 
 # RUNTIME STAGE
 FROM python:3.12-slim-bookworm
