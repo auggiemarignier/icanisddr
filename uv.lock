@@ -2086,6 +2086,15 @@ wheels = [
 ]
 
 [[package]]
+name = "ptemcee"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/81/1d/2b3f09f0eb3ce8530e59b03e1aab4bc260cc14ddbc7dad761f9107d944e6/ptemcee-1.0.0.tar.gz", hash = "sha256:58e7c1d9a477acd808668b5caa5cb4d61fc5f6cd1df02a391d0d04cd14453739", size = 17267, upload-time = "2015-08-28T12:18:18.249Z" }
+
+[[package]]
 name = "ptyprocess"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2653,6 +2662,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "expconfig" },
     { name = "icprem" },
+    { name = "ptemcee" },
     { name = "raytracer" },
     { name = "sampling" },
     { name = "sddr" },
@@ -2669,6 +2679,7 @@ dev = [
 requires-dist = [
     { name = "expconfig", editable = "src/expconfig" },
     { name = "icprem", editable = "src/icprem" },
+    { name = "ptemcee", specifier = ">=1.0.0" },
     { name = "raytracer", editable = "src/raytracer" },
     { name = "sampling", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling&branch=main" },
     { name = "sddr", git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr&branch=main" },
