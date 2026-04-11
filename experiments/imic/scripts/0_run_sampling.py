@@ -2,14 +2,11 @@
 
 import logging
 import pickle
-from collections.abc import Callable
 from datetime import datetime
 from functools import partial
 from pathlib import Path
 
 import numpy as np
-from ptemcee import Sampler
-from tqdm import tqdm
 
 from expconfig.config import PriorsConfig
 from expconfig.synthetic import (
@@ -18,8 +15,8 @@ from expconfig.synthetic import (
     gaussian_noise,
 )
 from sampling.likelihood import GaussianLikelihood
-from sampling.priors import CompoundPrior, PriorFunction
-from sampling.sampling import MCMCConfig
+from sampling.priors import CompoundPrior
+from sampling.sampling import MCMCConfig, ptmcmc
 from tti.traveltimes import TravelTimeCalculator
 from tti.traveltimes.parametrisations import (
     NestedNoShearDegreesParametriser,
@@ -75,61 +72,6 @@ def determine_weights(region, ic_in: np.ndarray, ic_out: np.ndarray) -> np.ndarr
     total_distances = segment_distances.sum(axis=1)
     weights = segment_distances / total_distances[:, None]
     return weights.T[None, ...]
-
-
-def mcmc(
-    ndim: int,
-    likelihood: Callable[[np.ndarray], float | np.ndarray],
-    prior: PriorFunction,
-    rng: np.random.Generator,
-    config: MCMCConfig | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Run MCMC sampling using the ensemble sampler.
-
-    Parameters
-    ----------
-    ndim : int
-        Number of dimensions in the parameter space.
-    likelihood : Callable[[ndarray], float | ndarray]
-        Likelihood function that takes model parameters and returns log-likelihood.
-        Should support both scalar (1D) and vectorised (2D batch) inputs if
-        config.vectorise is True.
-    prior : PriorFunction
-        Prior function that takes model parameters and returns log-prior.
-        Should support both scalar (1D) and vectorised (2D batch) inputs if
-        config.vectorise is True.
-    rng : np.random.Generator
-        Random number generator for initializing walkers.
-    config : MCMCConfig or None, optional
-        MCMC configuration. If None, uses default configuration.
-
-    Returns
-    -------
-    samples : ndarray, shape (num_samples, ndim)
-        MCMC samples of the model parameters, after burn-in and thinning.
-    lnprob : ndarray, shape (num_samples,)
-        Log-probabilities of the MCMC samples, after burn-in and thinning.
-    """
-    if config is None:
-        config = MCMCConfig()
-
-    ntemps = 10
-
-    initial_pos = prior.sample(ntemps * config.nwalkers, rng).reshape(
-        (ntemps, config.nwalkers, ndim)
-    )
-
-    sampler = Sampler(
-        config.nwalkers,
-        ndim,
-        likelihood,
-        prior,
-        threads=12,
-        ntemps=ntemps,
-    )
-    for _ in tqdm(sampler.sample(initial_pos, config.nsteps), total=config.nsteps):
-        pass
-    return sampler.chain, sampler.logprobability
 
 
 logging.basicConfig(
@@ -220,7 +162,7 @@ def main() -> None:
     prior = _setup_prior(cfg.priors)
 
     logger.info("Running MCMC sampling")
-    samples, lnprob = mcmc(
+    samples, lnprob = ptmcmc(
         prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
 
