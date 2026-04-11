@@ -1,0 +1,70 @@
+sampling:
+  nwalkers: 50
+  nsteps: 150000
+  burn_in: 0
+  thin: 0
+  progress: true
+  parallel: true
+  vectorise: false
+priors:
+  components:
+    - type: gaussian
+      mean: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # A, A, C, C, F, F
+      inv_covar:
+        - [100.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        - [0.0, 100.0, 0.0, 0.0, 0.0, 0.0]
+        - [0.0, 0.0, 50.0, 0.0, 0.0, 0.0]
+        - [0.0, 0.0, 0.0, 50.0, 0.0, 0.0]
+        - [0.0, 0.0, 0.0, 0.0, 50.0, 0.0]
+        - [0.0, 0.0, 0.0, 0.0, 0.0, 50.0]
+      indices: [0, 1, 2, 3, 4, 5]
+    - type: wrapped_uniform
+      lower_bounds: [-180.0, -180.0]
+      upper_bounds: [180.0, 180.0]
+      indices: [6, 7]
+    - type: uniform
+      lower_bounds: [0.0, 0.0]
+      upper_bounds: [90.0, 90.0]
+      indices: [8, 9]
+    - type: wrapped_uniform
+      lower_bounds: 0.0
+      upper_bounds: 1221.5
+      indices: [10]
+training:
+  batch_size: 24
+  epochs: 10
+  verbose: true
+flow:
+    flow_type: "RQSpline"
+    flow_model_config:
+      n_layers: 8
+      n_bins: 8
+      hidden_size: [64, 64]
+      spline_range: [-10.0, 10.0]
+    standardize: true
+    learning_rate: 0.001
+    momentum: 0.9
+hypotheses:
+  - name: Isotropic OIC
+    indices: [3, 5]
+    nu: [0.0, 0.0]
+  - name: Completely transverse isotropic
+    indices: [8, 9]
+    nu: [0.0, 0.0]
+  - name: Completely isotropic
+    indices: [2, 3, 4, 5]
+    nu: [0.0, 0.0, 0.0, 0.0]
+  - name: No IMIC
+    indices: [10]
+    nu: [0.0]
+geometry:
+  regions:
+    - type: ball
+      radius: 400.0
+      label: IC
+    - type: shell
+      radius_inner: 400.0
+      radius_outer: 1221.5
+      label: OC
+data:
+  noise_level: 0.0009

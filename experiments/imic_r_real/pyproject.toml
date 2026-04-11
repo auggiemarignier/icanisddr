@@ -1,0 +1,26 @@
+[project]
+name = "imic_r_real"
+version = "0.1.0"
+description = "Scripts for IMIC_r analysis"
+readme = "README.md"
+requires-python = ">=3.12, <3.14"
+dependencies = [
+    "tti",
+    "expconfig",
+    "icprem",
+    "raytracer",
+]
+
+[tool.uv.sources]
+tti = { workspace = true }
+expconfig = { workspace = true }
+icprem = { workspace = true }
+raytracer = { workspace = true }
+
+[dependency-groups]
+notebooks = [
+    "cartopy>=0.25.0",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.8",
+    "pykdtree>=1.4.3",
+]
