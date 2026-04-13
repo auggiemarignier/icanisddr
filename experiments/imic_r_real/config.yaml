@@ -1,11 +1,8 @@
 sampling:
   nwalkers: 50
-  nsteps: 150000
-  burn_in: 0
-  thin: 0
+  nsteps: 140000
   progress: true
   parallel: true
-  vectorise: false
 priors:
   components:
     - type: gaussian
