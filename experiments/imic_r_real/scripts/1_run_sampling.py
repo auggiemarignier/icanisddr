@@ -3,8 +3,8 @@
 import logging
 import pickle
 from datetime import datetime
-from functools import partial
 from pathlib import Path
+from typing import Self
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,7 @@ from expconfig.config import ExpConfig, PriorsConfig
 from expconfig.geometry import IC_RADIUS
 from raytracer import BallInShell
 from sampling.likelihood import GaussianLikelihood
+from sampling.likelihood._base import ForwardBase
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, ptmcmc
 from tti.traveltimes import TravelTimeCalculator
@@ -145,6 +146,55 @@ OUTPUT_DIR = (
 )
 
 
+class Forward(ForwardBase[TravelTimeCalculator]):
+    """Forward wrapper implementing the new `ForwardBase` API.
+
+    The internal state is a `TravelTimeCalculator` instance. The forward
+    callable expects model parameter arrays where the final column is the
+    IMIC radius.
+    """
+
+    state: TravelTimeCalculator
+
+    def __init__(self, state: TravelTimeCalculator) -> None:
+        self.state = state
+
+    @classmethod
+    def from_state(cls, state: TravelTimeCalculator) -> Self:
+        """Initialise from state."""
+        return cls(state)
+
+    def __call__(self, model_params: np.ndarray) -> np.ndarray:
+        """Call on a batch of model parameters.
+
+        Determines weights, updates them in the calculator, then calls the calculator.
+        """
+        model_params = np.atleast_2d(model_params)
+        tti_params = model_params[:, :-1]
+        imic_radii = model_params[:, -1]
+        n_cells = (
+            tti_params.shape[1] // self.state.parametriser.n_model_params_per_segment
+        )
+
+        n_samples = model_params.shape[0]
+        npaths = self.state.ic_in.shape[0]
+
+        invalid = (imic_radii < 0) | (imic_radii > IC_RADIUS)
+        batched_weights = np.zeros((n_samples, n_cells, npaths))
+        for i, (is_sample_invalid, imic_r) in enumerate(zip(invalid, imic_radii)):
+            if not is_sample_invalid:
+                batched_weights[i] = determine_weights(
+                    BallInShell(imic_r, IC_RADIUS),
+                    self.state.ic_in,
+                    self.state.path_directions,
+                )
+
+        self.state.update_weights(batched_weights)
+        out = self.state(tti_params)
+        out[invalid, :] = 1e6
+        return out
+
+
 def _setup_likelihood(
     ttc: TravelTimeCalculator,
     dt_over_t: np.ndarray,
@@ -152,8 +202,8 @@ def _setup_likelihood(
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
     inv_covar = 1 / sigma**2
-    forward_fn = partial(forward, ttc)
-    likelihood = GaussianLikelihood(forward_fn, dt_over_t, inv_covar)
+    forward_inst = Forward.from_state(ttc)
+    likelihood = GaussianLikelihood(forward_inst, dt_over_t, inv_covar)
     return likelihood
 
 
