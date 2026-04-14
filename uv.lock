@@ -1904,7 +1904,7 @@ wheels = [
 
 [[package]]
 name = "orbax-checkpoint"
-version = "0.11.34"
+version = "0.11.36"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -1923,9 +1923,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uvloop", marker = "sys_platform != 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4a/8d/ea7f1d4f84bae3c7c52d1655031e4af0110287b73a09a4fd620e80330885/orbax_checkpoint-0.11.34.tar.gz", hash = "sha256:ab7733a0839085b93fe7cb52ef9596c7b6f8310df4e234c75588289704367888", size = 575019, upload-time = "2026-04-08T00:34:13.699Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/95/2eb9afead8b1aaa5a5184ced09f57c7c0ee473ea283be8e36f22ea92680f/orbax_checkpoint-0.11.36.tar.gz", hash = "sha256:60ed7084a9b79385fb5b9e4b05d98c2db6f5892d05ee8d82df680cfac1622312", size = 585461, upload-time = "2026-04-14T17:03:47.475Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/fc/55a2a089dbf600dc58ef957212559f89846ebde9d5a43e20d9fcd91be1b1/orbax_checkpoint-0.11.34-py3-none-any.whl", hash = "sha256:8b0c9d853089be40ad1b0dbe902ef4e1c3ba03a3393d508bf96bc864b85eee63", size = 1110265, upload-time = "2026-04-08T00:34:12.145Z" },
+    { url = "https://files.pythonhosted.org/packages/be/d6/0d55c734042e48ad669e29566885d609c9548d8cdf297f8df2bcf71efb43/orbax_checkpoint-0.11.36-py3-none-any.whl", hash = "sha256:7a9a6039ef4d853f5744f72c3487b52daa64294677c5730f36099efead71e5e3", size = 1123858, upload-time = "2026-04-14T17:03:46.025Z" },
 ]
 
 [[package]]
@@ -2670,7 +2670,7 @@ wheels = [
 [[package]]
 name = "sampling"
 version = "0.1.0"
-source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling&branch=main#3976eff0c34455b3bb439f375ee0df7f3c585414" }
+source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsampling&branch=main#a1ed82114d500c1fad715907809e3610648955f1" }
 dependencies = [
     { name = "emcee" },
     { name = "numpy" },
@@ -2755,7 +2755,7 @@ wheels = [
 [[package]]
 name = "sddr"
 version = "0.1.0"
-source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr&branch=main#3976eff0c34455b3bb439f375ee0df7f3c585414" }
+source = { git = "https://github.com/auggiemarignier/bmcmethods.git?subdirectory=packages%2Fsddr&branch=main#a1ed82114d500c1fad715907809e3610648955f1" }
 dependencies = [
     { name = "harmonic" },
     { name = "numpy" },
@@ -2978,7 +2978,7 @@ wheels = [
 
 [[package]]
 name = "tfp-nightly"
-version = "0.26.0.dev20260413"
+version = "0.26.0.dev20260414"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -2990,7 +2990,7 @@ dependencies = [
     { name = "six" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/45/82/ec5dceb9f00c4d4318c754e766cb381f28efbf0c85be6315891f6c92a45c/tfp_nightly-0.26.0.dev20260413-py2.py3-none-any.whl", hash = "sha256:1184ebc70b9480606792af1a39be412de66e037929a94fa4cea04eb55ce1892b", size = 6975584, upload-time = "2026-04-13T08:46:29.466Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/66/283bbdfb5e7317d1a630101c35f8a4f71e081292622197c6d0b66471567b/tfp_nightly-0.26.0.dev20260414-py2.py3-none-any.whl", hash = "sha256:e4501742a81b2b6ab97452b5e209e8823058fadc00f69c908e76890e6b40b9bb", size = 6975585, upload-time = "2026-04-14T08:47:31.502Z" },
 ]
 
 [[package]]
@@ -3284,9 +3284,9 @@ wheels = [
 
 [[package]]
 name = "zipp"
-version = "3.23.0"
+version = "3.23.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e3/02/0f2892c661036d50ede074e376733dca2ae7c6eb617489437771209d4180/zipp-3.23.0.tar.gz", hash = "sha256:a07157588a12518c9d4034df3fbbee09c814741a33ff63c05fa29d26a2404166", size = 25547, upload-time = "2025-06-08T17:06:39.4Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/21/093488dfc7cc8964ded15ab726fad40f25fd3d788fd741cc1c5a17d78ee8/zipp-3.23.1.tar.gz", hash = "sha256:32120e378d32cd9714ad503c1d024619063ec28aad2248dc6672ad13edfa5110", size = 25965, upload-time = "2026-04-13T23:21:46.6Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2e/54/647ade08bf0db230bfea292f893923872fd20be6ac6f53b2b936ba839d75/zipp-3.23.0-py3-none-any.whl", hash = "sha256:071652d6115ed432f5ce1d34c336c0adfd6a884660d1e9712a256d3d3bd4b14e", size = 10276, upload-time = "2025-06-08T17:06:38.034Z" },
+    { url = "https://files.pythonhosted.org/packages/08/8a/0861bec20485572fbddf3dfba2910e38fe249796cb73ecdeb74e07eeb8d3/zipp-3.23.1-py3-none-any.whl", hash = "sha256:0b3596c50a5c700c9cb40ba8d86d9f2cc4807e9bedb06bcdf7fac85633e444dc", size = 10378, upload-time = "2026-04-13T23:21:45.386Z" },
 ]
