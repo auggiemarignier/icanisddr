@@ -17,7 +17,8 @@ from sampling.likelihood._base import ForwardBase
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, ptmcmc
 from tti.traveltimes import TravelTimeCalculator
-from tti.traveltimes.parametrisations import NestedNoShearDegreesParametriser
+from tti.traveltimes._types import seven_arrays
+from tti.traveltimes.parametrisations import BaseParametriser
 from tti.traveltimes.paths import calculate_path_direction_vector
 
 logging.basicConfig(
@@ -37,6 +38,43 @@ noise_levels: dict[str, float] = {
     "cd": 0.29,
     "df": 0.95,
 }
+
+TO_RADIANS = np.pi / 180.0
+
+
+class Parametriser(BaseParametriser):
+    """Nested parametrisation comparing corresponding Love parameters in 2 layers.
+
+    A1, A2-A1, C1, C2-C1 etc.
+    """
+
+    n_model_params_per_segment = 2
+
+    def __init__(self) -> None:
+        self.transformation = np.eye(14, 10)
+
+        self.transformation[1, 0] = 1.0  # A2
+        self.transformation[3, 2] = 1.0  # C2
+        self.transformation[5, 4] = 1.0  # F2
+        self.transformation[6:10, :] = 0  # L1, L2, N1, N2
+        self.transformation[10, 6] = TO_RADIANS  # eta11
+        self.transformation[11, 6:8] = TO_RADIANS  # eta12
+        self.transformation[12, 8] = TO_RADIANS  # eta21
+        self.transformation[13, 8:10] = TO_RADIANS  # eta22
+
+    def to_parameters(self, m: np.ndarray) -> seven_arrays:
+        """Transform m to love parameters.
+
+        m will be of shape (batch, n_segmentss*n_model_params_per_segment)
+        """
+        lv = np.matvec(self.transformation, m)
+        lv = np.atleast_2d(lv)
+        A, C, F, L, N, eta1, eta2 = lv.reshape(7, -1, self.n_model_params_per_segment)
+        return A, C, F, L, N, eta1, eta2
+
+    def apply_jacobian(self, grad: np.ndarray) -> np.ndarray:
+        """Apply the jacobian of this transformation."""
+        raise NotImplementedError("Not using gradients at the moment")
 
 
 def _setup_data(
@@ -172,9 +210,7 @@ class Forward(ForwardBase[TravelTimeCalculator]):
         model_params = np.atleast_2d(model_params)
         tti_params = model_params[:, :-1]
         imic_radii = model_params[:, -1]
-        n_cells = (
-            tti_params.shape[1] // self.state.parametriser.n_model_params_per_segment
-        )
+        n_cells = self.state.parametriser.n_model_params_per_segment
 
         n_samples = model_params.shape[0]
         npaths = self.state.ic_in.shape[0]
@@ -251,7 +287,7 @@ def main() -> None:
         ic_out=ic_out,
         normalisation=-0.5,
         weights=initial_weights,
-        parametriser=NestedNoShearDegreesParametriser(),
+        parametriser=Parametriser(),
     )
     likelihood = _setup_likelihood(ttc, dt_over_t, sigma)
     prior = _setup_prior(cfg.priors)
