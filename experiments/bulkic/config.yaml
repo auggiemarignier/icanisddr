@@ -1,6 +1,6 @@
 sampling:
-  nwalkers: 400
-  nsteps: 1500
+  nwalkers: 50
+  nsteps: 10000
   burn_in: 0
   thin: 0
   progress: true

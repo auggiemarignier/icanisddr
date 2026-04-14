@@ -1,18 +1,11 @@
 """Real Data bulk IC experiment entry point."""
 
 import logging
-import os
 import pickle
 from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Any
-
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
 import numpy as np
 import pandas as pd
@@ -20,7 +13,7 @@ import pandas as pd
 from expconfig import ExpConfig
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
-from sampling.sampling import MCMCConfig, nuts
+from sampling.sampling import MCMCConfig, ptmcmc
 from tti.traveltimes import TravelTimeCalculator
 from tti.traveltimes.parametrisations import NestedNoShearDegreesParametriser
 
@@ -133,7 +126,7 @@ def main() -> None:
 
     logger.info("Running MCMC sampling")
     rng = np.random.default_rng(42)
-    samples, lnprob = nuts(
+    samples, lnprob = ptmcmc(
         prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
 

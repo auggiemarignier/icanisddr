@@ -3,26 +3,21 @@
 import logging
 import pickle
 from datetime import datetime
-from functools import partial
 from pathlib import Path
+from typing import Self
 
 import numpy as np
+import pandas as pd
 
-from expconfig.config import PriorsConfig
+from expconfig.config import ExpConfig, PriorsConfig
 from expconfig.geometry import IC_RADIUS
-from expconfig.synthetic import (
-    SynthConfig,
-    create_paths,
-    gaussian_noise,
-)
 from raytracer import BallInShell
 from sampling.likelihood import GaussianLikelihood
+from sampling.likelihood._base import ForwardBase
 from sampling.priors import CompoundPrior
 from sampling.sampling import MCMCConfig, ptmcmc
 from tti.traveltimes import TravelTimeCalculator
-from tti.traveltimes.parametrisations import (
-    NestedNoShearDegreesParametriser,
-)
+from tti.traveltimes.parametrisations import NestedNoShearDegreesParametriser
 from tti.traveltimes.paths import calculate_path_direction_vector
 
 logging.basicConfig(
@@ -33,6 +28,32 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 CFG_FILE = Path(__file__).parent.parent / "config.yaml"
+DATA_FILE = Path(__file__).parent.parent / "data" / "brett2024_ic_traveltimes.parquet"
+
+# Hierarchical noise levels obtained by Brett et al., 2022
+noise_levels: dict[str, float] = {
+    "ab": 0.95,
+    "bc": 0.63,
+    "cd": 0.29,
+    "df": 0.95,
+}
+
+
+def _setup_data(
+    data_file: Path,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    logger.info("Loading real data...")
+    df = pd.read_parquet(data_file)
+    ic_in = np.stack(df.in_location.values)
+    ic_out = np.stack(df.out_location.values)
+    dt_over_t = (df.delta_t / df.inner_core_travel_time).values
+    #  The noise levels for each reference phase are given in seconds, so we need to convert them to fractional traveltime perturbations by dividing by the inner core travel time.
+    # In principle this gives a different sigma for each observation.
+    sigma = (
+        df["reference_phase"].map(noise_levels) / df["inner_core_travel_time"]
+    ).values
+    logger.info(f"Real data shape: {dt_over_t.shape}")
+    return ic_in, ic_out, dt_over_t, sigma
 
 
 def lonlatrad_to_xyz(lonlatrad: np.ndarray) -> np.ndarray:
@@ -125,15 +146,64 @@ OUTPUT_DIR = (
 )
 
 
+class Forward(ForwardBase[TravelTimeCalculator]):
+    """Forward wrapper implementing the new `ForwardBase` API.
+
+    The internal state is a `TravelTimeCalculator` instance. The forward
+    callable expects model parameter arrays where the final column is the
+    IMIC radius.
+    """
+
+    state: TravelTimeCalculator
+
+    def __init__(self, state: TravelTimeCalculator) -> None:
+        self.state = state
+
+    @classmethod
+    def from_state(cls, state: TravelTimeCalculator) -> Self:
+        """Initialise from state."""
+        return cls(state)
+
+    def __call__(self, model_params: np.ndarray) -> np.ndarray:
+        """Call on a batch of model parameters.
+
+        Determines weights, updates them in the calculator, then calls the calculator.
+        """
+        model_params = np.atleast_2d(model_params)
+        tti_params = model_params[:, :-1]
+        imic_radii = model_params[:, -1]
+        n_cells = (
+            tti_params.shape[1] // self.state.parametriser.n_model_params_per_segment
+        )
+
+        n_samples = model_params.shape[0]
+        npaths = self.state.ic_in.shape[0]
+
+        invalid = (imic_radii < 0) | (imic_radii > IC_RADIUS)
+        batched_weights = np.zeros((n_samples, n_cells, npaths))
+        for i, (is_sample_invalid, imic_r) in enumerate(zip(invalid, imic_radii)):
+            if not is_sample_invalid:
+                batched_weights[i] = determine_weights(
+                    BallInShell(imic_r, IC_RADIUS),
+                    self.state.ic_in,
+                    self.state.path_directions,
+                )
+
+        self.state.update_weights(batched_weights)
+        out = self.state(tti_params)
+        out[invalid, :] = 1e6
+        return out
+
+
 def _setup_likelihood(
-    synthetic_data: np.ndarray,
-    sigma: float | np.ndarray,
     ttc: TravelTimeCalculator,
+    dt_over_t: np.ndarray,
+    sigma: float | np.ndarray,
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
     inv_covar = 1 / sigma**2
-    forward_fn = partial(forward, ttc)
-    likelihood = GaussianLikelihood(forward_fn, synthetic_data, inv_covar)
+    forward_inst = Forward.from_state(ttc)
+    likelihood = GaussianLikelihood(forward_inst, dt_over_t, inv_covar)
     return likelihood
 
 
@@ -168,39 +238,26 @@ def dump_results(samples: np.ndarray, lnprob: np.ndarray, output_dir: Path) -> N
 
 
 def main() -> None:
-    """Main function for synthetic IMIC experiment."""
-    logger.info("Starting synthetic IMIC experiment")
-    cfg = SynthConfig.load(CFG_FILE)
+    """Main function for real data imic_r experiment."""
+    logger.info("Starting real data IMIC_r experiment")
+    cfg = ExpConfig.load(CFG_FILE)
 
-    rng = np.random.default_rng(42)
-
-    ic_in, ic_out = create_paths(source_spacing=30.0)
+    ic_in, ic_out, dt_over_t, sigma = _setup_data(DATA_FILE)
     path_directions = calculate_path_direction_vector(ic_in, ic_out)
     region = cfg.geometry.to_composite_region()
     initial_weights = determine_weights(region, ic_in, path_directions)
-    base_ttc_factory = partial(
-        TravelTimeCalculator,
+    ttc = TravelTimeCalculator(
         ic_in=ic_in,
         ic_out=ic_out,
         normalisation=-0.5,
         weights=initial_weights,
+        parametriser=NestedNoShearDegreesParametriser(),
     )
-
-    logger.info("Creating synthetic data...")
-    synth_calculator = base_ttc_factory()
-    synthetic_data_clean = synth_calculator(cfg.truth.as_array().flatten())[0]
-    noise = gaussian_noise(cfg.data.noise_level, rng, synthetic_data_clean)
-    synthetic_data = synthetic_data_clean + noise
-    logger.info(f"Synthetic data shape: {synthetic_data.shape}")
-
-    sigma = np.full_like(synthetic_data, cfg.data.noise_level)
-    forward_calculator = base_ttc_factory(
-        parametriser=NestedNoShearDegreesParametriser()
-    )
-    likelihood = _setup_likelihood(synthetic_data, sigma, forward_calculator)
+    likelihood = _setup_likelihood(ttc, dt_over_t, sigma)
     prior = _setup_prior(cfg.priors)
 
     logger.info("Running MCMC sampling")
+    rng = np.random.default_rng(42)
     samples, lnprob = ptmcmc(
         prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )

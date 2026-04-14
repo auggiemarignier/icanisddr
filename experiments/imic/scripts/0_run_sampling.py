@@ -1,35 +1,78 @@
 """Synthetic IMIC experiment entry point."""
 
 import logging
-import os
 import pickle
 from datetime import datetime
 from functools import partial
 from pathlib import Path
 
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 import numpy as np
 
 from expconfig.config import PriorsConfig
 from expconfig.synthetic import (
     SynthConfig,
     create_paths,
-    create_synthetic_data,
+    gaussian_noise,
 )
-from icprem import PREM_IC_RHO, PREM_IC_VP
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
-from sampling.sampling import MCMCConfig, mcmc
+from sampling.sampling import MCMCConfig, ptmcmc
 from tti.traveltimes import TravelTimeCalculator
 from tti.traveltimes.parametrisations import (
-    AbsoluteDegreesParametriser,
     NestedNoShearDegreesParametriser,
 )
 from tti.traveltimes.paths import calculate_path_direction_vector
+
+
+def lonlatrad_to_xyz(lonlatrad: np.ndarray) -> np.ndarray:
+    """Convert (lon, lat, radius) to Cartesian (x, y, z) coordinates.
+
+    Parameters
+    ----------
+    lonlatrad : np.ndarray, shape (..., 3)
+        Array of longitude (degrees), latitude (degrees), and radius (km).
+
+    Returns
+    -------
+    xyz : np.ndarray, shape (..., 3)
+        Array of Cartesian coordinates in km.
+    """
+    lon = np.radians(lonlatrad[..., 0])
+    lat = np.radians(lonlatrad[..., 1])
+    r = lonlatrad[..., 2]
+
+    x = r * np.cos(lat) * np.cos(lon)
+    y = r * np.cos(lat) * np.sin(lon)
+    z = r * np.sin(lat)
+
+    return np.stack([x, y, z], axis=-1)
+
+
+def determine_weights(region, ic_in: np.ndarray, ic_out: np.ndarray) -> np.ndarray:
+    """Determine weights for each path based on the distance travelled in each region.
+
+    Parameters
+    ----------
+    region : CompositeRegion
+        The composite region defining the geometry and properties of the inner core.
+    ic_in : ndarray, shape (num_paths, 3)
+        Entry points of paths into the inner core (longitude (deg), latitude (deg), radius (km)).
+    ic_out : ndarray, shape (num_paths, 3)
+        Exit points of paths from the inner core (longitude (deg), latitude (deg), radius
+
+    Returns
+    -------
+    weights : ndarray, shape (1, num_segments, num_paths)
+        Fractional distance of each path in each segment.  Additional axis for broadcasting with travel time calculator.
+    """
+    path_directions = calculate_path_direction_vector(ic_in, ic_out)
+    segment_distances = region.ray_distances_per_region(
+        lonlatrad_to_xyz(ic_in), path_directions
+    )
+    total_distances = segment_distances.sum(axis=1)
+    weights = segment_distances / total_distances[:, None]
+    return weights.T[None, ...]
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,36 +81,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-CFG = SynthConfig.load(Path(__file__).parent.parent / "config.yaml")
 
-REGION = CFG.geometry.to_composite_region()
-
-IC_IN, IC_OUT = create_paths(source_spacing=30.0)
-path_directions = calculate_path_direction_vector(IC_IN, IC_OUT)
-total_distances = REGION.ray_distances(IC_IN, path_directions)
-
-# Not sure why some rays have zero total distance.  Discard for now
-valid_rays = total_distances > 0
-IC_IN = IC_IN[valid_rays]
-IC_OUT = IC_OUT[valid_rays]
-path_directions = path_directions[valid_rays]
-segment_distances = REGION.ray_distances_per_region(IC_IN, path_directions)
-WEIGHTS = segment_distances / total_distances[valid_rays, None]
-
-NORMALISATION = -1 / (2 * PREM_IC_RHO * (PREM_IC_VP * 1e3) ** 2)
-BASE_TTC_FACTORY = partial(
-    TravelTimeCalculator,
-    ic_in=IC_IN,
-    ic_out=IC_OUT,
-    normalisation=NORMALISATION,
-    weights=WEIGHTS.T,
-)
-
-# Synthetic data computed based on absolute perturbations from PREM including shear components
-SYNTH_CALCULATOR = BASE_TTC_FACTORY(parametriser=AbsoluteDegreesParametriser())
-# Forward model takes nested parameters and excludes shear components.
-FORWARD_CALCULATOR = BASE_TTC_FACTORY(parametriser=NestedNoShearDegreesParametriser())
-
+CFG_FILE = Path(__file__).parent.parent / "config.yaml"
 OUTPUT_DIR = (
     Path(__file__).parent.parent / "outputs" / datetime.now().strftime("%Y%m%d-%H%M%S")
 )
@@ -75,10 +90,12 @@ OUTPUT_DIR = (
 
 def _setup_likelihood(
     synthetic_data: np.ndarray,
+    sigma: float | np.ndarray,
+    ttc: TravelTimeCalculator,
 ) -> GaussianLikelihood:
     logger.info("Setting up likelihood function...")
-    inv_covar = np.array([1 / synthetic_data.std() ** 2])
-    likelihood = GaussianLikelihood(FORWARD_CALCULATOR, synthetic_data, inv_covar)
+    inv_covar = 1 / sigma**2
+    likelihood = GaussianLikelihood(ttc, synthetic_data, inv_covar)
     return likelihood
 
 
@@ -115,23 +132,38 @@ def dump_results(samples: np.ndarray, lnprob: np.ndarray, output_dir: Path) -> N
 def main() -> None:
     """Main function for synthetic IMIC experiment."""
     logger.info("Starting synthetic IMIC experiment")
+    cfg = SynthConfig.load(CFG_FILE)
 
     rng = np.random.default_rng(42)
 
+    ic_in, ic_out = create_paths(source_spacing=30.0)
+    region = cfg.geometry.to_composite_region()
+    weights = determine_weights(region, ic_in, ic_out)
+    base_ttc_factory = partial(
+        TravelTimeCalculator,
+        ic_in=ic_in,
+        ic_out=ic_out,
+        normalisation=-0.5,
+        weights=weights,
+    )
+
     logger.info("Creating synthetic data...")
-    synthetic_data = create_synthetic_data(
-        SYNTH_CALCULATOR,
-        CFG.truth.as_array().flatten(),
-        CFG.data.noise_level,
-    )[0]
+    synth_calculator = base_ttc_factory()
+    synthetic_data_clean = synth_calculator(cfg.truth.as_array().flatten())[0]
+    noise = gaussian_noise(cfg.data.noise_level, rng, synthetic_data_clean)
+    synthetic_data = synthetic_data_clean + noise
     logger.info(f"Synthetic data shape: {synthetic_data.shape}")
 
-    likelihood = _setup_likelihood(synthetic_data)
-    prior = _setup_prior(CFG.priors)
+    sigma = np.full_like(synthetic_data, cfg.data.noise_level)
+    forward_calculator = base_ttc_factory(
+        parametriser=NestedNoShearDegreesParametriser()
+    )
+    likelihood = _setup_likelihood(synthetic_data, sigma, forward_calculator)
+    prior = _setup_prior(cfg.priors)
 
     logger.info("Running MCMC sampling")
-    samples, lnprob = mcmc(
-        prior.n, likelihood, prior, rng, MCMCConfig(**CFG.sampling.model_dump())
+    samples, lnprob = ptmcmc(
+        prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
 
     logger.info("MCMC sampling completed")
@@ -139,7 +171,7 @@ def main() -> None:
     logger.info("Saving samples to disk")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
     dump_results(samples, lnprob, OUTPUT_DIR)
-    CFG.dump(OUTPUT_DIR / "config.yaml")
+    cfg.dump(OUTPUT_DIR / "config.yaml")
 
 
 if __name__ == "__main__":

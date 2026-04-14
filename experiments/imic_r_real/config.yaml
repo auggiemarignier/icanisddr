@@ -1,11 +1,8 @@
 sampling:
   nwalkers: 50
-  nsteps: 50000
-  burn_in: 0
-  thin: 0
+  nsteps: 140000
   progress: true
   parallel: true
-  vectorise: false
 priors:
   components:
     - type: gaussian
@@ -18,7 +15,7 @@ priors:
         - [0.0, 0.0, 0.0, 0.0, 50.0, 0.0]
         - [0.0, 0.0, 0.0, 0.0, 0.0, 50.0]
       indices: [0, 1, 2, 3, 4, 5]
-    - type: uniform
+    - type: wrapped_uniform
       lower_bounds: [-180.0, -180.0]
       upper_bounds: [180.0, 180.0]
       indices: [6, 7]
@@ -26,6 +23,10 @@ priors:
       lower_bounds: [0.0, 0.0]
       upper_bounds: [90.0, 90.0]
       indices: [8, 9]
+    - type: wrapped_uniform
+      lower_bounds: 0.0
+      upper_bounds: 1221.5
+      indices: [10]
 training:
   batch_size: 24
   epochs: 10
@@ -50,14 +51,9 @@ hypotheses:
   - name: Completely isotropic
     indices: [2, 3, 4, 5]
     nu: [0.0, 0.0, 0.0, 0.0]
-truth:
-  A: [0.0143, 0.1]
-  C: [0.0909, 0.1]
-  F: [-0.0858, 0.1]
-  L: [0.0, 0.0]
-  N: [0.0, 0.0]
-  eta1: [90.0, 0.0]
-  eta2: [45.0, 0.0]
+  - name: No IMIC
+    indices: [10]
+    nu: [0.0]
 geometry:
   regions:
     - type: ball
@@ -68,4 +64,4 @@ geometry:
       radius_outer: 1221.5
       label: OC
 data:
-  noise_level: 0.009
+  noise_level: 0.0009

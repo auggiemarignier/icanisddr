@@ -41,11 +41,8 @@ class SamplingConfig(BaseModel):
 
     nwalkers: int
     nsteps: int
-    burn_in: int
-    thin: int
     progress: bool
-    vectorise: bool
-    parallel: bool
+    parallel: bool | int
 
 
 class HypothesisConfig(BaseModel):

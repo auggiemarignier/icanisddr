@@ -16,7 +16,7 @@ from expconfig.synthetic import (
 )
 from sampling.likelihood import GaussianLikelihood
 from sampling.priors import CompoundPrior
-from sampling.sampling import MCMCConfig, mcmc
+from sampling.sampling import MCMCConfig, ptmcmc
 from tti.traveltimes import TravelTimeCalculator
 from tti.traveltimes.parametrisations import NestedNoShearDegreesParametriser
 
@@ -114,7 +114,7 @@ def main() -> None:
     prior = _setup_prior(cfg.priors)
 
     logger.info("Running MCMC sampling")
-    samples, lnprob = mcmc(
+    samples, lnprob = ptmcmc(
         prior.n, likelihood, prior, rng, MCMCConfig(**cfg.sampling.model_dump())
     )
 
