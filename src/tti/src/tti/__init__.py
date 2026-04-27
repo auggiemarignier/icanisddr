@@ -1,1 +1,0 @@
-"""Subpackage for Tilted Transverse Isotropy (TTI) modelling."""
