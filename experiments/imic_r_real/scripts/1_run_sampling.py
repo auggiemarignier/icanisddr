@@ -51,16 +51,12 @@ class Parametriser(BaseParametriser):
     n_model_params_per_segment = 2
 
     def __init__(self) -> None:
-        self.transformation = np.eye(14, 10)
+        self.transformation = np.eye(14, 6)
 
         self.transformation[1, 0] = 1.0  # A2
         self.transformation[3, 2] = 1.0  # C2
         self.transformation[5, 4] = 1.0  # F2
-        self.transformation[6:10, :] = 0  # L1, L2, N1, N2
-        self.transformation[10, 6] = TO_RADIANS  # eta11
-        self.transformation[11, 6:8] = TO_RADIANS  # eta12
-        self.transformation[12, 8] = TO_RADIANS  # eta21
-        self.transformation[13, 8:10] = TO_RADIANS  # eta22
+        self.transformation[6:14, :] = 0  # L1, L2, N1, N2, eta11, eta12, eta21, eta22
 
     def to_parameters(self, m: np.ndarray) -> seven_arrays:
         """Transform m to love parameters.
