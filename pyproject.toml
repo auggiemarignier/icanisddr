@@ -5,6 +5,7 @@ description = "SAvage-Dickey Density Ratio for Anisotropic Seismic Tomography of
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+    "ris",
     "sddr",
     "sampling",
     "tti",
@@ -28,6 +29,7 @@ tti = { workspace = true }
 expconfig = { workspace = true }
 raytracer = { workspace = true }
 icprem = { workspace = true }
+ris = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/ris" }
 sddr = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sddr" }
 sampling = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sampling" }
 
