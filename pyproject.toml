@@ -16,18 +16,14 @@ dependencies = [
 [tool.uv.workspace]
 members = [
     "experiments/*",
-    "profiling",
-    "src/tti",
     "src/expconfig",
-    "src/raytracer",
-    "src/icprem",
 ]
 
 [tool.uv.sources]
-tti = { workspace = true }
+tti = { git = "https://github.com/auggiemarignier/tti.git", branch = "main" }
 expconfig = { workspace = true }
-raytracer = { workspace = true }
-icprem = { workspace = true }
+raytracer = { git = "https://github.com/auggiemarignier/raytracer.git", branch = "main" }
+icprem = { git = "https://github.com/auggiemarignier/icprem.git", branch = "main" }
 sddr = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sddr" }
 sampling = { git = "https://github.com/auggiemarignier/bmcmethods.git", branch = "main", subdirectory = "packages/sampling" }
 

@@ -4,18 +4,8 @@ version = "0.1.0"
 description = "Scripts for bulk IC analysis"
 readme = "README.md"
 requires-python = ">=3.12, <3.14"
-dependencies = [
-    "tti",
-    "expconfig",
-    "icprem",
-]
 
-[tool.uv.sources]
-tti = { workspace = true }
-expconfig = { workspace = true }
-icprem = { workspace = true }
-[dependency-groups]
-notebooks = [
+dependencies = [
     "cartopy>=0.25.0",
     "jupyter>=1.1.1",
     "matplotlib>=3.10.8",
